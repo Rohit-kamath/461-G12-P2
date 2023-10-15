@@ -6,7 +6,6 @@ const ndjson = require('ndjson');
 class PackageClassifier {
   urls: string[];
   constructor(file: string) {
-    ////console.log("HELOOOO");
     if (!existsSync(file)) {
       throw new Error('ERORR!!');
     }

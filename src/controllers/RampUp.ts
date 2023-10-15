@@ -1,9 +1,4 @@
-import {
-  fetchRepositoryContributors,
-  fetchRepositoryStars,
-  fetchRepositoryForks,
-  fetchFirstCommitTime
-} from '../utils/RampUpAPI';
+
 //import { Request, Response, NextFunction } from 'express';
 export const calculateRampUp = async (
   owner: string,
@@ -12,10 +7,10 @@ export const calculateRampUp = async (
   /* const { owner, repo } = req.query as { owner: string; repo: string }; */
   try {
     // Fetch data from GitHub API
-    const contributors = await fetchRepositoryContributors(owner, repo);
-    const stars = await fetchRepositoryStars(owner, repo);
-    const forks = await fetchRepositoryForks(owner, repo);
-    const firstCommitTime = await fetchFirstCommitTime(owner, repo);
+    const contributors = 0;
+    const stars = 0;
+    const forks = 0;
+    const firstCommitTime = 0;
 
     const weights = {
       Contributors: 0.3,
@@ -23,9 +18,9 @@ export const calculateRampUp = async (
       Forks: 0.2,
       FirstCommit: 0.3
     };
-    const contributorsContribution = weights.Contributors * contributors.length;
-    const starsContribution = weights.Stars * stars.length;
-    const forksContribution = weights.Forks * forks.length;
+    const contributorsContribution = weights.Contributors * 0;
+    const starsContribution = weights.Stars * 0;
+    const forksContribution = weights.Forks * 0;
     ////console.log('Contributors:', contributorsContribution);
     ////console.log('Stars:', starsContribution);
     ////console.log('Forks:', forksContribution);

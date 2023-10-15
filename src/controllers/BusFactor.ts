@@ -1,4 +1,3 @@
-import { Request, Response } from 'express';
 import { getRequest } from '../utils/api.utils';
 import axios from 'axios';
 
