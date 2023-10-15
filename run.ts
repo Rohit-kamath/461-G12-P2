@@ -16,7 +16,6 @@ class PackageClassifier {
     return this.urls;
   }
   classifyUrls(): { gitUrls: string[]; npmPackageUrls: string[] } {
-    ////console.log("CLASSIFY URLS CALLED!");
     const gitUrls: string[] = [];
     const npmPackageUrls: string[] = [];
 
@@ -48,7 +47,6 @@ class PackageClassifier {
       }
     }
     const x  = { gitUrls, npmPackageUrls };
-    ////console.log("X", x);
     return x;
   }
 
@@ -59,9 +57,6 @@ class PackageClassifier {
       });
       return output.trim();
     } catch (error) {
-      //console.error(
-      //  `Error getting repository URL for package ${packageName}: ${error.message}`
-      //);
       return null;
     }
   }
@@ -70,16 +65,12 @@ class PackageClassifier {
 async function main() {
     try {
       const filename = process.argv[2];
-      ////console.log("FILENAME!!!", filename);
       if (!filename) {
-        //console.error("No filename provided.");
         process.exit(1);
       }
       const classifier = new PackageClassifier(filename);
       const { gitUrls, npmPackageUrls } = classifier.classifyUrls();
       const urls = classifier.getUrls();
-      ////console.log("URLS", urls);
-      ////console.log('Git URLs:');
       let i = 0;
       const results: any[] = [];
   
@@ -90,25 +81,19 @@ async function main() {
           const owner = temp[1];
           let repo = temp[2];
           repo = repo.replace(/\.git$/, '');
-          ////console.log("URL", url);
           const NScore = new NET_SCORE(owner, repo);
           const scoreResults = await NScore.calculate();
           const URL = urls[i];
           const score_results_with_url = {URL, ...scoreResults};
           i++;
-/*           //console.log("SCORE RESULTS", scoreResults); */
           results.push(scoreResults);
-/*           //console.log("RESULTS", results); */
-          //process.stdout.write(ndjson.stringify(scoreResults));
           console.log(JSON.stringify(score_results_with_url));
           
         }
       }
     } catch (error) {
-      //console.error('An error occurred:', error);
     }
 
 }
   
 main();
-  
