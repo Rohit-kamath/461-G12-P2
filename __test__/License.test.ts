@@ -1,5 +1,4 @@
-import { License } from '../src/controllers/License';
-import * as licenseApi from '../src/utils/licenseApi';
+import {getLicenseScore } from '../src/controllers/License';
 import { mocked } from 'jest-mock';
 
 // Mock the licenseApi methods
