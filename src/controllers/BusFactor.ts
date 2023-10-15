@@ -42,7 +42,7 @@ export const calculateBusFactor = async (owner: string, repo: string) => {
     contributors.forEach((contributor) => {
       totalContributions += contributor.totalContributions;
     });
-    let sixtyPercent = 0.7 * totalContributions;
+    let sixtyPercent = 0.6 * totalContributions;
     let contributions = 0;
     for (let i = 0; i < contributors.length; i++) {
       contributions += contributors[i].totalContributions;
