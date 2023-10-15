@@ -1,5 +1,85 @@
 #!/bin/bash
-DIR="$(dirname "$0")"
+# set -x
 
-filename="$1"
-npx ts-node run.ts "$filename"
+# Read environment variables or set default values
+LOG_LEVEL=${LOG_LEVEL:-1}
+LOG_FILE=${LOG_FILE:-logfile.log}
+
+# Export environment variables so they are accessible to the Python script
+export LOG_LEVEL
+export LOG_FILE
+
+# Function to log messages using the Python script
+log() {
+    python3 log_file.py $LOG_LEVEL "$1"
+}
+
+# Check for the command passed as an argument
+case "$1" in
+    "install")
+        #log "Starting the installation process."
+        
+        # Install Node.js dependencies
+        npm install || { 
+            #log "npm install failed";
+             exit 1; }
+        npm install --save-dev jest ts-jest @types/jest typescript || { 
+            #log "npm install for dev dependencies failed"; 
+        exit 1; }
+        
+        #log "Dependencies installed successfully."
+        exit 0
+        ;;
+    "test")
+        # Run tests and capture the output
+        TEST_OUTPUT=$(npm test 2>&1)
+        EXIT_CODE=$?
+    
+        # Parse the output to get the number of passed tests, total tests, and line coverage
+        PASSED_TESTS=$(echo "$TEST_OUTPUT" | grep "Tests:" | awk '{for(i=1;i<=NF;i++) if ($i == "passed,") print $(i-1)}')
+        TOTAL_TESTS=$(echo "$TEST_OUTPUT" | grep "Tests:" | awk '{for(i=1;i<=NF;i++) if ($i == "total") print $(i-1)}')
+        LINE_COVERAGE=$(echo "$TEST_OUTPUT" | grep "Lines" | awk -F':' '{print $2}' | tr -d ' %')
+    
+        # Construct the desired output format
+        RESULT="$PASSED_TESTS/$TOTAL_TESTS test cases passed. $LINE_COVERAGE% line coverage achieved."
+    
+        # Log the result using the log function
+        log "$RESULT"
+    
+        # Extract and log the names of the failed test suites
+        # FAILED_SUITES=$(echo "$TEST_OUTPUT" | grep "FAIL" | awk -F' ' '{print $2}')
+        # if [ ! -z "$FAILED_SUITES" ]; then
+        #     #log "Failed test suites:"
+        #     while IFS= read -r line; do
+        #         #log "$line"
+        #     done <<< "$FAILED_SUITES"
+        # fi
+    
+        # # Extract and log the names of the failed tests
+        # FAILED_TESTS=$(echo "$TEST_OUTPUT" | grep -E "✕|×" | awk -F' ' '{print $2}')
+        # if [ ! -z "$FAILED_TESTS" ]; then
+        #     #log "Failed tests:"
+        #     while IFS= read -r line; do
+        #         #log "$line"
+        #     done <<< "$FAILED_TESTS"
+        #fi
+    
+    exit $EXIT_CODE
+        ;;
+    *)
+        if [ -z "$1" ]; then
+            #log "Command or filename not provided"
+            exit 1
+        fi
+
+        FILENAME="$1"
+
+        #log "Running: $FILENAME."
+        npx ts-node run.ts "$FILENAME" || { 
+            #log "node run.js failed"; 
+        exit 1; }
+
+        #log "SUCCESS!!: $FILENAME."
+        exit 0
+        ;;
+esac
