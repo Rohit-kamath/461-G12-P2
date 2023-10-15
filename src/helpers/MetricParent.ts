@@ -28,10 +28,4 @@ export abstract class MetricParent {
   getContributor(): string {
     return this.contributor;
   }
-
-  // Abstract method to be implemented by child classes
-  abstract calculateMetric(): any;
-
-  // Optional: Abstract method to fetch data (if needed)
-  abstract fetchData(): Promise<any>;
 }
