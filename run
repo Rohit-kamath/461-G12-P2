@@ -75,10 +75,7 @@ case "$1" in
         FILENAME="$1"
 
         #log "Running: $FILENAME."
-        tsc run.ts || { 
-            #log "tsc failed"; 
-        exit 1; }
-        node run.js "$FILENAME" || { 
+        npx ts-node run.ts "$FILENAME" || { 
             #log "node run.js failed"; 
         exit 1; }
 
