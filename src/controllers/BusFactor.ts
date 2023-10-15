@@ -1,50 +1,57 @@
 import { getRequest } from '../utils/api.utils';
 
-interface Contributor{
-  login: string;
-  contributions: number;
+interface Contributor {
+  login : string;
+  commits : number;
+  prs : number;
+  issues : number;
+  totalContributions : number;
 }
 
-export async function getContributors(owner: string, repo: string) : Promise<Contributor[]> {
-  const response = await getRequest(
-    `/repos/${owner}/${repo}/contributors?per_page=100`
-  );
+export const getContributors = async (
+  owner: string,
+  repo: string
+): Promise<Contributor[] | null> => {
+  const contributors: Contributor[] = [];
+  try {
+    const response = await getRequest(
+      `/repos/${owner}/${repo}/stats/contributors`
+    );
+    response.forEach((contributor: any) => {
+      const contributor_object : Contributor = {
+        login: contributor.author.login,
+        commits: contributor.total,
+        prs: contributor.weeks.reduce( (accumulator: number, week: any) => accumulator + week.c, 0),
+        issues: contributor.weeks.reduce( (accumulator: number, week: any) => accumulator + week.a, 0),
+        totalContributions: contributor.total + contributor.weeks.reduce( (accumulator: number, week: any) => accumulator + week.c + week.a, 0)
+      };
+      contributors.push(contributor_object);
+    });
+    contributors.sort((a, b) => b.totalContributions - a.totalContributions);
+    return contributors;
+  } catch (error: any) {
+    return null;
+  }
+};
 
-  const contributors = response.map((contributor: any) => {
-    return {
-      login: contributor.login,
-      contributions: contributor.contributions,
-    };
-  });
-  return contributors;
-}
-
-
-function calculateBusFactor(contributors: Contributor[]) {
-  if (contributors.length == 1 && contributors[0].contributions > 0){
-    return 0;
+export const calculateBusFactor = async (owner: string, repo: string) => {
+  const contributors = await getContributors(owner, repo);
+  let totalContributions = 0;
+  let busFactor = 0;
+  if (contributors) {
+    contributors.forEach((contributor) => {
+      totalContributions += contributor.totalContributions;
+    });
+    let sixtyPercent = 0.7 * totalContributions;
+    let contributions = 0;
+    for (let i = 0; i < contributors.length; i++) {
+      contributions += contributors[i].totalContributions;
+      busFactor += 0.1;
+      if (contributions >= sixtyPercent) {
+        break;
+      }
+    }
   }
 
-  const sortedContributors = [...contributors].sort((a, b) => b.contributions - a.contributions);
-  let majorContributorsCount = 0;
-	let contributionsCounted = 0;
-	const percentOfTotalContributions =
-		sortedContributors.reduce((acc, contributor) => acc + contributor.contributions, 0) * 0.6;
-
-	for (const contributor of sortedContributors) {
-		contributionsCounted += contributor.contributions;
-		majorContributorsCount++;
-
-		if (contributionsCounted >= percentOfTotalContributions) {
-			break;
-		}
-	}
-
-	const busFactor = Math.min(majorContributorsCount / 10, 1);
-  return busFactor;
-}
-
-export async function getBusFactor(owner: string, repo: string) {
-  const contributors = await getContributors(owner, repo);
-  return calculateBusFactor(contributors);
-}
+  return Math.min(busFactor, 1);
+};
