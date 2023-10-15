@@ -2,10 +2,7 @@ import { Octokit } from "@octokit/rest";
 import { ESLint } from "eslint";
 import { execSync,exec } from "child_process";
 /* import {config} from "dotenv"; */
-import {
-    fetchRepositoryStars,
-    fetchRepositoryForks,
-  } from '../utils/RampUpAPI';
+
 
 export class correctness {
     //private octokit: Octokit;
@@ -40,10 +37,10 @@ export class correctness {
             owner: this.owner,
             repo: this.repo,
         }); */
-        const stars = await fetchRepositoryStars(this.owner, this.repo);
-        const forks = await fetchRepositoryForks(this.owner, this.repo);
-        const stars_count = stars.length;
-        const forks_count = forks.length;
+        const stars = 0;
+        const forks = 0;
+        const stars_count = 0;
+        const forks_count = 0;
         /* ////console.log(`Stars: ${stars}, Forks: ${forks}`); */
         // Calculate a score based on the number of stars, forks, and watchers
         const power = this.calculateLowestPowerOf10(stars_count, forks_count);
@@ -168,6 +165,7 @@ export class correctness {
         const warning_prop = this.warnings / (this.errors + this.warnings + this.securityIssues + 1);
         const security_prop = this.securityIssues / (this.errors + this.warnings + this.securityIssues + 1); */
         const eslintScore = (test_suite_checker);        
+
         return eslintScore;
 
     }
