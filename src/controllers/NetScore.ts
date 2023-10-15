@@ -1,5 +1,5 @@
 import { correctness } from "./correctness";
-import { getBusFactor} from "./BusFactor";
+import { calculateBusFactor} from "./BusFactor";
 import { calculateRampUp } from "./RampUp";
 import { Responsiveness } from "./Responsiveness";
 import { getLicenseScore } from "./License";
@@ -9,12 +9,7 @@ export class NET_SCORE {
     async calculate(): Promise<{NET_SCORE: number, RAMP_UP_SCORE: number, CORRECTNESS_SCORE: number, BUS_FACTOR_SCORE: number, RESPONSIVE_MAINTAINER_SCORE: number, LICENSE_SCORE: number}> {
         const correctnessobj = new correctness(this.owner, this.repo);
         let CORRECTNESS_SCORE = 0;
-        try {
-            CORRECTNESS_SCORE = await correctnessobj.check();
-        } catch(e) {
-            console.log("Error", e);
-        }
-        const BUS_FACTOR_SCORE = await getBusFactor(this.owner, this.repo);
+        const BUS_FACTOR_SCORE = await calculateBusFactor(this.owner, this.repo);
         const RAMP_UP_SCORE = await calculateRampUp(this.owner, this.repo);
         const responsiveness = new Responsiveness('someSharedProperty', this.owner, this.repo);
         const RESPONSIVE_MAINTAINER_SCORE = responsiveness.calculateMetric();
