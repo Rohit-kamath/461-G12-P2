@@ -4,93 +4,69 @@ import * as responsivenessApi from '../utils/responsivenessApi';
 export class Responsiveness extends MetricParent {
   private repoOwner: string;
   private repoName: string;
-  private issueResponseTime: number = 0;
-  private prResponseTime: number = 0;
   private commitMergeTime: number = 0;
+  private score_list: number[] = [];
 
   constructor(someSharedProperty: string, repoOwner: string, repoName: string) {
-    super(someSharedProperty, 'Responsive Maintainer', 'kim3574');
+    super(someSharedProperty, 'Responsive Maintainer', 'ty-runner');
     this.repoOwner = repoOwner;
     this.repoName = repoName;
   }
-
-  async fetchData(): Promise<any> {
+  async fetchData(): Promise<void>{
     try {
-      // Fetch issue comments
-      const issueComments = await responsivenessApi.fetchIssueComments(
+      const issues = await responsivenessApi.fetchIssues(
         this.repoOwner,
-        this.repoName,
-        1
+        this.repoName
       );
-      if (issueComments && issueComments.length > 0) {
-        const issueCreationTime = new Date(issueComments[0].created_at);
-        const firstCommentTime = new Date(issueComments[0].updated_at);
-        this.issueResponseTime =
-          (firstCommentTime.getTime() - issueCreationTime.getTime()) /
-          (1000 * 60); // in minutes
+      if (issues.length > 0) {
+        for(const issue of issues) {
+          const creationTime = new Date(issue.created_at);
+          const closeTime = new Date(issue.closed_at);
+          this.commitMergeTime =
+            (closeTime.valueOf() - creationTime.valueOf()) / (1000 * 3600 * 24); // in minutes
+          this.score_list.push(this.commitMergeTime);
+        }
       }
-
-      // Fetch PR comments
-      const prComments = await responsivenessApi.fetchPullRequestComments(
-        this.repoOwner,
-        this.repoName,
-        1
-      );
-      if (prComments && prComments.length > 0) {
-        const prCreationTime = new Date(prComments[0].created_at);
-        const firstPrCommentTime = new Date(prComments[0].updated_at);
-        this.prResponseTime =
-          (firstPrCommentTime.getTime() - prCreationTime.getTime()) /
-          (1000 * 60); // in minutes
-      }
-
-      // Fetch PR merge time
-      const prMergeData = await responsivenessApi.fetchPullRequestMergeTime(
-        this.repoOwner,
-        this.repoName,
-        1
-      );
-      if (prMergeData) {
-        const prCreationTime = new Date(prMergeData.created_at);
-        const mergeTime = new Date(prMergeData.merged_at);
-        this.commitMergeTime =
-          (mergeTime.getTime() - prCreationTime.getTime()) / (1000 * 60); // in minutes
-      }
-
-      return Promise.resolve(
-        'Fetched and processed data for Responsive Maintainer'
-      );
     } catch (error) {
-      //console.error('Error fetching data:', error);
+      console.error('Error fetching data:', error);
       return Promise.reject(error);
     }
   }
+  async findMedian(numbers: number[]){
+    	// Step 1: Sort the list
+    const sortedNumbers = numbers.slice().sort((a: any, b: any) => a - b);
 
-  calculateMetric(): number {
-    let validDataCount = 0;
-    let totalResponseTime = 0;
+    const middleIndex = Math.floor(sortedNumbers.length / 2);
 
-    // Issue Response Time
-    if (this.issueResponseTime !== null) {
-      totalResponseTime += this.issueResponseTime;
-      validDataCount++;
+    if (sortedNumbers.length % 2 === 0) {
+      // Even number of elements, so take the average of the two middle elements
+      const middle1 = sortedNumbers[middleIndex - 1];
+      const middle2 = sortedNumbers[middleIndex];
+      return (middle1 + middle2) / 2;
+    } else {
+      // Odd number of elements, so the middle element is the median
+      return sortedNumbers[middleIndex];
     }
+  }
 
-    // PR Response Time
-    if (this.prResponseTime !== null) {
-      totalResponseTime += this.prResponseTime;
-      validDataCount++;
-    }
-
-    // Commit Merge Time
-    if (this.commitMergeTime !== null) {
-      totalResponseTime += this.commitMergeTime;
-      validDataCount++;
-    }
-
-    // Calculate the average response time based on valid data
-    const averageResponseTime =
-      validDataCount > 0 ? totalResponseTime / validDataCount : 0;
-    return averageResponseTime;
+  calculateMetric(): Promise<number> {
+    return new Promise<number>(async (resolve, reject) => {
+      try {
+        await this.fetchData();
+        const median = await this.findMedian(this.score_list);
+        console.log('median', median);
+        if(median <= 1){
+          resolve (1);
+        }
+        else if(median > 10){
+          resolve(0);
+        }
+        else{
+          resolve(1 - (median - 1) / 9);
+        }
+      } catch (error) {
+        reject(error);
+      }
+    });
   }
 }
