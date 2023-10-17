@@ -54,7 +54,6 @@ export class Responsiveness extends MetricParent {
       try {
         await this.fetchData();
         const median = await this.findMedian(this.score_list);
-        console.log('median', median);
         if(median <= 1){
           resolve (1);
         }
