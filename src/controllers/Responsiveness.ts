@@ -33,7 +33,7 @@ export class Responsiveness extends MetricParent {
     }
   }
   async findMedian(numbers: number[]){
-    	// Step 1: Sort the list
+    // Step 1: Sort the list
     const sortedNumbers = numbers.slice().sort((a: any, b: any) => a - b);
 
     const middleIndex = Math.floor(sortedNumbers.length / 2);
@@ -49,24 +49,17 @@ export class Responsiveness extends MetricParent {
     }
   }
 
-  calculateMetric(): Promise<number> {
-    return new Promise<number>(async (resolve, reject) => {
-      try {
-        await this.fetchData();
-        const median = await this.findMedian(this.score_list);
-        console.log('median', median);
-        if(median <= 1){
-          resolve (1);
-        }
-        else if(median > 10){
-          resolve(0);
-        }
-        else{
-          resolve(1 - (median - 1) / 9);
-        }
-      } catch (error) {
-        reject(error);
-      }
-    });
+  async calculateMetric(): Promise<number> {
+    await this.fetchData();
+    const median = await this.findMedian(this.score_list);
+    console.log('median', median);
+    
+    if (median <= 1) {
+      return 1;
+    } else if (median > 10) {
+      return 0;
+    } else {
+      return 1 - (median - 1) / 9;
+    }
   }
 }
