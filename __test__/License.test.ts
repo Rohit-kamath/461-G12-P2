@@ -1,59 +1,41 @@
-import {getLicenseScore } from '../src/controllers/License';
-import { mocked } from 'jest-mock';
+import { getLicenseScore } from '../src/controllers/License';
+import { getRequest } from '../src/utils/api.utils';
 
-// Mock the licenseApi methods
-jest.mock('../src/utils/licenseApi');
+jest.mock('../src/utils/api.utils');
 
-const repoOwner = 'kim3574';
-const repoName = 'ECE461_Team11';
-
-describe('License Class', () => {
-  beforeEach(() => {
-    // Reset the mocks before each test
-    jest.clearAllMocks();
-  });
-
-  it('should fetch data and calculate metric', async () => {
-    // Mock API response
-    mocked(licenseApi.fetchLicense).mockResolvedValue({
-      license: {
-        spdx_id: 'MIT'
-      }
+describe('License Score', () => {
+    afterEach(() => {
+        jest.clearAllMocks();
     });
 
-    const license = new License('sharedProperty', repoOwner, repoName);
-    await license.fetchData();
-    const result = license.calculateMetric();
+    it('should return 1 if the README contains a license', async () => {
+        const mockData = {
+            content: Buffer.from('This is a sample readme with a License').toString('base64')
+        };
+        (getRequest as jest.Mock).mockResolvedValue(mockData);
 
-    expect(result).toBe(10); // MIT license score
-  });
-
-  it('should return 1 for calculateMetric when unknown license', async () => {
-    mocked(licenseApi.fetchLicense).mockResolvedValue({
-      license: {
-        spdx_id: 'UNKNOWN'
-      }
+        const score = await getLicenseScore('testOwner', 'testRepo');
+        expect(score).toBe(1);
     });
 
-    const license = new License('sharedProperty', repoOwner, repoName);
-    await license.fetchData();
-    const result = license.calculateMetric();
+    it('should return 0 if the README does not contain a license', async () => {
+        const mockData = {
+            content: Buffer.from('This is a sample readme without the keyword').toString('base64')
+        };
+        (getRequest as jest.Mock).mockResolvedValue(mockData);
 
-    expect(result).toBe(1); // Unknown license score
-  });
+        const score = await getLicenseScore('testOwner', 'testRepo');
+        expect(score).toBe(0);
+    });
 
-  it('should handle empty API responses in fetchData', async () => {
-    mocked(licenseApi.fetchLicense).mockResolvedValue(null);
-
-    const license = new License('sharedProperty', repoOwner, repoName);
-    const fetchDataResult = await license.fetchData();
-    expect(fetchDataResult).toBe('Fetched license data successfully');
-  });
-
-  it('should handle API errors in fetchData', async () => {
-    mocked(licenseApi.fetchLicense).mockRejectedValue(new Error('API Error'));
-
-    const license = new License('sharedProperty', repoOwner, repoName);
-    await expect(license.fetchData()).rejects.toThrow('API Error');
-  });
+    it('should return 0 and log the error when there is an API issue', async () => {
+        (getRequest as jest.Mock).mockRejectedValue(new Error('API Error'));
+        const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+        
+        const score = await getLicenseScore('testOwner', 'testRepo');
+        expect(score).toBe(0);
+        expect(consoleSpy).toHaveBeenCalledWith(new Error('API Error'));
+        
+        consoleSpy.mockRestore(); 
+    });
 });

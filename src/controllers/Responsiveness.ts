@@ -33,7 +33,7 @@ export class Responsiveness extends MetricParent {
     }
   }
   async findMedian(numbers: number[]){
-    	// Step 1: Sort the list
+    // Step 1: Sort the list
     const sortedNumbers = numbers.slice().sort((a: any, b: any) => a - b);
 
     const middleIndex = Math.floor(sortedNumbers.length / 2);
