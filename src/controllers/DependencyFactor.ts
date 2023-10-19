@@ -5,7 +5,7 @@ interface Dependency {
   version: string;
 }
 
-async function getDependencies(owner: string, repo: string) : Promise<Dependency[] | null> {
+export async function getDependencies(owner: string, repo: string) : Promise<Dependency[] | null> {
     try {
         const response = await getRequest(`/repos/${owner}/${repo}/contents/package.json`);
         const packageJson = Buffer.from(response.content, 'base64').toString('ascii');
@@ -21,9 +21,9 @@ async function getDependencies(owner: string, repo: string) : Promise<Dependency
         return dependencyArray;
     } catch (error: any) {
         console.log("Error in getDependencies: with repo: " + repo + " and owner: " + owner, error);
-        return null;
+        process.exit(1)
     }
-    }
+}
 
 export async function calculateDependencyFactor(owner: string, repo : string) : Promise<number> {
     const dependencies = await getDependencies(owner, repo);

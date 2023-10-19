@@ -11,25 +11,28 @@ describe('Bus Factor calculations', () => {
 
     describe('getContributors', () => {
         it('should correctly process contributor data', async () => {
-        const mockContributorsData = [{
-            author: { login: 'user1' },
-            total: 60,
-            weeks: [
-                { c: 30, a: 20 },
-                { c: 20, a: 10 },
-            ],
-            },
-            {
-            author: { login: 'user2' },
-            total: 30,
-            weeks: [
-                { c: 10, a: 10 },
-                { c: 5, a: 5 },
-        ],
-        },
-    ];
-
-        (getRequest as jest.Mock).mockResolvedValue(mockContributorsData);
+        const mockContributors = {
+            content: Buffer.from(JSON.stringify([
+                {
+                    author: { login: 'user1' },
+                    total: 60,
+                    weeks: [
+                        { c: 30, a: 20 },
+                        { c: 20, a: 10 },
+                    ],
+                },
+                {
+                    author: { login: 'user2' },
+                    total: 30,
+                    weeks: [
+                        { c: 10, a: 10 },
+                        { c: 5, a: 5 },
+                    ],
+                }
+            ])).toString('base64')
+        };
+        
+        (getRequest as jest.Mock).mockResolvedValue(mockContributors);
 
         const contributors = await getContributors('owner', 'repo');
         expect(contributors).not.toBeNull();
@@ -45,28 +48,26 @@ describe('Bus Factor calculations', () => {
 
 describe('calculateBusFactor', () => {
     it('should correctly calculate bus factor when contributors are present', async () => {
-        const mockContributors = [
-            {
-                author: {
-                login: 'user1',
+        const mockContributors = {
+            content: Buffer.from(JSON.stringify([
+                {
+                    author: { login: 'user1' },
+                    total: 60,
+                    weeks: [
+                        { c: 30, a: 20 },
+                        { c: 20, a: 10 },
+                    ],
                 },
-            total: 60,
-            weeks: [
-                { c: 30, a: 20 },
-                { c: 20, a: 10 },
-            ],
-            },
-            {
-                author: {
-                login: 'user2',
-                },
-            total: 30,
-            weeks: [
-                { c: 10, a: 10 },
-                { c: 5, a: 5 },
-            ],
-            },
-        ];
+                {
+                    author: { login: 'user2' },
+                    total: 30,
+                    weeks: [
+                        { c: 10, a: 10 },
+                        { c: 5, a: 5 },
+                    ],
+                }
+            ])).toString('base64')
+        };
 
         (getRequest as jest.Mock).mockResolvedValue(mockContributors);
 
