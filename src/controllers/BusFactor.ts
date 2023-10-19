@@ -3,9 +3,6 @@ import { response } from 'express';
 
 interface Contributor {
   login : string;
-  commits : number;
-  prs : number;
-  issues : number;
   totalContributions : number;
 }
 
@@ -16,25 +13,21 @@ export const getContributors = async (
   const contributors: Contributor[] = [];
   try {
     const response = await getRequest(
-      `/repos/${owner}/${repo}/stats/contributors`
+      `/repos/${owner}/${repo}/contributors`
     );
     response.forEach((contributor: any) => {
+      console.log(contributor);
       const contributor_object : Contributor = {
-        login: contributor.author.login,
-        commits: contributor.total,
-        prs: contributor.weeks.reduce( (accumulator: number, week: any) => accumulator + week.c, 0),
-        issues: contributor.weeks.reduce( (accumulator: number, week: any) => accumulator + week.a, 0),
-        totalContributions: 0
-      };
-      contributor_object.totalContributions = contributor_object.commits + contributor_object.prs + contributor_object.issues;
+        login: contributor.login,
+        totalContributions: contributor.contributions
+      }
       contributors.push(contributor_object);
     });
     contributors.sort((a, b) => b.totalContributions - a.totalContributions);
     return contributors;
   } catch (error: any) {
-    console.log(response)
-    console.log("response")
-    console.log("Error in getContributors: with repo: " + repo + " and owner: " + owner, error);
+    console.log(`response: ${response}`)
+    console.log(`Error in getContributors: with repo: ${repo} and owner: ${owner}`)
     return null;
   }
 };
