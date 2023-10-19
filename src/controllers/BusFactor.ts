@@ -1,5 +1,6 @@
 import { exit } from 'process';
 import { getRequest } from '../utils/api.utils';
+import { response } from 'express';
 
 interface Contributor {
   login : string;
@@ -32,6 +33,8 @@ export const getContributors = async (
     contributors.sort((a, b) => b.totalContributions - a.totalContributions);
     return contributors;
   } catch (error: any) {
+    console.log(response)
+    console.log("response")
     console.log("Error in getContributors: with repo: " + repo + " and owner: " + owner, error);
     return null;
   }
@@ -48,12 +51,12 @@ export const calculateBusFactor = async (owner: string, repo: string) => {
     contributors.forEach((contributor) => {
       totalContributions += contributor.totalContributions;
     });
-    const sixtyPercent = 0.6 * totalContributions;
+    const fractionContributors = 0.7 * totalContributions;
     let contributions = 0;
-    for (let i = 0; i < contributors.length; i++) {
-      contributions += contributors[i].totalContributions;
-      busFactor += 0.1;
-      if (contributions >= sixtyPercent) {
+    for(const contributor of contributors) {
+      contributions += contributor.totalContributions;
+      busFactor += 0.2;
+      if (contributions >= fractionContributors) {
         break;
       }
     }

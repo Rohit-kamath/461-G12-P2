@@ -71,7 +71,7 @@ describe('calculateBusFactor', () => {
         (getRequest as jest.Mock).mockResolvedValue(mockContributors);
 
         const result = await calculateBusFactor('owner', 'repo');
-        expect(result).toBe(0.1);
+        expect(result).toBe(0.2);
     });
 
     it('should return a bus factor of 0 if no contributors are found', async () => {
