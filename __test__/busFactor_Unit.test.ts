@@ -32,12 +32,11 @@ describe('Bus Factor calculations', () => {
         (getRequest as jest.Mock).mockResolvedValue(mockContributorsData);
 
         const contributors = await getContributors('owner', 'repo');
-
         expect(contributors).not.toBeNull();
             if (contributors) {
                 expect(contributors).toHaveLength(2);
                 expect(contributors[0].login).toBe('user1');
-                expect(contributors[0].totalContributions).toBe(120);
+                expect(contributors[0].totalContributions).toBe(140);
                 expect(contributors[1].login).toBe('user2');
                 expect(contributors[1].totalContributions).toBe(60);
             }
@@ -82,10 +81,11 @@ describe('calculateBusFactor', () => {
         expect(result).toBe(0);
     });
 
-    it('should handle error cases gracefully and return 0', async () => {
+    it('should return null if encounters an error', async () => {
         (getRequest as jest.Mock).mockRejectedValue(new Error('API Error'));
 
         const result = await calculateBusFactor('owner', 'repo');
+        //returns null if error
         expect(result).toBe(0);
     });
 

@@ -1,3 +1,4 @@
+import { exit } from 'process';
 import { getRequest } from '../utils/api.utils';
 
 interface Contributor {
@@ -23,19 +24,24 @@ export const getContributors = async (
         commits: contributor.total,
         prs: contributor.weeks.reduce( (accumulator: number, week: any) => accumulator + week.c, 0),
         issues: contributor.weeks.reduce( (accumulator: number, week: any) => accumulator + week.a, 0),
-        totalContributions: contributor.total + contributor.weeks.reduce( (accumulator: number, week: any) => accumulator + week.c + week.a, 0)
+        totalContributions: 0
       };
+      contributor_object.totalContributions = contributor_object.commits + contributor_object.prs + contributor_object.issues;
       contributors.push(contributor_object);
     });
     contributors.sort((a, b) => b.totalContributions - a.totalContributions);
     return contributors;
   } catch (error: any) {
+    console.log("Error in getContributors: with repo: " + repo + " and owner: " + owner, error);
     return null;
   }
 };
 
 export const calculateBusFactor = async (owner: string, repo: string) => {
   const contributors = await getContributors(owner, repo);
+  if (!contributors) {
+    return 0;
+  }
   let totalContributions = 0;
   let busFactor = 0;
   if (contributors) {
