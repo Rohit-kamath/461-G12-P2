@@ -1,4 +1,3 @@
-import { exit } from 'process';
 import { getRequest } from '../utils/api.utils';
 import { response } from 'express';
 
