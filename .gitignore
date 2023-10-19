@@ -12,3 +12,4 @@ one-url.txt
 node_modules
 temp/
 logfile.log
+dist
