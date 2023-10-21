@@ -12,11 +12,8 @@ export const getContributors = async (
 ): Promise<Contributor[] | null> => {
   const contributors: Contributor[] = [];
   try {
-    const response = await getRequest(
-      `/repos/${owner}/${repo}/contributors`
-    );
+    const response = await getRequest(`/repos/${owner}/${repo}/contributors`);
     response.forEach((contributor: any) => {
-      console.log(contributor);
       const contributor_object : Contributor = {
         login: contributor.login,
         totalContributions: contributor.contributions
@@ -26,14 +23,12 @@ export const getContributors = async (
     contributors.sort((a, b) => b.totalContributions - a.totalContributions);
     return contributors;
   } catch (error: any) {
-    console.log(`response: ${response}`)
-    console.log(`Error in getContributors: with repo: ${repo} and owner: ${owner}`)
+    console.log(`Error in getContributors: with repo: ${repo} and owner: ${owner}, response: ${JSON.stringify(response, null, 2)}, error: ${error}`)
     return null;
   }
 };
 
-export const calculateBusFactor = async (owner: string, repo: string) => {
-  const contributors = await getContributors(owner, repo);
+export const calculateBusFactor = (contributors: Contributor[] | null): number => {
   if (!contributors) {
     return 0;
   }
@@ -55,4 +50,11 @@ export const calculateBusFactor = async (owner: string, repo: string) => {
   }
 
   return Math.min(busFactor, 1);
+};
+
+//getBusFactor uses both previous functions and returns the score
+export const getBusFactor = async (owner: string, repo: string): Promise<number> => {
+  const contributors = await getContributors(owner, repo);
+  const busFactor = calculateBusFactor(contributors);
+  return busFactor;
 };
