@@ -25,7 +25,7 @@ export async function getDependencies(owner: string, repo: string) : Promise<Dep
     }
 }
 
-export async function calculateDependencyFactor(owner: string, repo : string) : Promise<number> {
+export async function calculateGoodPinningPractice(owner: string, repo : string) : Promise<number> {
     const dependencies = await getDependencies(owner, repo);
     const totalDependencies = dependencies ? dependencies.length : 0;
     

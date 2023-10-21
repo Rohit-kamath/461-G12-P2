@@ -1,5 +1,5 @@
 import { getRequest } from '../src/utils/api.utils';
-import { calculateDependencyFactor } from '../src/controllers/DependencyFactor';
+import { calculateGoodPinningPractice } from '../src/controllers/GoodPinningPractice';
 
 jest.mock('../src/utils/api.utils');
 
@@ -16,7 +16,7 @@ describe('Dependency Factor', () => {
 
         (getRequest as jest.Mock).mockResolvedValue(mockData);
 
-        const score = await calculateDependencyFactor('testOwner', 'testRepo');
+        const score = await calculateGoodPinningPractice('testOwner', 'testRepo');
         expect(score).toBe(1);
     });
 
@@ -32,7 +32,7 @@ describe('Dependency Factor', () => {
 
         (getRequest as jest.Mock).mockResolvedValue(mockData);
 
-        const score = await calculateDependencyFactor('testOwner', 'testRepo');
+        const score = await calculateGoodPinningPractice('testOwner', 'testRepo');
         expect(score).toBe(0.5);
     });
 
@@ -48,7 +48,7 @@ describe('Dependency Factor', () => {
 
         (getRequest as jest.Mock).mockResolvedValue(mockData);
 
-        const score = await calculateDependencyFactor('testOwner', 'testRepo');
+        const score = await calculateGoodPinningPractice('testOwner', 'testRepo');
         expect(score).toBe(0);
     });
 });
