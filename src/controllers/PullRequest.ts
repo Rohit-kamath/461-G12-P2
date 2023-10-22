@@ -21,5 +21,7 @@ export async function numberOfApprovedPRs(owner: string, repo : string): Promise
 export async function getPullRequest(owner: string, repo : string): Promise<number> {
     const approvedPRs = await numberOfApprovedPRs(owner, repo);
     const commits = await numberOfCommits(owner, repo);
-    return (approvedPRs)/commits;
+    const metric = (approvedPRs)/commits;
+    //return metric and make it between 0 and 1
+    return metric > 1 ? 1 : metric;
 }
