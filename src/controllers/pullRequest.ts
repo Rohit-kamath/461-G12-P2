@@ -11,7 +11,7 @@ export async function numberOfApprovedPRs(owner: string, repo : string): Promise
     const response = await getRequest(`/repos/${owner}/${repo}/pulls?state=all`);
     let approvedPRs = 0;
     response.forEach((pr: any) => {
-        if(pr.merged_at){
+        if(pr.mergedAt){
             approvedPRs++;
         }
     });
