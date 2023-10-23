@@ -18,7 +18,7 @@ export const getRequest = async (endpoint: string, params?: any) => {
     });
     return response.data;
   } catch (error) {
-    //console.error('Error making GET request:', error);
+    console.error('Error making GET request:', error);
     throw error;
   }
 };
