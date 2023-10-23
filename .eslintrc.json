@@ -12,10 +12,39 @@
     "parserOptions": {
         "ecmaVersion": "latest"
     },
-    "plugins": [
-        "@typescript-eslint"
-    ],
+    "plugins": ["@typescript-eslint"],
     "rules": {
-        "@typescript-eslint/no-explicit-any": "off"
+        "@typescript-eslint/naming-convention": [
+            "error",
+            {
+                "selector": "variable",
+                "format": ["camelCase"]
+            },
+            {
+                "selector": "function",
+                "format": ["camelCase"]
+            },
+            {
+                "selector": "class",
+                "format": ["PascalCase"]
+            },
+            {
+                "selector": "interface",
+                "format": ["PascalCase"]
+            },
+            {
+                "selector": "interface",
+                "modifiers": ["member"],
+                "format": ["camelCase"]
+            },
+            {
+                "selector": "typeAlias",
+                "format": ["PascalCase"]
+            },
+            {
+                "selector": "enum",
+                "format": ["PascalCase"]
+            }
+        ]
     }
 }
