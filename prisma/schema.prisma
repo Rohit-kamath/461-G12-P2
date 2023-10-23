@@ -23,6 +23,7 @@ model Packages {
   user_id        Int
   package_name   String @db.VarChar(255)
   download_date  DateTime
+  version        String   @db.VarChar(255)
   user           Users  @relation(fields: [user_id], references: [user_id])
 }
 
