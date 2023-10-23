@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Folder Upload</title>
+</head>
+<body>
+    <h1>Upload a Folder</h1>
+    <form id="folderUploadForm">
+        <input type="file" id="folderInput" webkitdirectory multiple>
+        <button type="submit">Upload Folder</button>
+    </form>
+
+    <div id="status"></div>
+
+    <script>
+        const folderUploadForm = document.getElementById('folderUploadForm');
+        const folderInput = document.getElementById('folderInput');
+        const status = document.getElementById('status');
+
+        folderUploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (folderInput.files.length === 0) {
+                status.textContent = 'Please select a folder to upload.';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('folder', folderInput.files[0]);
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (response.ok) {
+                    status.textContent = 'Folder uploaded successfully!';
+                } else {
+                    status.textContent = 'Error uploading the folder.';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                status.textContent = 'An error occurred while uploading the folder.';
+            }
+        });
+    </script>
+</body>
+</html>
