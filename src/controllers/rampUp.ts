@@ -1,5 +1,5 @@
 //import { Request, Response, NextFunction } from 'express';
-import * as RampUpAPI from '../utils/RampUpAPI';
+import * as RampUpAPI from '../utils/rampUpAPI';
 
 export const calculateRampUp = async (owner: string, repo: string) => {
 	/* const { owner, repo } = req.query as { owner: string; repo: string }; */

@@ -1,4 +1,4 @@
-import { numberOfCommits, numberOfApprovedPRs, getPullRequest } from "../src/controllers/PullRequest";
+import { numberOfCommits, numberOfApprovedPRs, getPullRequest } from "../src/controllers/pullRequest";
 import { getRequest } from "../src/utils/api.utils";
 
 // Mocking the getRequest function from api.utils

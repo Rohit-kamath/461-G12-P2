@@ -1,10 +1,10 @@
 import { correctness } from "./correctness";
-import { getBusFactor} from "./BusFactor";
-import { calculateRampUp } from "./RampUp";
-import { Responsiveness } from "./Responsiveness";
-import { getLicenseScore } from "./License";
-import { calculateGoodPinningPractice } from "./GoodPinningPractice";
-import {getPullRequest } from "./PullRequest";
+import { getBusFactor} from "./busFactor";
+import { calculateRampUp } from "./rampUp";
+import { Responsiveness } from "./responsiveness";
+import { getLicenseScore } from "./license";
+import { calculateGoodPinningPractice } from "./goodPinningPractice";
+import {getPullRequest } from "./pullRequest";
 
 export class NET_SCORE {
     constructor(private owner: string, private repo: string) {}

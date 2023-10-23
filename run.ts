@@ -1,6 +1,6 @@
 import { readFileSync, existsSync } from 'fs';
 import { execSync } from 'child_process';
-import { NET_SCORE } from './src/controllers/NetScore';
+import { NET_SCORE } from './src/controllers/netScore';
 
 class PackageClassifier {
   urls: string[];
