@@ -7,7 +7,7 @@ import { calculateGoodPinningPractice } from "./GoodPinningPractice";
 import {getPullRequest } from "./PullRequest";
 
 export class NET_SCORE {
-    constructor(private owner: string, private repo: string) {};
+    constructor(private owner: string, private repo: string) {}
     async calculate(): Promise<{NET_SCORE: number, RAMP_UP_SCORE: number, CORRECTNESS_SCORE: number, BUS_FACTOR_SCORE: number, RESPONSIVE_MAINTAINER_SCORE: number, LICENSE_SCORE: number}> {
         const correctnessobj = new correctness(this.owner, this.repo);
         let CORRECTNESS_SCORE = 0;
@@ -16,8 +16,8 @@ export class NET_SCORE {
         const responsiveness = new Responsiveness('someSharedProperty', this.owner, this.repo);
         const RESPONSIVE_MAINTAINER_SCORE = await responsiveness.calculateMetric();
         const LICENSE_SCORE = await getLicenseScore(this.owner, this.repo);
-        // const GOOED_PINNING_PRACTICE_SCORE = await calculateGoodPinningPractice(this.owner, this.repo);
-        // console.log(`GOOED_PINNING_PRACTICE_SCORE: ${GOOED_PINNING_PRACTICE_SCORE}`);
+        const GOOED_PINNING_PRACTICE_SCORE = await calculateGoodPinningPractice(this.owner, this.repo);
+        console.log(`GOOED_PINNING_PRACTICE_SCORE: ${GOOED_PINNING_PRACTICE_SCORE}`);
         const PULL_REQUEST_SCORE = await getPullRequest(this.owner, this.repo);
         console.log(PULL_REQUEST_SCORE)
         const NET_SCORE = (CORRECTNESS_SCORE * 0.25 + BUS_FACTOR_SCORE * 0.15 + RAMP_UP_SCORE * 0.25 + RESPONSIVE_MAINTAINER_SCORE * 0.3 + LICENSE_SCORE * 0.05);
