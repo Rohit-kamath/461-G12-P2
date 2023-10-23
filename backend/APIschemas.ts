@@ -1,3 +1,5 @@
+//defines all schemas used in the API
+
 interface Package {
     metadata: PackageMetadata;
     data: PackageData;
