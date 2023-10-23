@@ -34,7 +34,7 @@
             },
             {
                 "selector": "interface",
-                "modifiers": ["member"],
+                "modifiers": ["property"],
                 "format": ["camelCase"]
             },
             {
