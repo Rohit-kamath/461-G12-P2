@@ -68,7 +68,7 @@ async function main() {
         process.exit(1);
       }
       const classifier = new PackageClassifier(filename);
-      const { gitUrls } = classifier.classifyUrls();
+      const { gitUrls,  } = classifier.classifyUrls();
       const urls = classifier.getUrls();
       let i = 0;
       const results: any[] = [];
@@ -91,7 +91,8 @@ async function main() {
         }
       }
     } catch (error) {
-      console.log(error);
+      console.error(error);
+      process.exit(1);
     }
 
 }

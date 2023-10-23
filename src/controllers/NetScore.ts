@@ -9,7 +9,7 @@ import {getPullRequest } from "./PullRequest";
 export class NET_SCORE {
     constructor(private owner: string, private repo: string) {}
     async calculate(): Promise<{NET_SCORE: number, RAMP_UP_SCORE: number, CORRECTNESS_SCORE: number, BUS_FACTOR_SCORE: number, RESPONSIVE_MAINTAINER_SCORE: number, LICENSE_SCORE: number}> {
-        const correctnessobj = new correctness(this.owner, this.repo);
+        // const correctnessobj = new correctness(this.owner, this.repo);
         let CORRECTNESS_SCORE = 0;
         const BUS_FACTOR_SCORE = await getBusFactor(this.owner, this.repo);
         const RAMP_UP_SCORE = await calculateRampUp(this.owner, this.repo);
