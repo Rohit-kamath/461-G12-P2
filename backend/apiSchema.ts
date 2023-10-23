@@ -1,32 +1,30 @@
-// apiSchema.ts
-
-interface Package {
+export type Package = {
     metadata: PackageMetadata;
     data: PackageData;
-}
+};
 
-interface PackageMetadata {
+export type PackageMetadata = {
     Name: string;
     Version: string;
     ID: string;
-}
+};
 
-interface PackageData {
+export type PackageData = {
     Content?: string;
     URL?: string;
     JSProgram?: string;
-}
+};
 
-interface User {
+export type User = {
     name: string;
     isAdmin: boolean;
-}
+};
 
-interface UserAuthenticationInfo {
+export type UserAuthenticationInfo = {
     password: string;
-}
+};
 
-interface PackageRating {
+export type PackageRating = {
     BusFactor: number;
     Correctness: number;
     RampUp: number;
@@ -35,55 +33,37 @@ interface PackageRating {
     GoodPinningPractice: number;
     PullRequest: number;
     NetScore: number;
-}
+};
 
-interface PackageHistoryEntry {
+export type PackageHistoryEntry = {
     User: User;
     Date: string;
     metadata: PackageMetadata;
     Action: 'CREATE' | 'UPDATE' | 'DOWNLOAD' | 'RATE';
-}
+};
 
-interface PackageName {
+export type PackageName = {
     Name: string;
-}
+};
 
-interface AuthenticationToken {
+export type AuthenticationToken = {
     token: string;
-}
+};
 
-interface AuthenticationRequest {
+export type AuthenticationRequest = {
     User: User;
     Secret: UserAuthenticationInfo;
-}
+};
 
-type SemverRange = string;
+export type SemverRange = string;
 
-interface PackageQuery {
+export type PackageQuery = {
     Version: SemverRange;
     Name: PackageName;
-}
+};
 
-type EnumerateOffset = string;
+export type EnumerateOffset = string;
 
-interface PackageRegEx {
+export type PackageRegEx = {
     RegEx: string;
-}
-
-// Export everything at the end of the file
-export {
-    Package,
-    PackageMetadata,
-    PackageData,
-    User,
-    UserAuthenticationInfo,
-    PackageRating,
-    PackageHistoryEntry,
-    PackageName,
-    AuthenticationToken,
-    AuthenticationRequest,
-    SemverRange,
-    PackageQuery,
-    EnumerateOffset,
-    PackageRegEx,
 };
