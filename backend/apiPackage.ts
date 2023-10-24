@@ -2,22 +2,28 @@
 import * as apiSchema from './apiSchema';
 import { Request, Response } from 'express';
 import * as prismOperations from './prismaOperations';
+import { type } from 'os';
 export async function getPackageMetaData(req : Request, res : Response){
   try{
-    const packageQuery : apiSchema.PackageQuery = {
-      Name: req.query.name as string,
-      Version: req.query.Version as string
-    }
     //later will have to split version along \n. For now, just act like there's no \n character and it's only single query with exact version
-    const minVersion : string = packageQuery.Version;
-    const maxVersion : string = packageQuery.Version;
+    //also pretend that it's just a string like "1.2.3" instead of "exact (1.2.3) for now. Later, we can parse the string to get the version range"
+    if(req.query?.name === undefined){
+      return res.status(400).send(`Error in getPackageMetaData: Name is undefined`);
+    }
+    if(req.query?.version === undefined){
+      return res.status(400).send(`Error in getPackageMetaData: Version is undefined`);
+    }
+
+    const queryName = req.query?.name;
+    const minVersion = req.query?.version;
+    const maxVersion = req.query?.version;
     const packageMetaData : apiSchema.PackageMetadata[] | null = await prismOperations.dbGetPackage(packageQuery.Name, minVersion, maxVersion);
     if(packageMetaData === null){
-      res.status(500).send(`Error in getPackageMetaData: packageMetaData is null`);
+      return res.status(500).send(`Error in getPackageMetaData: packageMetaData is null`);
     }
-    res.status(200).json(packageMetaData);
+    return res.status(200).json(packageMetaData);
   }catch(error){
     console.log(`Error in getPackageMetaData: ${error}`);
-    res.status(500).send(`Error in getPackageMetaData: ${error}`);
+    return res.status(500).send(`Error in getPackageMetaData: ${error}`);
   }
 }
