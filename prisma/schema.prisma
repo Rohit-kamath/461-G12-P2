@@ -37,4 +37,3 @@ model API_Token {
   download_permission Boolean
   user                Users   @relation(fields: [user_id], references: [user_id])
 }
-
