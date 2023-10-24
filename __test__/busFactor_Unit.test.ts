@@ -1,4 +1,4 @@
-import { calculateBusFactor } from '../src/controllers/BusFactor';
+import { calculateBusFactor } from '../src/controllers/busFactor';
 
 interface Contributor {
     login : string;

@@ -1,4 +1,4 @@
-import { getContributors, calculateBusFactor } from '../src//controllers/BusFactor';
+import { getContributors, calculateBusFactor } from '../src//controllers/busFactor';
 
 describe('Bus Factor Calculations Integration Tests', () => {
 

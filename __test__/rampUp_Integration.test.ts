@@ -1,4 +1,4 @@
-import { calculateRampUp } from '../src/controllers/RampUp';
+import { calculateRampUp } from '../src/controllers/rampUp';
 
 describe('RampUp Calculations Integration Tests', () => {
 	const owner = 'facebook';

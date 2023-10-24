@@ -1,7 +1,6 @@
 import { readFileSync, existsSync } from 'fs';
 import { execSync } from 'child_process';
-import { NET_SCORE } from './src/controllers/NetScore';
-const ndjson = require('ndjson');
+import { NET_SCORE } from './src/controllers/netScore';
 
 class PackageClassifier {
   urls: string[];
@@ -26,7 +25,7 @@ class PackageClassifier {
         url.startsWith('git+ssh://git@github.com/') ||
         url.startsWith('ssh://git@github.com/')
       ) {
-        let cleanUrl = url
+        const cleanUrl = url
           .replace('git+', '')
           .replace('git+ssh://', '')
           .replace('ssh://', '');
@@ -37,7 +36,7 @@ class PackageClassifier {
         if (packageName) {
           const repoUrl = this.getNpmPackageRepoUrl(packageName);
           if (repoUrl) {
-            let cleanRepoUrl = repoUrl
+            const cleanRepoUrl = repoUrl
               .replace('git+', '')
               .replace('git+ssh://', '')
               .replace('ssh://', '');
@@ -69,7 +68,7 @@ async function main() {
         process.exit(1);
       }
       const classifier = new PackageClassifier(filename);
-      const { gitUrls, npmPackageUrls } = classifier.classifyUrls();
+      const { gitUrls,  } = classifier.classifyUrls();
       const urls = classifier.getUrls();
       let i = 0;
       const results: any[] = [];
@@ -92,6 +91,8 @@ async function main() {
         }
       }
     } catch (error) {
+      console.error(error);
+      process.exit(1);
     }
 
 }

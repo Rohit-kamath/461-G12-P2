@@ -1,4 +1,4 @@
-import { getLicenseScore } from '../src/controllers/License';
+import { getLicenseScore } from '../src/controllers/license';
 import { getRequest } from '../src/utils/api.utils';
 
 jest.mock('../src/utils/api.utils');

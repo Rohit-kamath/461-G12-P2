@@ -1,7 +1,7 @@
-import * as RampUpAPI from '../src/utils/RampUpAPI';
-import { calculateRampUp } from '../src/controllers/RampUp';
+import * as RampUpAPI from '../src/utils/rampUpAPI';
+import { calculateRampUp } from '../src/controllers/rampUp';
 
-jest.mock('../src/utils/RampUpAPI'); // Mock the entire RampUpAPI module
+jest.mock('../src/utils/rampUpAPI'); // Mock the entire RampUpAPI module
 
 describe('RampUp Unit Tests', () => {
 	const owner = 'facebook';
