@@ -13,6 +13,6 @@ app.get('/', (req, res) => {
     res.send('The sedulous hyena ate the antelope!');
 });
 
-app.get('/packages', async (req, res) => {
+app.post('/packages', async (req, res) => {
     await apiPackage.getPackageMetaData(req, res);
 });
