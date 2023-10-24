@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,30 +7,79 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Users {
-  user_id   Int       @id
-  username  String    @db.VarChar(255)
-  password  String    @db.VarChar(255)
-  Packages  Packages[]
-  API_Token API_Token[]
+model User {
+  id                  Int                     @id @default(autoincrement())
+  name                String                  @db.VarChar(255)
+  isAdmin             Boolean
+  password            String                  @db.VarChar(255)
+  Packages            Package[]
+  API_Tokens          APIToken[]
+  AuthRequests        AuthenticationRequest[]
+  PackageHistoryEntry PackageHistoryEntry[]
 }
 
-model Packages {
-  package_id     String @id @db.VarChar(255)
-  user_id        Int
-  package_name   String @db.VarChar(255)
-  download_date  DateTime
-  version        String   @db.VarChar(255)
-  user           Users  @relation(fields: [user_id], references: [user_id])
+model Package {
+  id               String                @id @db.VarChar(255)
+  metadataId       String 
+  dataId           String 
+  metadata         PackageMetadata       @relation(fields: [metadataId], references: [id])
+  data             PackageData           @relation(fields: [dataId], references: [id])
+  userId           Int
+  user             User                  @relation(fields: [userId], references: [id])
+  PackageHistories PackageHistoryEntry[]
 }
 
-model API_Token {
-  token_id            String @id @db.VarChar(255)
-  user_id             Int
-  num_usage           Int
-  created_at          DateTime
-  upload_permission   Boolean
-  search_permission   Boolean
-  download_permission Boolean
-  user                Users   @relation(fields: [user_id], references: [user_id])
+model PackageMetadata {
+  id      String    @id @db.VarChar(255)
+  name    String    @db.VarChar(255)
+  version String    @db.VarChar(255)
+  Package Package[]
+}
+
+model PackageData {
+  id        String    @id @db.VarChar(255)
+  content   String?   @db.Text
+  URL       String?   @db.VarChar(255)
+  JSProgram String?   @db.VarChar(255)
+  Package   Package[]
+}
+
+model PackageRating {
+  id                   Int   @id @default(autoincrement())
+  busFactor            Float
+  correctness          Float
+  rampUp               Float
+  responsiveMaintainer Float
+  licenseScore         Float
+  goodPinningPractice  Float
+  pullRequest          Float
+  netScore             Float
+}
+
+model PackageHistoryEntry {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  date      DateTime
+  packageId String
+  package   Package  @relation(fields: [packageId], references: [id])
+  action    String
+}
+
+model APIToken {
+  id                 String   @id @db.VarChar(255)
+  userId             Int
+  user               User     @relation(fields: [userId], references: [id])
+  numUsage           Int
+  createdAt          DateTime
+  uploadPermission   Boolean
+  searchPermission   Boolean
+  downloadPermission Boolean
+}
+
+model AuthenticationRequest {
+  id     Int    @id @default(autoincrement())
+  userId Int
+  user   User   @relation(fields: [userId], references: [id])
+  secret String @db.VarChar(255)
 }
