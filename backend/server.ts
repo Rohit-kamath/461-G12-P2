@@ -1,5 +1,6 @@
 //express server
 import express from "express";
+import * as apiPackage from "./apiPackage";
 const port = 3000;
 const app = express();
 
@@ -10,4 +11,8 @@ app.listen(port, () => {
 
 app.get('/', (req, res) => {
     res.send('The sedulous hyena ate the antelope!');
+});
+
+app.get('/packages', async (req, res) => {
+    await apiPackage.getPackageMetaData(req, res);
 });
