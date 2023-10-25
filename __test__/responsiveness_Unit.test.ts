@@ -1,4 +1,4 @@
-import { Responsiveness } from '../src/controllers/Responsiveness';
+import { Responsiveness } from '../src/controllers/responsiveness';
 import * as responsivenessApi from '../src/utils/responsivenessApi';
 
 jest.mock('../src/utils/responsivenessApi');

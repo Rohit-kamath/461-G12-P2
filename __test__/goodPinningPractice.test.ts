@@ -1,5 +1,5 @@
 import { getRequest } from '../src/utils/api.utils';
-import { calculateGoodPinningPractice } from '../src/controllers/GoodPinningPractice';
+import { calculateGoodPinningPractice } from '../src/controllers/goodPinningPractice';
 
 jest.mock('../src/utils/api.utils');
 
