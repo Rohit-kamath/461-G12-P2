@@ -2,6 +2,7 @@
 import * as apiSchema from './apiSchema';
 import { Request, Response } from 'express';
 import * as prismOperations from './prismaOperations';
+import * as prismaSchema from '@prisma/client';
 export async function getPackageMetaData(req : Request, res : Response){
   try{
     //later will have to split version along \n. For now, just act like there's no \n character and it's only single query with exact version
@@ -16,11 +17,11 @@ export async function getPackageMetaData(req : Request, res : Response){
     const queryName = req.query.name as string;
     const minVersion = req.query.version as string;
     const maxVersion = req.query.version as string;
-    const packageMetaData : apiSchema.PackageMetadata[] | null = await prismOperations.dbGetPackage(queryName, minVersion, maxVersion);
-    if(packageMetaData === null){
+    const dbPackageMetaData : prismaSchema.PackageMetadata[] | null = await prismOperations.dbGetPackage(queryName, minVersion, maxVersion);
+    if(dbPackageMetaData === null){
       return res.status(500).send(`Error in getPackageMetaData: packageMetaData is null`);
     }
-    return res.status(200).json(packageMetaData);
+    return res.status(200).json(dbPackageMetaData);
   }catch(error){
     console.log(`Error in getPackageMetaData: ${error}`);
     return res.status(500).send(`Error in getPackageMetaData: ${error}`);
