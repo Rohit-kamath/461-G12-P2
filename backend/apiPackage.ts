@@ -3,7 +3,8 @@ import * as apiSchema from './apiSchema';
 import { Request, Response } from 'express';
 import * as prismOperations from './prismaOperations';
 import * as prismaSchema from '@prisma/client';
-export async function getPackageMetaData(req : Request, res : Response){
+
+export async function getPackageHistory(req : Request, res : Response){
   try{
     //later will have to split version along \n. For now, just act like there's no \n character and it's only single query with exact version
     //also pretend that it's just a string like "1.2.3" instead of "exact (1.2.3) for now. Later, we can parse the string to get the version range"
@@ -18,7 +19,7 @@ export async function getPackageMetaData(req : Request, res : Response){
     const minVersion = req.query.version as string;
     const maxVersion = req.query.version as string;
   
-    const dbPackageMetaData : prismaSchema.PackageMetadata[] | null = await prismOperations.dbGetPackageMetaData(queryName, minVersion, maxVersion);
+    const dbPackageMetaData : prismaSchema.PackageMetadata[] | null = await prismOperations.dbGetPackageMetaDataArray(queryName, minVersion, maxVersion);
     if(dbPackageMetaData === null){
       return res.status(500).send(`Error in getPackageMetaData: packageMetaData is null`);
     }

@@ -1,11 +1,11 @@
 import { Request, Response } from 'express';
 import * as prismOperations from '../backend/prismaOperations';
-import { getPackageMetaData } from '../backend/apiPackage';
+import { getPackageHistory } from '../backend/apiPackage';
 
 jest.mock('../backend/prismaOperations');
 
-describe('getPackageMetaData', () => {
-  it('should return package metadata when valid data is provided', async () => {
+describe('getPackageHistory', () => {
+  it('should return package history when valid data is provided', async () => {
     const req : Partial<Request>= {
         query: {
             Version: '1.2.3',
@@ -32,9 +32,9 @@ describe('getPackageMetaData', () => {
       },
     ];
 
-    (prismOperations.dbGetPackageMetaData as jest.Mock).mockResolvedValue(mockData);
+    (prismOperations.dbGetPackageMetaDataArray as jest.Mock).mockResolvedValue(mockData);
 
-    await getPackageMetaData(req as Request, res as Response);
+    await getPackageHistory(req as Request, res as Response);
 
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith(mockData.map((data) => ({
