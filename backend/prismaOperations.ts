@@ -6,7 +6,7 @@ async function dbUploadPackage(packageData : apiSchema.AuthenticationRequest) {
 }
 
 //parameters: packageName,
-export async function dbGetPackage(queryName : apiSchema.PackageName, minVersion : string, maxVersion : string) : Promise<prismaSchema.PackageMetadata[] | null> {
+export async function dbGetPackageMetaDataArray(queryName : apiSchema.PackageName, minVersion : string, maxVersion : string) : Promise<prismaSchema.PackageMetadata[] | null> {
     //in the future, have to parse query.Version to get a version range
     //also, will have to handle paginated request with a skip and take parameter
     try{

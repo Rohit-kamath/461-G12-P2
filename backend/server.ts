@@ -15,9 +15,8 @@ app.get('/', (req, res) => {
 
 app.post('/packages', async (req, res) => {
     try {
-        await apiPackage.getPackageMetaData(req, res);
+        await apiPackage.getPackageHistory(req, res);
     } catch (error) {
-        console.error(error);
         res.status(500).send('Internal Server Error');
     }
-});  
+}); 
