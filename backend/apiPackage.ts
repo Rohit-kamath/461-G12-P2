@@ -17,11 +17,21 @@ export async function getPackageMetaData(req : Request, res : Response){
     const queryName = req.query.name as string;
     const minVersion = req.query.version as string;
     const maxVersion = req.query.version as string;
+  
     const dbPackageMetaData : prismaSchema.PackageMetadata[] | null = await prismOperations.dbGetPackage(queryName, minVersion, maxVersion);
     if(dbPackageMetaData === null){
       return res.status(500).send(`Error in getPackageMetaData: packageMetaData is null`);
     }
-    return res.status(200).json(dbPackageMetaData);
+    //map dbPackageMetaData to apiPackageMetaData
+    const apiPackageMetaData : apiSchema.PackageMetadata[] = dbPackageMetaData.map((dbPackageMetaData : prismaSchema.PackageMetadata) => {
+      const apiPackageMetaData : apiSchema.PackageMetadata = {
+        Name: dbPackageMetaData.name,
+        Version: dbPackageMetaData.version,
+        ID: dbPackageMetaData.id
+      };
+      return apiPackageMetaData;
+    });
+    return res.status(200).json(apiPackageMetaData);
   }catch(error){
     console.log(`Error in getPackageMetaData: ${error}`);
     return res.status(500).send(`Error in getPackageMetaData: ${error}`);
