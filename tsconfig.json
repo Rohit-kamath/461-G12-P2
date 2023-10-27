@@ -6,6 +6,7 @@
     "esModuleInterop": true,
     "outDir": "dist",
     "skipLibCheck": true,
+    "jsx": "react",
     "forceConsistentCasingInFileNames": true
   },
   "include": ["src/**/*.ts", "__test__/Responsiveness.test.ts", "__test__/responsivenessApi.test.ts", "backend/**/*.ts"],
