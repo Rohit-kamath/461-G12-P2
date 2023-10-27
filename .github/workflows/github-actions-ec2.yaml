@@ -14,6 +14,9 @@ jobs:
       - name: Checkout files
         uses: actions/checkout@v2
 
+      - name: Add EC2 to SSH known hosts
+        run: echo "${{ secrets.EC2_HOST_KEY }}" >> ~/.ssh/known_hosts
+
       - name: Deploy to EC2
         env:
           EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
