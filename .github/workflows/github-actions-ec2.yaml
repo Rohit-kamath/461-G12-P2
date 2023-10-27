@@ -15,7 +15,12 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Add EC2 to SSH known hosts
-        run: echo "${{ secrets.EC2_HOST_KEY }}" >> ~/.ssh/known_hosts
+        env:
+          EC2_HOST_KEY: ${{ secrets.EC2_HOST_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_HOST_KEY }}" >> ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
 
       - name: Deploy to EC2
         env:
