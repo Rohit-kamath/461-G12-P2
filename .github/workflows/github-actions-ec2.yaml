@@ -31,6 +31,6 @@ jobs:
         run: |
           echo "$EC2_SSH_KEY" > private_key.pem
           chmod 600 private_key.pem
-          ssh -i private_key.pem $USERNAME@$HOST_DNS 'yum update -y && rm -rf $TARGET_DIR && git clone https://github.com/Rohit-kamath/461-G12-P2.git $TARGET_DIR'
+          ssh -i private_key.pem $USERNAME@$HOST_DNS 'sudo yum update -y && sudo rm -rf $TARGET_DIR && git clone https://github.com/Rohit-kamath/461-G12-P2.git $TARGET_DIR'
           rm -f private_key.pem
 
