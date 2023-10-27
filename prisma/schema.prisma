@@ -1,0 +1,79 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  Int                     @id @default(autoincrement())
+  name                String                  @db.VarChar(255)
+  isAdmin             Boolean
+  password            String                  @db.VarChar(255)
+  API_Tokens          APIToken[]
+  AuthRequests        AuthenticationRequest[]
+  PackageHistoryEntry PackageHistoryEntry[]
+}
+
+model Package {
+  id        String          @id @db.VarChar(255)
+  metadataId String         @unique
+  dataId     String         @unique
+  metadata   PackageMetadata @relation(fields: [metadataId], references: [id])
+  data       PackageData    @relation(fields: [dataId], references: [id])
+}
+
+model PackageMetadata {
+  id      String   @id @db.VarChar(255)
+  name    String   @db.VarChar(255)
+  version String   @db.VarChar(255)
+  package Package? 
+}
+
+model PackageData {
+  id        String   @id @db.VarChar(255)
+  content   String   @db.Text
+  URL       String   @db.VarChar(255)
+  JSProgram String   @db.VarChar(255)
+  package   Package? 
+}
+
+model PackageRating {
+  id                   Int   @id @default(autoincrement())
+  busFactor            Float
+  correctness          Float
+  rampUp               Float
+  responsiveMaintainer Float
+  licenseScore         Float
+  goodPinningPractice  Float
+  pullRequest          Float
+  netScore             Float
+}
+
+model PackageHistoryEntry {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  date      DateTime
+  action    String
+}
+
+model APIToken {
+  id                 String   @id @db.VarChar(255)
+  userId             Int
+  user               User     @relation(fields: [userId], references: [id])
+  numUsage           Int
+  createdAt          DateTime
+  uploadPermission   Boolean
+  searchPermission   Boolean
+  downloadPermission Boolean
+}
+
+model AuthenticationRequest {
+  id     Int    @id @default(autoincrement())
+  userId Int
+  user   User   @relation(fields: [userId], references: [id])
+  secret String @db.VarChar(255)
+}

@@ -1,4 +1,4 @@
-import { Responsiveness } from '../src/controllers/Responsiveness';
+import { Responsiveness } from '../src/controllers/responsiveness';
 
 describe('Responsiveness Metric Integration Tests', () => {
 
