@@ -4,7 +4,7 @@ import { Request, Response } from 'express';
 import * as prismOperations from './prismaOperations';
 import * as prismaSchema from '@prisma/client';
 
-export async function getPackageHistory(req : Request, res : Response){
+export async function getPackages(req : Request, res : Response){
   try{
     //later will have to split version along \n. For now, just act like there's no \n character and it's only single query with exact version
     //also pretend that it's just a string like "1.2.3" instead of "exact (1.2.3) for now. Later, we can parse the string to get the version range"
