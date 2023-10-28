@@ -36,3 +36,45 @@ export async function getPackages(req : Request, res : Response){
     return res.status(500).send(`Error in getPackageMetaData: ${error}`);
   }
 }
+
+export type PackageDownloadResponseType = {
+  metadata: apiSchema.PackageMetadata;
+  data: apiSchema.PackageData;
+};
+
+export async function getPackageDownload(req: Request, res: Response) {
+  try {
+      if (req.query?.name === undefined) {
+          return res.status(400).send(`Error in getPackageDownload: Package name is undefined`);
+      }
+      if (req.query?.version === undefined) {
+          return res.status(400).send(`Error in getPackageDownload: Package version is undefined`);
+      }
+
+      const packageName = req.query.name as string;
+      const packageVersion = req.query.version as string;
+
+      const dbPackage: { metadata: prismaSchema.PackageMetadata, data: prismaSchema.PackageData } | null = await prismOperations.dbGetPackageByNameAndVersion(packageName, packageVersion);
+
+      if (!dbPackage || !dbPackage.data || !dbPackage.metadata) {
+          return res.status(404).send(`Error in getPackageDownload: Package not found`);
+      }
+
+      const apiPackageData: apiSchema.PackageData = {
+          Content: dbPackage.data.content,
+          URL: dbPackage.data.URL,
+          JSProgram: dbPackage.data.JSProgram,
+      };
+
+      const apiPackageMetadata: apiSchema.PackageMetadata = {
+          Name: dbPackage.metadata.name,
+          Version: dbPackage.metadata.version,
+          ID: dbPackage.metadata.id,
+      };
+
+      // can combine
+      return res.status(200).json({ metadata: apiPackageMetadata, data: apiPackageData });
+  } catch (error) {
+      return res.status(500).send(`Error in getPackageDownload: ${error}`);
+  }
+}

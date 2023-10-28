@@ -82,4 +82,10 @@ app.listen(port, () => {
     console.log(`server started at http://localhost:${port}`);
 });
 
-
+app.get('/package/download', async (req, res) => {
+    try {
+        await apiPackage.getPackageDownload(req, res);
+    } catch (error) {
+        res.status(500).send('Internal Server Error');
+    }
+});

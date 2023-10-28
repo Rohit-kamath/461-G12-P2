@@ -2,8 +2,8 @@ import * as prismaSchema from '@prisma/client'
 import * as apiSchema from './apiSchema'
 const prisma = new prismaSchema.PrismaClient();
 
-async function dbUploadPackage(packageData : apiSchema.AuthenticationRequest) {
-}
+// async function dbUploadPackage(packageData : apiSchema.AuthenticationRequest) {
+// }
 
 //parameters: packageName,
 export async function dbGetPackageMetaDataArray(queryName : apiSchema.PackageName, minVersion : string, maxVersion : string) : Promise<prismaSchema.PackageMetadata[] | null> {
@@ -25,3 +25,13 @@ export async function dbGetPackageMetaDataArray(queryName : apiSchema.PackageNam
         return null;
     }
 }
+
+export async function dbGetPackageByNameAndVersion(name: string, version: string) {
+    const metadata = await prisma.packageMetadata.findFirst({ where: { name, version } });
+    if (!metadata) return null;
+  
+    const data = await prisma.packageData.findFirst({ where: { id: metadata.id } });
+    if (!data) return null;
+  
+    return { metadata, data };
+  }
