@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import * as prismOperations from '../backend/prismaOperations';
-import { getPackageHistory } from '../backend/apiPackage';
+import { getPackages } from '../backend/apiPackage';
 
 jest.mock('../backend/prismaOperations');
 
@@ -34,7 +34,7 @@ describe('getPackageHistory', () => {
 
     (prismOperations.dbGetPackageMetaDataArray as jest.Mock).mockResolvedValue(mockData);
 
-    await getPackageHistory(req as Request, res as Response);
+    await getPackages(req as Request, res as Response);
 
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith(mockData.map((data) => ({
