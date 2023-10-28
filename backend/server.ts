@@ -1,6 +1,7 @@
 import express from "express";
 import multer from "multer";
 import AWS, { S3 } from 'aws-sdk';
+import * as apiPackage from "./apiPackage";
 import dotenv from 'dotenv';
 import cors from 'cors';
 import path from 'path';
@@ -62,6 +63,14 @@ app.post('/upload', upload.single('packageContent'), (req, res, next) => {
         next(error); // Forward the error to the error handler
     }
 });
+
+app.post('/packages', async (req, res) => {
+    try {
+        await apiPackage.getPackages(req, res);
+    } catch (error) {
+        res.status(500).send('Internal Server Error');
+    }
+}); 
 
 // Error handling middleware
 app.use((err, res) => {
