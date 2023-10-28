@@ -1,32 +1,34 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Folder Upload</title>
+    <title>Package Upload</title>
 </head>
 <body>
-    <h1>Upload a Folder</h1>
-    <form id="folderUploadForm">
-        <input type="file" id="folderInput" webkitdirectory multiple>
-        <button type="submit">Upload Folder</button>
+    <h1>Upload a Package</h1>
+    <form id="packageUploadForm">
+        <label for="packageInput">Select Package (zip file):</label>
+        <input type="file" id="packageInput" required>
+
+        <button type="submit">Upload Package</button>
     </form>
 
     <div id="status"></div>
 
     <script>
-        const folderUploadForm = document.getElementById('folderUploadForm');
-        const folderInput = document.getElementById('folderInput');
+        const packageUploadForm = document.getElementById('packageUploadForm');
+        const packageInput = document.getElementById('packageInput');
         const status = document.getElementById('status');
 
-        folderUploadForm.addEventListener('submit', async (e) => {
+        packageUploadForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            if (folderInput.files.length === 0) {
-                status.textContent = 'Please select a folder to upload.';
+            if (packageInput.files.length === 0) {
+                status.textContent = 'Please select a package to upload.';
                 return;
             }
 
             const formData = new FormData();
-            formData.append('folder', folderInput.files[0]);
+            formData.append('packageContent', packageInput.files[0]);
 
             try {
                 const response = await fetch('/upload', {
@@ -35,13 +37,13 @@
                 });
 
                 if (response.ok) {
-                    status.textContent = 'Folder uploaded successfully!';
+                    status.textContent = 'Package uploaded successfully!';
                 } else {
-                    status.textContent = 'Error uploading the folder.';
+                    status.textContent = 'Error uploading the package.';
                 }
             } catch (error) {
                 console.error('Error:', error);
-                status.textContent = 'An error occurred while uploading the folder.';
+                status.textContent = 'An error occurred while uploading the package.';
             }
         });
     </script>
