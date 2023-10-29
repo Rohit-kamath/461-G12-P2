@@ -1,3 +1,5 @@
+import * as prismaClient from '@prisma/client';
+
 export type Package = {
     metadata: PackageMetadata;
     data: PackageData;
@@ -37,11 +39,12 @@ export type PackageRating = {
     NetScore: number; // Description: Scores calculated from other seven metrics.
 };
 
+
 export type PackageHistoryEntry = {
     User: User;
     Date: string; // Description: Date of activity using ISO-8601 Datetime standard in UTC format.
     PackageMetadata: PackageMetadata;
-    Action: 'CREATE' | 'UPDATE' | 'DOWNLOAD' | 'RATE';
+    Action: prismaClient.Action;
 };
 
 export type PackageName = string; // Description: Name of a package. Names should only use typical "keyboard" characters. The name "*" is reserved. See the `/packages` API for its meaning.

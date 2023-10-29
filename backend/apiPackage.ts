@@ -36,3 +36,35 @@ export async function getPackages(req : Request, res : Response){
     return res.status(500).send(`Error in getPackageMetaData: ${error}`);
   }
 }
+
+export async function getPackagesByName(req : Request, res: Response){
+  try{
+    //'/packages/byName/:name'
+    if(req.params?.name === undefined){
+      return res.status(400).send(`Error in getPackagesByName: Name is undefined`);
+    }
+    const queryName = req.params.name;
+    const dbPackageHistories = await prismOperations.dbGetPackageHistories(queryName);
+    if(dbPackageHistories === null){
+      return res.status(500).send(`Error in getPackagesByName: dbPackageHistories is null`);
+    }
+    const packageHistoryEntries: apiSchema.PackageHistoryEntry[] | null = dbPackageHistories.map((dbPackageHistory) => {
+      return {
+        User: {
+          name: dbPackageHistory.user.name,
+          isAdmin: dbPackageHistory.user.isAdmin,
+        },
+        Date: dbPackageHistory.date.toISOString(),
+        PackageMetadata: {
+          Name: dbPackageHistory.metadata.name,
+          Version: dbPackageHistory.metadata.version,
+          ID: dbPackageHistory.metadata.id,
+        },
+        Action: dbPackageHistory.action,
+      };
+    });
+    return res.status(200).json(packageHistoryEntries);
+  }catch(error){
+    return res.status(500).send(`Error in getPackagesByName: ${error}`);
+  }
+}

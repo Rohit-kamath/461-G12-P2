@@ -25,3 +25,23 @@ export async function dbGetPackageMetaDataArray(queryName : apiSchema.PackageNam
         return null;
     }
 }
+
+export async function dbGetPackageHistories(queryName: apiSchema.PackageName){
+    try{
+        const packageHistories = await prisma.packageHistoryEntry.findMany({
+            where: {
+                metadata: {
+                    name: queryName
+                }
+            },
+            include: {
+                user: true,
+                metadata: true
+            }
+        })
+        return packageHistories;
+    } catch (error) {
+        console.log(`Error in dbGetPackageHistories: ${error}`);
+        return null;
+    }
+}
