@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import * as prismaCalls from '../backend/prismaCalls';
 import { getPackages } from '../backend/apiPackage';
 
-jest.mock('../backend/prismaOperations');
+jest.mock('../backend/prismaCalls');
 
 describe('getPackageHistory', () => {
   it('should return package history when valid data is provided', async () => {
