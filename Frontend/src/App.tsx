@@ -22,7 +22,7 @@ function App() {
     try {
       setUploadStatus('Uploading...');
 
-      const response = await axios.post('YOUR_UPLOAD_ENDPOINT', formData, {
+      const response = await axios.post(import.meta.env.VITE_API_ENDPOINT, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
