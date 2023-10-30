@@ -1,7 +1,7 @@
 //has all packages functions needed for backend API
 import * as apiSchema from './apiSchema';
 import { Request, Response } from 'express';
-import * as prismOperations from './prismaOperations';
+import * as prismaCalls from './prismaCalls';
 import * as prismaSchema from '@prisma/client';
 
 export async function getPackages(req : Request, res : Response){
@@ -19,17 +19,17 @@ export async function getPackages(req : Request, res : Response){
     const minVersion = req.query.version as string;
     const maxVersion = req.query.version as string;
   
-    const dbPackageMetaData : prismaSchema.PackageMetadata[] | null = await prismOperations.dbGetPackageMetaDataArray(queryName, minVersion, maxVersion);
+    const dbPackageMetaData = await prismaCalls.getMetaDataArray(queryName, minVersion, maxVersion);
     if(dbPackageMetaData === null){
       return res.status(500).send(`Error in getPackageMetaData: packageMetaData is null`);
     }
     const apiPackageMetaData : apiSchema.PackageMetadata[] = dbPackageMetaData.map((dbPackageMetaData : prismaSchema.PackageMetadata) => {
-      const apiPackageMetaData : apiSchema.PackageMetadata = {
+      const metaData : apiSchema.PackageMetadata = {
         Name: dbPackageMetaData.name,
         Version: dbPackageMetaData.version,
         ID: dbPackageMetaData.id
       };
-      return apiPackageMetaData;
+      return metaData;
     });
     return res.status(200).json(apiPackageMetaData);
   }catch(error){
@@ -37,11 +37,45 @@ export async function getPackages(req : Request, res : Response){
   }
 }
 
+export async function getPackagesByName(req : Request, res: Response){
+  try{
+    if(req.params?.name === undefined){
+      return res.status(400).send(`Error in getPackagesByName: Name is undefined`);
+    }
+    const queryName = req.params.name;
+    const dbPackageHistories = await prismaCalls.getPackageHistories(queryName);
+    if(dbPackageHistories === null){
+      return res.status(500).send(`Error in getPackagesByName: dbPackageHistories is null`);
+    }
+    const apiPackageHistories: apiSchema.PackageHistoryEntry[] | null = dbPackageHistories.map((dbPackageHistory) => {
+      const historyEntry : apiSchema.PackageHistoryEntry = {
+        User: {
+          name: dbPackageHistory.user.name,
+          isAdmin: dbPackageHistory.user.isAdmin,
+        },
+        Date: dbPackageHistory.date.toISOString(),
+        PackageMetadata: {
+          Name: dbPackageHistory.metadata.name,
+          Version: dbPackageHistory.metadata.version,
+          ID: dbPackageHistory.metadata.id,
+        },
+        Action: dbPackageHistory.action,
+      };
+      return historyEntry;
+    });
+    return res.status(200).json(apiPackageHistories);
+  }catch(error){
+    return res.status(500).send(`Error in getPackagesByName: ${error}`);
+  }
+}
+
+// Packagedownloadresponsetype
 export type PackageDownloadResponseType = {
   metadata: apiSchema.PackageMetadata;
   data: apiSchema.PackageData;
 };
 
+// For: get package download
 export async function getPackageDownload(req: Request, res: Response) {
   try {
       if (req.query?.name === undefined) {
@@ -54,7 +88,7 @@ export async function getPackageDownload(req: Request, res: Response) {
       const packageName = req.query.name as string;
       const packageVersion = req.query.version as string;
 
-      const dbPackage: { metadata: prismaSchema.PackageMetadata, data: prismaSchema.PackageData } | null = await prismOperations.dbGetPackageByNameAndVersion(packageName, packageVersion);
+      const dbPackage = await prismaCalls.getPackageWithMetadataAndData(packageName, packageVersion);
 
       if (!dbPackage || !dbPackage.data || !dbPackage.metadata) {
           return res.status(404).send(`Error in getPackageDownload: Package not found`);
@@ -72,9 +106,39 @@ export async function getPackageDownload(req: Request, res: Response) {
           ID: dbPackage.metadata.id,
       };
 
-      // can combine
       return res.status(200).json({ metadata: apiPackageMetadata, data: apiPackageData });
   } catch (error) {
       return res.status(500).send(`Error in getPackageDownload: ${error}`);
+  }
+}
+
+// Packagedownloadresponsetype
+export type PackageUpdateRequestType = {
+  name: string;
+  version: string;
+  content: string;
+  URL: string;
+  JSProgram: string;
+};
+// For: put package update
+export async function updatePackage(req: Request, res: Response) {
+  try {
+      const { name, version, content, URL, JSProgram } = req.body;
+
+      if (!name || !version || !content || !URL || !JSProgram) {
+          return res.status(400).send('All fields are required');
+      }
+
+      // Add more detailed validation if needed
+
+      const updatedPackage = await prismaCalls.updatePackageDetails(name, version, content, URL, JSProgram);
+
+      if (!updatedPackage) {
+          return res.status(404).send('Package not found or could not be updated');
+      }
+
+      return res.status(200).json(updatedPackage);
+  } catch (error) {
+      return res.status(500).send(`Error in updatePackage: ${error}`);
   }
 }

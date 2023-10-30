@@ -72,6 +72,14 @@ app.post('/packages', async (req, res) => {
     }
 }); 
 
+app.get('/packages/byName/:name', async (req, res) => {
+    try {
+        await apiPackage.getPackagesByName(req, res);
+    } catch (error) {
+        res.status(500).send('Internal Server Error');
+    }
+});
+
 // Error handling middleware
 app.use((err, res) => {
     console.error('Caught exception: ', err);
@@ -82,6 +90,7 @@ app.listen(port, () => {
     console.log(`server started at http://localhost:${port}`);
 });
 
+//GET package download
 app.get('/package/download', async (req, res) => {
     try {
         await apiPackage.getPackageDownload(req, res);
@@ -89,3 +98,6 @@ app.get('/package/download', async (req, res) => {
         res.status(500).send('Internal Server Error');
     }
 });
+
+//PUT package update
+app.put('/packages/update', apiPackage.updatePackage);
