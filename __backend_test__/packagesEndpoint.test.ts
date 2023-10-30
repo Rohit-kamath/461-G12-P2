@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
-import * as prismOperations from '../backend/prismaOperations';
-import { getPackageHistory } from '../backend/apiPackage';
+import * as prismaCalls from '../backend/prismaCalls';
+import { getPackages } from '../backend/apiPackage';
 
-jest.mock('../backend/prismaOperations');
+jest.mock('../backend/prismaCalls');
 
 describe('getPackageHistory', () => {
   it('should return package history when valid data is provided', async () => {
@@ -32,9 +32,9 @@ describe('getPackageHistory', () => {
       },
     ];
 
-    (prismOperations.dbGetPackageMetaDataArray as jest.Mock).mockResolvedValue(mockData);
+    (prismaCalls.getMetaDataArray as jest.Mock).mockResolvedValue(mockData);
 
-    await getPackageHistory(req as Request, res as Response);
+    await getPackages(req as Request, res as Response);
 
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith(mockData.map((data) => ({
