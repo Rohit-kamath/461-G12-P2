@@ -3,6 +3,8 @@ import * as apiSchema from './apiSchema';
 import { Request, Response } from 'express';
 import * as prismaCalls from './prismaCalls';
 import * as prismaSchema from '@prisma/client';
+import JSZip from 'jszip';
+import { v4 as uuidv4 } from 'uuid';
 
 export async function getPackages(req : Request, res : Response){
   try{
@@ -66,5 +68,32 @@ export async function getPackagesByName(req : Request, res: Response){
     return res.status(200).json(apiPackageHistories);
   }catch(error){
     return res.status(500).send(`Error in getPackagesByName: ${error}`);
+  }
+}
+
+export async function extractMetadataFromZip(filebuffer: Buffer): Promise<apiSchema.PackageMetadata> {
+  const zip = await JSZip.loadAsync(filebuffer);
+  
+  let packageFile = zip.file("package.json");
+  
+  // If the top-level package.json is not found, search for any package.json in the ZIP.
+  if (!packageFile) {
+    const files = zip.file(/^.*package.json$/);  // This will return an array of matching files.
+    if (files.length > 0) {
+      packageFile = files[0];  // Use the first match.
+    }
+  }
+  
+  if (!packageFile) {
+    throw new Error("package.json not found inside the zip.");
+  }
+
+  const packageContent = await packageFile.async('string');
+  const packageJson = JSON.parse(packageContent);
+
+  return {
+    Name: packageJson.name,
+    Version: packageJson.version,
+    ID: uuidv4(),
   }
 }

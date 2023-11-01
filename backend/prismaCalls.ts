@@ -43,3 +43,18 @@ export async function getPackageHistories(queryName: apiSchema.PackageName){
         return null;
     }
 }
+
+export async function uploadMetadataToDatabase(metadata: apiSchema.PackageMetadata): Promise<void> {
+    try {
+        await prisma.packageMetadata.create({
+            data: {
+                name: metadata.Name,
+                version: metadata.Version,
+                id: metadata.ID
+            }
+        });
+    } catch (error) {
+        console.error(`Error in uploadMetadataToDatabase: ${error}`);
+        throw new Error('Failed to upload metadata to the database.');
+    }
+}
