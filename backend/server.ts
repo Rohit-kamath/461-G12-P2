@@ -72,6 +72,14 @@ app.post('/packages', async (req, res) => {
     }
 }); 
 
+app.get('/packages/byName/:name', async (req, res) => {
+    try {
+        await apiPackage.getPackagesByName(req, res);
+    } catch (error) {
+        res.status(500).send('Internal Server Error');
+    }
+});
+
 // Error handling middleware
 app.use((err, res) => {
     console.error('Caught exception: ', err);
