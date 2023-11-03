@@ -129,26 +129,6 @@ export async function getPackagesByRegEx(req: Request, res: Response) {
     } catch (error) {
         return res.status(500).send(`Error in getPackagesByRegEx: ${error}`);
     }
-    const apiPackageHistories: apiSchema.PackageHistoryEntry[] | null = dbPackageHistories.map((dbPackageHistory) => {
-      const historyEntry : apiSchema.PackageHistoryEntry = {
-        User: {
-          name: dbPackageHistory.user.name,
-          isAdmin: dbPackageHistory.user.isAdmin,
-        },
-        Date: dbPackageHistory.date.toISOString(),
-        PackageMetadata: {
-          Name: dbPackageHistory.metadata.name,
-          Version: dbPackageHistory.metadata.version,
-          ID: dbPackageHistory.metadata.id,
-        },
-        Action: dbPackageHistory.action,
-      };
-      return historyEntry;
-    });
-    return res.status(200).json(apiPackageHistories);
-  }catch(error){
-    return res.status(500).send(`Error in getPackagesByName: ${error}`);
-  }
 }
 
 export async function extractMetadataFromZip(filebuffer: Buffer): Promise<apiSchema.PackageMetadata> {
