@@ -1,14 +1,13 @@
 import { Responsiveness } from '../src/controllers/responsiveness';
 
 describe('Responsiveness Metric Integration Tests', () => {
-
     const owner = 'facebook';
     const repo = 'react';
 
     test('Fetching issue response times for a known repository', async () => {
         const responsiveness = new Responsiveness('sharedProp', owner, repo);
         const initialScore = await responsiveness.calculateMetric();
-        
+
         expect(initialScore).toBeGreaterThanOrEqual(0);
         expect(initialScore).toBeLessThanOrEqual(1);
     });
@@ -22,5 +21,3 @@ describe('Responsiveness Metric Integration Tests', () => {
         expect(score).toBeLessThanOrEqual(1);
     });
 });
-
-
