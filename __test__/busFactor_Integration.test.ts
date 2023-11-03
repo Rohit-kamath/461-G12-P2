@@ -1,13 +1,12 @@
 import { getContributors, calculateBusFactor } from '../src//controllers/busFactor';
 
 describe('Bus Factor Calculations Integration Tests', () => {
-
     const owner = 'facebook';
     const repo = 'react';
 
     test('Fetching contributors for a known repository', async () => {
         const contributors = await getContributors(owner, repo);
-        
+
         expect(contributors).not.toBeNull();
 
         if (contributors) {

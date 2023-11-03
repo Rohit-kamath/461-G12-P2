@@ -10,29 +10,31 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 let winstonLogLevel: 'silent' | 'info' | 'debug';
 switch (LOG_LEVEL) {
     case '0':
-        winstonLogLevel = 'silent'; 
+        winstonLogLevel = 'silent';
         break;
     case '1':
-        winstonLogLevel = 'info'; 
+        winstonLogLevel = 'info';
         break;
     case '2':
-        winstonLogLevel = 'debug'; 
+        winstonLogLevel = 'debug';
         break;
     default:
-        winstonLogLevel = 'silent'; 
+        winstonLogLevel = 'silent';
 }
 
 const createModuleLogger = (moduleName: string) => {
     // Determine the appropriate transport based on the environment.
     const selectedTransports = [];
-    
+
     if (NODE_ENV === 'test') {
-        selectedTransports.push(new transports.Console({
-            format: format.combine(
-                format.colorize(),
-                format.printf(({ timestamp, level, message }) => `${timestamp} ${level} [${moduleName}]: ${message}`)
-            )
-        }));
+        selectedTransports.push(
+            new transports.Console({
+                format: format.combine(
+                    format.colorize(),
+                    format.printf(({ timestamp, level, message }) => `${timestamp} ${level} [${moduleName}]: ${message}`),
+                ),
+            }),
+        );
     } else {
         selectedTransports.push(new transports.File({ filename: LOG_FILE }));
     }
