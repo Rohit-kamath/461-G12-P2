@@ -5,6 +5,17 @@ import * as prismaCalls from './prismaCalls';
 import * as prismaSchema from '@prisma/client';
 import JSZip from 'jszip';
 import { v4 as uuidv4 } from 'uuid';
+import AWS from 'aws-sdk';
+import { ManagedUpload } from 'aws-sdk/clients/s3';
+import createModuleLogger from '../src/logger';
+
+const logger = createModuleLogger('API Package Calls');
+
+const s3 = new AWS.S3({
+  accessKeyId:  process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  region: 'us-east-2'
+});
 
 export async function getPackages(req : Request, res : Response){
   try{
@@ -71,29 +82,64 @@ export async function getPackagesByName(req : Request, res: Response){
   }
 }
 
-export async function extractMetadataFromZip(filebuffer: Buffer): Promise<apiSchema.PackageMetadata> {
-  const zip = await JSZip.loadAsync(filebuffer);
+export async function extractFileFromZip(zipBuffer: Buffer, filename: string): Promise<string> {
+  const zip = await JSZip.loadAsync(zipBuffer);
+  let file = zip.file(filename);
   
-  let packageFile = zip.file("package.json");
-  
-  // If the top-level package.json is not found, search for any package.json in the ZIP.
-  if (!packageFile) {
-    const files = zip.file(/^.*package.json$/);  // This will return an array of matching files.
+  // If the specific file is not found, search for any matching files in the ZIP.
+  if (!file) {
+    const files = zip.file(new RegExp(`^.*${filename}$`)); // This will return an array of matching files.
     if (files.length > 0) {
-      packageFile = files[0];  // Use the first match.
+      file = files[0]; // Use the first match.
     }
   }
   
-  if (!packageFile) {
-    throw new Error("package.json not found inside the zip.");
+  if (!file) {
+    logger.info(`${filename} not found inside the zip.`)
+    throw new Error(`${filename} not found inside the zip.`);
   }
+  
+  // Extract and return the file content as a string
+  return file.async('string');
+}
 
-  const packageContent = await packageFile.async('string');
-  const packageJson = JSON.parse(packageContent);
+export async function extractMetadataFromZip(filebuffer: Buffer): Promise<apiSchema.PackageMetadata> {
+  try {
+    const packageContent = await extractFileFromZip(filebuffer, "package.json");
+    const packageJson = JSON.parse(packageContent);
 
-  return {
-    Name: packageJson.name,
-    Version: packageJson.version,
-    ID: uuidv4(),
+    return {
+      Name: packageJson.name,
+      Version: packageJson.version,
+      ID: uuidv4(),
+    };
+  } catch (error) {
+    logger.info('An error occurred while extracting metadata from zip:', error);
+    throw error;
   }
+}
+
+export async function uploadToS3(fileName: string, fileBuffer: Buffer): Promise<ManagedUpload.SendData> {
+  return new Promise((resolve, reject) => {
+      const bucketName = process.env.AWS_S3_BUCKET_NAME;
+
+      if (!bucketName) {
+          throw new Error("S3 bucket name not configured.");
+      }
+
+      const params: AWS.S3.Types.PutObjectRequest = {
+          Bucket: bucketName,
+          Key: fileName,
+          Body: fileBuffer
+      };
+
+      // Uploading files to the bucket
+      s3.upload(params, function(err: Error, data: ManagedUpload.SendData) {
+          if (err) {
+              reject(err);
+          } else {
+              resolve(data);
+          }
+      });
+  });
 }

@@ -1,9 +1,13 @@
 import * as prismaSchema from '@prisma/client'
+import { Action } from '@prisma/client'
 import * as apiSchema from './apiSchema'
+import createModuleLogger from '../src/logger';
+
+const logger = createModuleLogger('Prisma Calls');
 const prisma = new prismaSchema.PrismaClient();
 
-async function uploadPackage(packageData : apiSchema.AuthenticationRequest) {
-}
+//async function uploadPackage(packageData : apiSchema.AuthenticationRequest) {
+//}
 
 export async function getMetaDataArray(queryName : apiSchema.PackageName, minVersion : string, maxVersion : string) : Promise<prismaSchema.PackageMetadata[] | null> {
     //in the future, have to handle paginated request with a skip and take parameter
@@ -19,7 +23,7 @@ export async function getMetaDataArray(queryName : apiSchema.PackageName, minVer
         })
         return packages;
     } catch (error) {
-        console.log(`Error in getMetaDataArray: ${error}`);
+        logger.info(`Error in getMetaDataArray: ${error}`);
         return null;
     }
 }
@@ -39,7 +43,7 @@ export async function getPackageHistories(queryName: apiSchema.PackageName){
         })
         return packageHistories;
     } catch (error) {
-        console.log(`Error in getPackageHistories: ${error}`);
+        logger.info(`Error in getPackageHistories: ${error}`);
         return null;
     }
 }
@@ -54,7 +58,23 @@ export async function uploadMetadataToDatabase(metadata: apiSchema.PackageMetada
             }
         });
     } catch (error) {
-        console.error(`Error in uploadMetadataToDatabase: ${error}`);
+        logger.info(`Error in uploadMetadataToDatabase: ${error}`);
         throw new Error('Failed to upload metadata to the database.');
+    }
+}
+
+export async function createPackageHistoryEntry(metadataId: string, userId: number, action: Action): Promise<void> {
+    try {
+        await prisma.packageHistoryEntry.create({
+            data: {
+                metadataId: metadataId,
+                userId: userId,
+                action: action,
+                date: new Date(),
+            }
+        });
+    } catch (error) {
+        logger.info(`Error in createPackageHistoryEntry: ${error}`);
+        throw new Error('Failed to create package history entry in the database.');
     }
 }
