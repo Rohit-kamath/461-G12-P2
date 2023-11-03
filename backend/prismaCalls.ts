@@ -2,8 +2,6 @@ import * as prismaSchema from '@prisma/client';
 import * as apiSchema from './apiSchema';
 const prisma = new prismaSchema.PrismaClient();
 
-async function uploadPackage(packageData: apiSchema.AuthenticationRequest) {}
-
 export async function getMetaDataByQuery(queryName: apiSchema.PackageName, minVersion: string, maxVersion: string, minInclusive: boolean, maxInclusive: boolean, offset : number): Promise<prismaSchema.PackageMetadata[] | null> {
     try {
         // Ensure that the offset is at least 1 (treat 0 as page 1)
@@ -13,7 +11,7 @@ export async function getMetaDataByQuery(queryName: apiSchema.PackageName, minVe
         const pageSize = 10;
         const recordsToSkip = (page - 1) * pageSize;
 
-        let whereCondition = {
+        const whereCondition = {
             version: {
             [minInclusive ? 'gte' : 'gt']: maxVersion,
             [maxInclusive ? 'lte' : 'lt']: minVersion,
