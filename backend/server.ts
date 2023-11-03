@@ -61,18 +61,26 @@ app.post('/package', upload.single('packageContent'), async (req, res) => {
         }
     }
 });
-
+/*
 app.post('/packages', async (req, res) => {
     try {
         await apiPackage.getPackages(req, res);
     } catch (error) {
         res.status(500).send('Internal Server Error');
     }
-}); 
-
+});
+*/
 app.get('/packages/byName/:name', async (req, res) => {
     try {
         await apiPackage.getPackagesByName(req, res);
+    } catch (error) {
+        res.status(500).send('Internal Server Error');
+    }
+});
+
+app.post('/package/byRegEx', async (req, res) => {
+    try {
+        await apiPackage.getPackagesByRegEx(req, res);
     } catch (error) {
         res.status(500).send('Internal Server Error');
     }
@@ -87,5 +95,3 @@ app.use((err, res) => {
 app.listen(port, () => {
     console.log(`server started at http://localhost:${port}`);
 });
-
-
