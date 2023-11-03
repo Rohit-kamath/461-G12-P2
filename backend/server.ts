@@ -35,18 +35,10 @@ app.post('/package', upload.single('packageContent'), async (req, res) => {
             return res.status(400).send('No file uploaded');
         }
 
-        const bucketName = process.env.AWS_S3_BUCKET_NAME;
-
-        if (!bucketName) {
-            logger.info("Error: S3 bucket name not configured.");
-            return res.status(500).send("S3 bucket name not configured.");
-        }
-
         const metadata = await apiPackage.extractMetadataFromZip(req.file.buffer);
         const action = Action.CREATE;
         await prismaCalls.uploadMetadataToDatabase(metadata);
         await prismaCalls.createPackageHistoryEntry(metadata.ID, 1, action); // User id is 1 for now
-
 
         // Uploading files to the bucket
         const s3Response = await apiPackage.uploadToS3(req.file.originalname, req.file.buffer);
