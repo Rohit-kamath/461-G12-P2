@@ -1,7 +1,9 @@
 import express from 'express';
 import multer from 'multer';
 import AWS, { S3 } from 'aws-sdk';
-import * as apiPackage from './apiPackage';
+
+import * as apiPackage from "./apiPackage";
+import * as prismaCalls from "./prismaCalls";
 import dotenv from 'dotenv';
 import cors from 'cors';
 import path from 'path';
@@ -28,10 +30,10 @@ const storage = multer.memoryStorage(); // Store the file in memory
 const upload = multer({ storage: storage });
 
 app.get('/upload-page', (req, res) => {
-    res.sendFile(path.join(__dirname, '../Frontend/website.html'));
+    res.sendFile(path.join(__dirname, '../Frontend/testwebsite.html'));
 });
 
-app.post('/upload', upload.single('packageContent'), (req, res, next) => {
+app.post('/upload', upload.single('packageContent'), async (req, res, next) => {
     try {
         if (!req.file) {
             console.warn('No file provided in the upload.');
@@ -44,6 +46,9 @@ app.post('/upload', upload.single('packageContent'), (req, res, next) => {
             console.error('Error: S3 bucket name not configured.');
             return res.status(500).send('S3 bucket name not configured.');
         }
+
+        const metadata = await apiPackage.extractMetadataFromZip(req.file.buffer);
+        await prismaCalls.uploadMetadataToDatabase(metadata);
 
         const params = {
             Bucket: bucketName,
