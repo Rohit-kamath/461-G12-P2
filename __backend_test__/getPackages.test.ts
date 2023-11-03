@@ -15,6 +15,7 @@ describe('getPackages', () => {
         let responseObject = {};
 
         const res: Partial<Response> = {
+            setHeader: jest.fn().mockReturnThis(),
             status: jest.fn().mockReturnThis(),
             json: jest.fn().mockReturnThis(),
             send: jest.fn().mockReturnValue({
