@@ -39,7 +39,6 @@ export type PackageRating = {
     NetScore: number; // Description: Scores calculated from other seven metrics.
 };
 
-
 export type PackageHistoryEntry = {
     User: User;
     Date: string; // Description: Date of activity using ISO-8601 Datetime standard in UTC format.
@@ -52,8 +51,8 @@ export type PackageName = string; // Description: Name of a package. Names shoul
 export type AuthenticationToken = string; // Description: "The spec permits you to use any token format you like. You could, for example, look into JSON Web Tokens ("JWT," pronounced "jots"): https://jwt.io."
 
 export type AuthenticationRequest = {
-    User: User; 
-    Secret: UserAuthenticationInfo; 
+    User: User;
+    Secret: UserAuthenticationInfo;
 };
 
 export type SemverRange = string;
