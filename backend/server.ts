@@ -61,3 +61,22 @@ app.use((err, res) => {
 app.listen(port, () => {
     console.log(`server started at http://localhost:${port}`);
 });
+
+//GET package download
+app.get('/package/:id', async (req, res) => {
+	try {
+		await apiPackage.getPackageDownload(req, res);
+	} catch (error) {
+		res.status(500).send('Internal Server Error');
+	}
+});
+
+//PUT package update
+app.put('/packages/:id', async (req, res) => {
+	try {
+		await apiPackage.updatePackage(req, res);
+	} catch (error) {
+		res.status(500).send('Internal Server Error');
+	}
+});
+

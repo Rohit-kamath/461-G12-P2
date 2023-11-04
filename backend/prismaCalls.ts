@@ -162,3 +162,52 @@ export async function storeMetricsInDatabase(packageRating: apiSchema.PackageRat
         throw new Error('Failed to store package rating metrics in the database.');
     }
 }
+
+export async function getPackage(queryID: apiSchema.PackageID): Promise<apiSchema.Package | null> {
+	// Assume this type is equivalent to the Prisma package type
+	try {
+		const packageEntry = await prisma.package.findFirst({
+			where: {
+				metadata: {
+					id: queryID,
+				},
+			},
+			include: {
+				data: true,
+				metadata: true,
+			},
+		});
+		return packageEntry as unknown as apiSchema.Package;
+	} catch (error) {
+		console.error(`Error in getPackage: ${error}`);
+		return null;
+	}
+}
+
+// For update endpoint
+export async function updatePackageDetails(
+	packageId: apiSchema.PackageID,
+	packageData: apiSchema.PackageData,
+): Promise<apiSchema.PackageData | null> {
+	try {
+		// metadata has been validated in updatePackage
+		const updatedData = await prisma.packageData.update({
+			where: { id: packageId },
+			data: {
+				content: packageData.Content ?? '', // nullish  to handle optional fields
+				URL: packageData.URL ?? '',
+				JSProgram: packageData.JSProgram ?? '',
+			},
+		});
+
+		// Return the updated package data
+		return {
+			Content: updatedData.content,
+			URL: updatedData.URL,
+			JSProgram: updatedData.JSProgram,
+		};
+	} catch (error) {
+		console.error(`Error in updatePackageDetails: ${error}`);
+		return null;
+	}
+}

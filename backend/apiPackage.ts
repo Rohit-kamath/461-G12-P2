@@ -335,3 +335,73 @@ export async function uploadPackage(req: Request, res: Response) {
     }
   }
 }
+// For: get package download
+export async function getPackageDownload(req: Request, res: Response) {
+	try {
+		const packageID = req.query.name;
+
+		if (packageID === undefined) {
+			return res.status(400).send('Package name or version is undefined');
+		}
+		const dbPackage = await prismaCalls.getPackage(packageID as string);
+		if (!dbPackage) {
+			return res.status(404).send('Package not found');
+		}
+		// transformed for the apiSchema structure
+		// can't use map unless I change apischema/prismaschema
+		const apiPackage: apiSchema.Package = {
+			metadata: {
+				Name: dbPackage.metadata.Name,
+				Version: dbPackage.metadata.Version,
+				ID: dbPackage.metadata.ID,
+			},
+			data: {
+				Content: dbPackage.data.Content,
+				URL: dbPackage.data.URL,
+				JSProgram: dbPackage.data.JSProgram,
+			},
+		};
+		return res.status(200).json(apiPackage);
+	} catch (error) {
+		return res.status(500).send(`Error in getPackageDownload: ${error}`);
+	}
+}
+
+// For: put package update
+export async function updatePackage(req: Request, res: Response) {
+	try {
+		// Validate required package fields from the request body
+		const { metadata, data } = req.body as apiSchema.Package;
+
+		// Validate required fields
+		if (!metadata || !data || !metadata.Name || !metadata.Version || !metadata.ID) {
+			return res.status(400).send('All fields are required and must be valid.');
+		}
+
+		const packageId = req.params.id;
+		if (!packageId) {
+			return res.status(400).send('Package ID is required.');
+		}
+
+		if (packageId !== metadata.ID) {
+			return res.status(400).send('Package ID in the URL does not match the ID in the request body.');
+		}
+
+		//update the package data only
+		try {
+			const updatedData = await prismaCalls.updatePackageDetails(packageId, data);
+			return res.status(200).json({ Data: updatedData });
+		} catch (error) {
+			if (error instanceof Error) {
+				if (error.message.includes('do not match')) {
+					return res.status(400).send('Package ID, name, or version do not match.');
+				}
+				return res.status(404).send('Package does not exist.');
+			}
+		}
+	} catch (error) {
+		console.error(`Error in updatePackage: ${error}`);
+		return res.status(500).send(`Server error: ${error}`);
+	}
+}
+
