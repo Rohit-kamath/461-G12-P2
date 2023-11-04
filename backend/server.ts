@@ -36,9 +36,18 @@ app.post('/package', upload.single('packageContent'), async (req, res) => {
         }
 
         const metadata = await apiPackage.extractMetadataFromZip(req.file.buffer);
+        const url = await apiPackage.getGithubUrlFromZip(req.file.buffer);
+        const githubInfo = apiPackage.parseGitHubUrl(url); 
+
+        if (!githubInfo) {
+            logger.info("Invalid GitHub repository URL.");
+            return res.status(400).send('Invalid GitHub repository URL.');
+        }
+        const { owner, repo } = githubInfo;
         const action = Action.CREATE;
         await prismaCalls.uploadMetadataToDatabase(metadata);
         await prismaCalls.createPackageHistoryEntry(metadata.ID, 1, action); // User id is 1 for now
+        await apiPackage.calculateAndStoreGithubMetrics(owner, repo);
 
         // Uploading files to the bucket
         const s3Response = await apiPackage.uploadToS3(req.file.originalname, req.file.buffer);

@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import AWS from 'aws-sdk';
 import { ManagedUpload } from 'aws-sdk/clients/s3';
 import createModuleLogger from '../src/logger';
+import { NET_SCORE } from '../src/controllers/netScore';
 
 const logger = createModuleLogger('API Package Calls');
 
@@ -127,6 +128,27 @@ export async function extractFileFromZip(zipBuffer: Buffer, filename: string): P
   return file.async('string');
 }
 
+export async function getGithubUrlFromZip(zipBuffer: Buffer): Promise<string> {
+  try {
+    const packageJsonString = await extractFileFromZip(zipBuffer, 'package.json');
+    const packageJson = JSON.parse(packageJsonString);
+
+    // Look for the repository field in the package.json content
+    if (packageJson.repository && packageJson.repository.url) {
+      let url = packageJson.repository.url;
+      url = url.replace(/\.git$/, '');
+
+      logger.info(`GitHub URL extracted: ${url}`);
+      return url;
+    } else {
+      throw new Error('GitHub repository URL not found in package.json');
+    }
+  } catch (error) {
+    logger.info(`An error occurred while extracting the GitHub URL: ${error}`);
+    throw error;
+  }
+}
+
 export async function extractMetadataFromZip(filebuffer: Buffer): Promise<apiSchema.PackageMetadata> {
   try {
     const packageContent = await extractFileFromZip(filebuffer, "package.json");
@@ -142,6 +164,8 @@ export async function extractMetadataFromZip(filebuffer: Buffer): Promise<apiSch
     throw error;
   }
 }
+
+
 
 export async function uploadToS3(fileName: string, fileBuffer: Buffer): Promise<ManagedUpload.SendData> {
   return new Promise((resolve, reject) => {
@@ -166,4 +190,52 @@ export async function uploadToS3(fileName: string, fileBuffer: Buffer): Promise<
           }
       });
   });
+}
+
+export async function calculateAndStoreGithubMetrics(owner: string, repo: string): Promise<void> {
+  try {
+      const netScoreCalculator = new NET_SCORE(owner, repo);
+      const {
+          NET_SCORE: netScoreValue,
+          RAMP_UP_SCORE,
+          CORRECTNESS_SCORE,
+          BUS_FACTOR_SCORE,
+          RESPONSIVE_MAINTAINER_SCORE,
+          LICENSE_SCORE,
+          GOOD_PINNING_PRACTICE_SCORE,
+          PULL_REQUEST_SCORE,
+      } = await netScoreCalculator.calculate();
+
+      await prismaCalls.storeMetricsInDatabase({
+          BusFactor: BUS_FACTOR_SCORE,
+          Correctness: CORRECTNESS_SCORE,
+          RampUp: RAMP_UP_SCORE,
+          ResponsiveMaintainer: RESPONSIVE_MAINTAINER_SCORE,
+          LicenseScore: LICENSE_SCORE,
+          GoodPinningPractice: GOOD_PINNING_PRACTICE_SCORE, 
+          PullRequest: PULL_REQUEST_SCORE,
+          NetScore: netScoreValue,
+      });
+
+      console.log('Metrics for the GitHub repository stored successfully.');
+  } catch (error) {
+      console.error(`Failed to calculate or store metrics: ${error}`);
+      throw error; // Rethrow the error if you need to handle it further up the chain
+  }
+}
+
+export function parseGitHubUrl(url: string): { owner: string, repo: string } | null {
+  // Regular expression to extract the owner and repo name from a GitHub URL
+  const regex = /github\.com[/:]([^/]+)\/([^.]+)(\.git)?/;
+  const match = url.match(regex);
+  
+  if (match && match[1] && match[2]) {
+  return {
+      owner: match[1],
+      repo: match[2],
+  };
+  } else {
+      console.info('Invalid GitHub URL provided:', url);
+      return null;
+  }
 }

@@ -114,3 +114,25 @@ export async function getMetaDataByRegEx(regEx: string): Promise<prismaSchema.Pa
         return null;
     }
 }
+
+export async function storeMetricsInDatabase(packageRating: apiSchema.PackageRating): Promise<void> {
+    try {
+        await prisma.packageRating.create({
+            data: {
+                busFactor: packageRating.BusFactor,
+                correctness: packageRating.Correctness,
+                rampUp: packageRating.RampUp,
+                responsiveMaintainer: packageRating.ResponsiveMaintainer,
+                licenseScore: packageRating.LicenseScore,
+                goodPinningPractice: packageRating.GoodPinningPractice,
+                pullRequest: packageRating.PullRequest,
+                netScore: packageRating.NetScore,
+            }
+        });
+
+        logger.info('Package rating metrics stored in the database successfully.');
+    } catch (error) {
+        logger.info(`Error in storeMetricsInDatabase: ${error}`);
+        throw new Error('Failed to store package rating metrics in the database.');
+    }
+}
