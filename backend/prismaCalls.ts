@@ -30,14 +30,14 @@ export async function getMetaDataByQuery(queryName: apiSchema.PackageName, minVe
     }
 }
 
-type fullHistoryEntry = prismaSchema.Prisma.PackageHistoryEntryGetPayload<{
+type FullHistoryEntry = prismaSchema.Prisma.PackageHistoryEntryGetPayload<{
     include: {
         metadata: true;
         user: true;
     };
 }>;
 
-export async function getPackageHistories(queryName: apiSchema.PackageName) : Promise<fullHistoryEntry[] | null>{
+export async function getPackageHistories(queryName: apiSchema.PackageName) : Promise<FullHistoryEntry[] | null>{
     try {
         const packageHistories = await prisma.packageHistoryEntry.findMany({
             where: {
@@ -95,14 +95,14 @@ export async function getMetaDataByRegEx(regEx: string): Promise<prismaSchema.Pa
         return null;
     }
 }
-type fullPackage = prismaSchema.Prisma.PackageGetPayload<{
+type FullPackage = prismaSchema.Prisma.PackageGetPayload<{
     include: {
         metadata: true;
         data: true;
     };
 }>;
 
-export async function getPackage(queryID: apiSchema.PackageID) : Promise<fullPackage | null>{
+export async function getPackage(queryID: apiSchema.PackageID) : Promise<FullPackage | null>{
 	try {
 		const packageEntry = await prisma.package.findFirst({
 			where: {
