@@ -62,7 +62,7 @@ app.post('/package', upload.single('packageContent'), async (req, res) => {
         }
     }
 });
-/*
+
 app.post('/packages', async (req, res) => {
     try {
         await apiPackage.getPackages(req, res);
@@ -70,7 +70,7 @@ app.post('/packages', async (req, res) => {
         res.status(500).send('Internal Server Error');
     }
 });
-*/
+
 app.get('/packages/byName/:name', async (req, res) => {
     try {
         await apiPackage.getPackagesByName(req, res);

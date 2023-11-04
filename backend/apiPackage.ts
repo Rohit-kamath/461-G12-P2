@@ -8,6 +8,7 @@ import AWS from 'aws-sdk';
 import { ManagedUpload } from 'aws-sdk/clients/s3';
 import createModuleLogger from '../src/logger';
 import { NET_SCORE } from '../src/controllers/netScore';
+import semver from 'semver';
 
 const logger = createModuleLogger('API Package Calls');
 
@@ -17,94 +18,129 @@ const s3 = new AWS.S3({
   region: 'us-east-2'
 });
 
-/*export async function getPackages(req : Request, res : Response){
-  try{
-    //later will have to split version along \n. For now, just act like there's no \n character and it's only single query with exact version
-    //also pretend that it's just a string like "1.2.3" instead of "exact (1.2.3) for now. Later, we can parse the string to get the version range"
-    if(req.query?.Name === undefined){
-      return res.status(400).send(`Error in getPackageMetaData: Name is undefined`);
-    }
-    if(req.query?.Version === undefined){
-      return res.status(400).send(`Error in getPackageMetaData: Version is undefined`);
-    }
-
-        const queryName = req.body.name as string;
-        //use parseVersion function to get min and max version, and whether they are inclusive
-        const { min: minVersion, max: maxVersion, minInclusive: minInclusive, maxInclusive: maxInclusive } = parseVersion(req.body.Version as string);
-
-        const dbPackageMetaData = await prismaCalls.getMetaDataByQuery(queryName, minVersion, maxVersion, minInclusive, maxInclusive, offset);
-        if (dbPackageMetaData === null) {
-            return res.status(500).send(`Error in getPackageMetaData: packageMetaData is null`);
-        }
-        const apiPackageMetaData: apiSchema.PackageMetadata[] = dbPackageMetaData.map((dbPackageMetaData: prismaSchema.PackageMetadata) => {
-            const metaData: apiSchema.PackageMetadata = {
-                Name: dbPackageMetaData.name,
-                Version: dbPackageMetaData.version,
-                ID: dbPackageMetaData.id,
-            };
-            return metaData;
-        });
-        res.setHeader('offset', offset);
-        return res.status(200).json(apiPackageMetaData);
-    } catch (error) {
-        return res.status(500).send(`Error in getPackageMetaData: ${error}`);
-    }
+function getMaxVersion(versionRange: string) {
+  versionRange = versionRange.replace(/-0/g, '');
+  const versions = versionRange.match(/\d+\.\d+\.\d+/g);
+  if (versions && versions.length > 0) {
+      return versions[versions.length - 1];
+  } else {
+      console.log('Error in getMaxVersion: No versions found in range');
+      process.exit(1);
+  }
 }
-*/
+
+export function parseVersion(version: string) {
+  const comparators = semver.toComparators(version);
+  const validRange = comparators.map((comparatorSet) => comparatorSet.join(' ')).join(' || ');
+  const minVersion = semver.minVersion(validRange)?.version;
+  if (minVersion === null) {
+      console.log('Error in parseVersion: minVersion is null');
+      process.exit(1);
+  }
+  if (minVersion === undefined) {
+      console.log('Error in parseVersion: minVersion is undefined');
+      process.exit(1);
+  }
+  const maxVersion = getMaxVersion(validRange);
+  if (!validRange.includes(' ')) {
+      return { min: minVersion, max: maxVersion, minInclusive: true, maxInclusive: true };
+  }
+  const tokens = validRange.split(/\s+/);
+  return {
+      min: minVersion,
+      max: maxVersion,
+      minInclusive: tokens[0].startsWith('>='),
+      maxInclusive: tokens[1].startsWith('<='),
+  };
+}
+
+export async function getPackages(req: Request, res: Response) {
+  try {
+      const offset = req.query?.offset === undefined ? 1 : parseInt(req.query.offset as string);
+      if (req.body?.Name === undefined) {
+          return res.status(400).send(`Error in getPackageMetaData: Name is undefined`);
+      }
+      if (req.body?.Version === undefined) {
+          return res.status(400).send(`Error in getPackageMetaData: Version is undefined`);
+      }
+
+      const queryName = req.body.name as string;
+      //use parseVersion function to get min and max version, and whether they are inclusive
+      const { min: minVersion, max: maxVersion, minInclusive: minInclusive, maxInclusive: maxInclusive } = parseVersion(req.body.Version as string);
+
+      const dbPackageMetaData = await prismaCalls.getMetaDataByQuery(queryName, minVersion, maxVersion, minInclusive, maxInclusive, offset);
+      if (dbPackageMetaData === null) {
+          return res.status(500).send(`Error in getPackageMetaData: packageMetaData is null`);
+      }
+      const apiPackageMetaData: apiSchema.PackageMetadata[] = dbPackageMetaData.map((dbPackageMetaData: prismaSchema.PackageMetadata) => {
+          const metaData: apiSchema.PackageMetadata = {
+              Name: dbPackageMetaData.name,
+              Version: dbPackageMetaData.version,
+              ID: dbPackageMetaData.id,
+          };
+          return metaData;
+      });
+      res.setHeader('offset', offset);
+      return res.status(200).json(apiPackageMetaData);
+  } catch (error) {
+      return res.status(500).send(`Error in getPackageMetaData: ${error}`);
+  }
+}
+
 export async function getPackagesByName(req: Request, res: Response) {
-    try {
-        if (req.params?.name === undefined) {
-            return res.status(400).send(`Error in getPackagesByName: Name is undefined`);
-        }
-        const queryName = req.params.name;
-        const dbPackageHistories = await prismaCalls.getPackageHistories(queryName);
-        if (dbPackageHistories === null) {
-            return res.status(500).send(`Error in getPackagesByName: dbPackageHistories is null`);
-        }
-        const apiPackageHistories: apiSchema.PackageHistoryEntry[] | null = dbPackageHistories.map((dbPackageHistory) => {
-            const historyEntry: apiSchema.PackageHistoryEntry = {
-                User: {
-                    name: dbPackageHistory.user.name,
-                    isAdmin: dbPackageHistory.user.isAdmin,
-                },
-                Date: dbPackageHistory.date.toISOString(),
-                PackageMetadata: {
-                    Name: dbPackageHistory.metadata.name,
-                    Version: dbPackageHistory.metadata.version,
-                    ID: dbPackageHistory.metadata.id,
-                },
-                Action: dbPackageHistory.action,
-            };
-            return historyEntry;
-        });
-        return res.status(200).json(apiPackageHistories);
-    } catch (error) {
-        return res.status(500).send(`Error in getPackagesByName: ${error}`);
-    }
+  try {
+      if (req.params?.name === undefined) {
+          return res.status(400).send(`Error in getPackagesByName: Name is undefined`);
+      }
+      const queryName = req.params.name;
+      const dbPackageHistories = await prismaCalls.getPackageHistories(queryName);
+      if (dbPackageHistories === null) {
+          return res.status(500).send(`Error in getPackagesByName: dbPackageHistories is null`);
+      }
+      const apiPackageHistories: apiSchema.PackageHistoryEntry[] | null = dbPackageHistories.map((dbPackageHistory) => {
+          const historyEntry: apiSchema.PackageHistoryEntry = {
+              User: {
+                  name: dbPackageHistory.user.name,
+                  isAdmin: dbPackageHistory.user.isAdmin,
+              },
+              Date: dbPackageHistory.date.toISOString(),
+              PackageMetadata: {
+                  Name: dbPackageHistory.metadata.name,
+                  Version: dbPackageHistory.metadata.version,
+                  ID: dbPackageHistory.metadata.id,
+              },
+              Action: dbPackageHistory.action,
+          };
+          return historyEntry;
+      });
+      return res.status(200).json(apiPackageHistories);
+  } catch (error) {
+      return res.status(500).send(`Error in getPackagesByName: ${error}`);
+  }
 }
 
 export async function getPackagesByRegEx(req: Request, res: Response) {
-    try {
-        if (req.body?.RegEx === undefined) {
-            return res.status(400).send(`Error in getPackagesByRegEx: RegEx is undefined`);
-        }
-        const regEx: string = req.body.RegEx;
-        const dbPackageMetaData = await prismaCalls.getMetaDataByRegEx(regEx);
-        if (dbPackageMetaData === null) {
-            return res.status(500).send(`Error in getPackagesByRegEx: dbPackageMetaData is null`);
-        }
-        const apiPackageMetaData: apiSchema.PackageMetadata[] = dbPackageMetaData.map((dbPackageMetaData: prismaSchema.PackageMetadata) => {
-            const metaData: apiSchema.PackageMetadata = {
-                Name: dbPackageMetaData.name,
-                Version: dbPackageMetaData.version,
-                ID: dbPackageMetaData.id,
-            };
-            return metaData;
-        });
-        return res.status(200).json(apiPackageMetaData);
-    } catch (error) {
-        return res.status(500).send(`Error in getPackagesByRegEx: ${error}`);
-    }
+  try {
+      if (req.body?.RegEx === undefined) {
+          return res.status(400).send(`Error in getPackagesByRegEx: RegEx is undefined`);
+      }
+      const regEx: string = req.body.RegEx;
+      const dbPackageMetaData = await prismaCalls.getMetaDataByRegEx(regEx);
+      if (dbPackageMetaData === null) {
+          return res.status(500).send(`Error in getPackagesByRegEx: dbPackageMetaData is null`);
+      }
+      const apiPackageMetaData: apiSchema.PackageMetadata[] = dbPackageMetaData.map((dbPackageMetaData: prismaSchema.PackageMetadata) => {
+          const metaData: apiSchema.PackageMetadata = {
+              Name: dbPackageMetaData.name,
+              Version: dbPackageMetaData.version,
+              ID: dbPackageMetaData.id,
+          };
+          return metaData;
+      });
+      return res.status(200).json(apiPackageMetaData);
+  } catch (error) {
+      return res.status(500).send(`Error in getPackagesByRegEx: ${error}`);
+  }
 }
 
 export async function extractFileFromZip(zipBuffer: Buffer, filename: string): Promise<string> {
