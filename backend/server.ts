@@ -93,12 +93,6 @@ app.post('/package/byRegEx', async (req, res) => {
     }
 });
 
-// Error handling middleware
-app.use((err, res) => {
-    console.error('Caught exception: ', err);
-    res.status(500).send('Internal Server Error');
-});
-
 app.listen(port, () => {
     console.log(`server started at http://localhost:${port}`);
 });
