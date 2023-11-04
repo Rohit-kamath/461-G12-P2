@@ -63,8 +63,7 @@ async function main() {
         const results: any[] = [];
 
         for (const url of gitUrls) {
-            const temp = url.match(/github.com([^\/]+)\/([^\/]+)/);
-
+            const temp = url.match(/github\.com\/([^]+)\/([^]+)/);
             if (temp) {
                 const owner = temp[1];
                 let repo = temp[2];
