@@ -30,7 +30,7 @@ export async function getMetaDataByQuery(queryName: apiSchema.PackageName, minVe
     }
 }
 
-export type fullHistoryEntry = prismaSchema.Prisma.PackageHistoryEntryGetPayload<{
+type fullHistoryEntry = prismaSchema.Prisma.PackageHistoryEntryGetPayload<{
     include: {
         metadata: true;
         user: true;
@@ -95,7 +95,7 @@ export async function getMetaDataByRegEx(regEx: string): Promise<prismaSchema.Pa
         return null;
     }
 }
-export type fullPackage = prismaSchema.Prisma.PackageGetPayload<{
+type fullPackage = prismaSchema.Prisma.PackageGetPayload<{
     include: {
         metadata: true;
         data: true;
@@ -138,7 +138,6 @@ export async function updatePackageDetails(
 			},
 		});
 
-		// Return the updated package data
 		return {
 			Content: updatedData.content,
 			URL: updatedData.URL,
