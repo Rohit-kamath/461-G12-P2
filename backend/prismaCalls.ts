@@ -76,6 +76,23 @@ export async function uploadMetadataToDatabase(metadata: apiSchema.PackageMetada
 
 export async function createPackageHistoryEntry(metadataId: string, userId: number, action: Action): Promise<void> {
     try {
+        // Check if metadataId exists
+        const metadataExists = await prisma.packageMetadata.findUnique({
+            where: { id: metadataId },
+        });
+        if (!metadataExists) {
+            throw new Error(`No metadata found for ID: ${metadataId}`);
+        }
+
+        // Check if userId exists
+        const userExists = await prisma.user.findUnique({
+            where: { id: userId },
+        });
+        if (!userExists) {
+            throw new Error(`No user found for ID: ${userId}`);
+        }
+
+        // Create PackageHistoryEntry
         await prisma.packageHistoryEntry.create({
             data: {
                 metadataId: metadataId,
@@ -88,6 +105,15 @@ export async function createPackageHistoryEntry(metadataId: string, userId: numb
         logger.info(`Error in createPackageHistoryEntry: ${error}`);
         throw new Error('Failed to create package history entry in the database.');
     }
+}
+
+export async function checkPackageHistoryExists(metadataId: string): Promise<boolean> {
+    const count = await prisma.packageHistoryEntry.count({
+        where: {
+            metadataId: metadataId,
+        },
+    });
+    return count > 0;
 }
 
 export async function getMetaDataByRegEx(regEx: string): Promise<prismaSchema.PackageMetadata[] | null> {

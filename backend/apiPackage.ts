@@ -9,6 +9,7 @@ import { ManagedUpload } from 'aws-sdk/clients/s3';
 import createModuleLogger from '../src/logger';
 import { NET_SCORE } from '../src/controllers/netScore';
 import semver from 'semver';
+import { Action } from '@prisma/client';
 
 const logger = createModuleLogger('API Package Calls');
 
@@ -273,5 +274,64 @@ export function parseGitHubUrl(url: string): { owner: string, repo: string } | n
   } else {
       console.info('Invalid GitHub URL provided:', url);
       return null;
+  }
+}
+
+export async function uploadPackage(req: Request, res: Response) {
+  try {
+    if (!req.file) {
+        logger.info("No file provided in the upload.");
+        return res.status(400).send('No file uploaded');
+    }
+
+    const metadata = await extractMetadataFromZip(req.file.buffer);
+    const url = await getGithubUrlFromZip(req.file.buffer);
+    const githubInfo = parseGitHubUrl(url);
+
+    if (!githubInfo) {
+        logger.info("Invalid GitHub repository URL.");
+        return res.status(400).send('Invalid GitHub repository URL.');
+    }
+    const { owner, repo } = githubInfo;
+    const action = Action.CREATE;
+    await prismaCalls.uploadMetadataToDatabase(metadata);
+
+    const exists = await prismaCalls.checkPackageHistoryExists(metadata.ID);
+    if (exists) {
+        return res.status(409).send('Package Exists Already');
+    }
+    
+    await prismaCalls.createPackageHistoryEntry(metadata.ID, 1, action); // User id is 1 for now
+    await calculateAndStoreGithubMetrics(owner, repo);
+
+    await uploadToS3(req.file.originalname, req.file.buffer);
+
+    const encodedContent = req.file.buffer.toString('base64');
+
+    const jsProgram = "if (process.argv.length === 7) {\nconsole.log('Success')\nprocess.exit(0)\n} else {\nconsole.log('Failed')\nprocess.exit(1)\n}\n";
+
+    // Construct the response object
+    const response: apiSchema.Package = {
+        metadata: {
+            Name: metadata.Name,
+            Version: metadata.Version,
+            ID: metadata.ID
+        },
+        data: {
+            Content: encodedContent,
+            JSProgram: jsProgram
+        }
+    };
+
+    res.json(response);
+
+  } catch (error) {
+    if (error instanceof Error) {
+        logger.info("S3 upload error: ", error.message);
+        res.status(500).send(error.message);
+    } else {
+        logger.info("Error in POST /package: ", error);
+        res.status(500).send("Internal Server Error");
+    }
   }
 }
