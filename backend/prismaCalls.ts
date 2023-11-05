@@ -141,10 +141,11 @@ export async function getMetaDataByRegEx(regEx: string): Promise<prismaSchema.Pa
     }
 }
 
-export async function storeMetricsInDatabase(packageRating: apiSchema.PackageRating): Promise<void> {
+export async function storeMetricsInDatabase(metadataId: string, packageRating: apiSchema.PackageRating): Promise<void> {
     try {
         await prisma.packageRating.create({
             data: {
+                metadataId: metadataId, 
                 busFactor: packageRating.BusFactor,
                 correctness: packageRating.Correctness,
                 rampUp: packageRating.RampUp,
@@ -210,4 +211,16 @@ export async function updatePackageDetails(
 		console.error(`Error in updatePackageDetails: ${error}`);
 		return null;
 	}
+}
+
+export async function checkMetricsExist(metadataId: string): Promise<boolean> {
+    try {
+        const existingMetrics = await prisma.packageRating.findUnique({
+            where: { metadataId: metadataId },
+        });
+        return existingMetrics !== null;
+    } catch (error) {
+        logger.error(`Error in checkMetricsExist: ${error}`);
+        throw error;
+    }
 }

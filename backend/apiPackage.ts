@@ -19,6 +19,7 @@ const s3 = new AWS.S3({
   region: 'us-east-2'
 });
 
+
 function getMaxVersion(versionRange: string) {
   versionRange = versionRange.replace(/-0/g, '');
   const versions = versionRange.match(/\d+\.\d+\.\d+/g);
@@ -29,6 +30,7 @@ function getMaxVersion(versionRange: string) {
       process.exit(1);
   }
 }
+
 
 export function parseVersion(version: string) {
   const comparators = semver.toComparators(version);
@@ -54,6 +56,7 @@ export function parseVersion(version: string) {
       maxInclusive: tokens[1].startsWith('<='),
   };
 }
+
 
 export async function getPackages(req: Request, res: Response) {
   try {
@@ -88,6 +91,7 @@ export async function getPackages(req: Request, res: Response) {
   }
 }
 
+
 export async function getPackagesByName(req: Request, res: Response) {
   try {
       if (req.params?.name === undefined) {
@@ -120,6 +124,7 @@ export async function getPackagesByName(req: Request, res: Response) {
   }
 }
 
+
 export async function getPackagesByRegEx(req: Request, res: Response) {
   try {
       if (req.body?.RegEx === undefined) {
@@ -144,6 +149,7 @@ export async function getPackagesByRegEx(req: Request, res: Response) {
   }
 }
 
+
 export async function extractFileFromZip(zipBuffer: Buffer, filename: string): Promise<string> {
   const zip = await JSZip.loadAsync(zipBuffer);
   let file = zip.file(filename);
@@ -165,26 +171,52 @@ export async function extractFileFromZip(zipBuffer: Buffer, filename: string): P
   return file.async('string');
 }
 
+
 export async function getGithubUrlFromZip(zipBuffer: Buffer): Promise<string> {
   try {
+    if (!zipBuffer || zipBuffer.length === 0) {
+      throw new Error('Empty or invalid zip buffer provided');
+    }
+
     const packageJsonString = await extractFileFromZip(zipBuffer, 'package.json');
-    const packageJson = JSON.parse(packageJsonString);
+    if (!packageJsonString) {
+      throw new Error('package.json not found or empty in the zip file');
+    }
 
-    // Look for the repository field in the package.json content
-    if (packageJson.repository && packageJson.repository.url) {
-      let url = packageJson.repository.url;
-      url = url.replace(/\.git$/, '');
+    logger.info(`Extracted package.json content: ${packageJsonString}`);
 
-      logger.info(`GitHub URL extracted: ${url}`);
-      return url;
-    } else {
+    let packageJson;
+    try {
+      packageJson = JSON.parse(packageJsonString);
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error('Failed to parse package.json: ' + error.message);
+      } else {
+        throw new Error('Failed to parse package.json: Unknown error occurred');
+      }
+    }
+
+    let url = packageJson.repository?.url || packageJson.repository;
+
+    if (!url || typeof url !== 'string') {
       throw new Error('GitHub repository URL not found in package.json');
     }
+
+    if (url.startsWith('github:')) {
+      url = `https://github.com/${url.substring(7)}`;
+    }
+
+    url = url.replace(/\.git$/, '');
+
+    logger.info(`GitHub URL extracted: ${url}`);
+    return url;
   } catch (error) {
     logger.info(`An error occurred while extracting the GitHub URL: ${error}`);
     throw error;
   }
 }
+
+
 
 export async function extractMetadataFromZip(filebuffer: Buffer): Promise<apiSchema.PackageMetadata> {
   try {
@@ -201,7 +233,6 @@ export async function extractMetadataFromZip(filebuffer: Buffer): Promise<apiSch
     throw error;
   }
 }
-
 
 
 export async function uploadToS3(fileName: string, fileBuffer: Buffer): Promise<ManagedUpload.SendData> {
@@ -229,7 +260,8 @@ export async function uploadToS3(fileName: string, fileBuffer: Buffer): Promise<
   });
 }
 
-export async function calculateAndStoreGithubMetrics(owner: string, repo: string): Promise<void> {
+
+export async function calculateAndStoreGithubMetrics(metadataId: string, owner: string, repo: string): Promise<void> {
   try {
       const netScoreCalculator = new NET_SCORE(owner, repo);
       const {
@@ -243,98 +275,90 @@ export async function calculateAndStoreGithubMetrics(owner: string, repo: string
           PULL_REQUEST_SCORE,
       } = await netScoreCalculator.calculate();
 
-      await prismaCalls.storeMetricsInDatabase({
-          BusFactor: BUS_FACTOR_SCORE,
-          Correctness: CORRECTNESS_SCORE,
-          RampUp: RAMP_UP_SCORE,
-          ResponsiveMaintainer: RESPONSIVE_MAINTAINER_SCORE,
-          LicenseScore: LICENSE_SCORE,
-          GoodPinningPractice: GOOD_PINNING_PRACTICE_SCORE, 
-          PullRequest: PULL_REQUEST_SCORE,
-          NetScore: netScoreValue,
-      });
+      await prismaCalls.storeMetricsInDatabase(metadataId, {
+        BusFactor: BUS_FACTOR_SCORE,
+        Correctness: CORRECTNESS_SCORE,
+        RampUp: RAMP_UP_SCORE,
+        ResponsiveMaintainer: RESPONSIVE_MAINTAINER_SCORE,
+        LicenseScore: LICENSE_SCORE,
+        GoodPinningPractice: GOOD_PINNING_PRACTICE_SCORE, 
+        PullRequest: PULL_REQUEST_SCORE,
+        NetScore: netScoreValue,
+    });
 
       console.log('Metrics for the GitHub repository stored successfully.');
   } catch (error) {
       console.error(`Failed to calculate or store metrics: ${error}`);
-      throw error; // Rethrow the error if you need to handle it further up the chain
   }
 }
 
+
 export function parseGitHubUrl(url: string): { owner: string, repo: string } | null {
-  // Regular expression to extract the owner and repo name from a GitHub URL
-  const regex = /github\.com[/:]([^/]+)\/([^.]+)(\.git)?/;
+  // Regular expression to extract the owner and repo name from various GitHub URL formats
+  const regex = /github\.com[/:]([^/]+)\/([^/.]+)(\.git)?/;
   const match = url.match(regex);
   
   if (match && match[1] && match[2]) {
-  return {
-      owner: match[1],
-      repo: match[2],
-  };
+      return {
+          owner: match[1],
+          repo: match[2].replace('.git', '')
+      };
   } else {
       console.info('Invalid GitHub URL provided:', url);
       return null;
   }
 }
 
+
 export async function uploadPackage(req: Request, res: Response) {
   try {
-    if (!req.file) {
-        logger.info("No file provided in the upload.");
-        return res.status(400).send('No file uploaded');
-    }
+      if (!req.file) {
+          logger.info("No file provided in the upload.");
+          return res.status(400).send('No file uploaded');
+      }
 
-    const metadata = await extractMetadataFromZip(req.file.buffer);
-    const url = await getGithubUrlFromZip(req.file.buffer);
-    const githubInfo = parseGitHubUrl(url);
+      const metadata = await extractMetadataFromZip(req.file.buffer);
 
-    if (!githubInfo) {
-        logger.info("Invalid GitHub repository URL.");
-        return res.status(400).send('Invalid GitHub repository URL.');
-    }
-    const { owner, repo } = githubInfo;
-    const action = Action.CREATE;
-    await prismaCalls.uploadMetadataToDatabase(metadata);
+      const url = await getGithubUrlFromZip(req.file.buffer);
+      const githubInfo = parseGitHubUrl(url);
+      if (!githubInfo) {
+          logger.info("Invalid GitHub repository URL.");
+          return res.status(400).send('Invalid GitHub repository URL.');
+      }
 
-    const exists = await prismaCalls.checkPackageHistoryExists(metadata.ID);
-    if (exists) {
-        return res.status(409).send('Package Exists Already');
-    }
-    
-    await prismaCalls.createPackageHistoryEntry(metadata.ID, 1, action); // User id is 1 for now
-    await calculateAndStoreGithubMetrics(owner, repo);
+      const encodedContent = req.file.buffer.toString('base64');
+      const jsProgram = "if (process.argv.length === 7) {\nconsole.log('Success')\nprocess.exit(0)\n} else {\nconsole.log('Failed')\nprocess.exit(1)\n}\n";
+      const PackageData: apiSchema.PackageData = {
+          Content: encodedContent,
+          JSProgram: jsProgram
+      };
 
-    await uploadToS3(req.file.originalname, req.file.buffer);
 
-    const encodedContent = req.file.buffer.toString('base64');
+      const packageExists = await prismaCalls.checkPackageHistoryExists(metadata.ID);
+      if (packageExists) {
+          return res.status(409).send('Package Exists Already');
+      }
+      await prismaCalls.uploadMetadataToDatabase(metadata);
 
-    const jsProgram = "if (process.argv.length === 7) {\nconsole.log('Success')\nprocess.exit(0)\n} else {\nconsole.log('Failed')\nprocess.exit(1)\n}\n";
+      const Package: apiSchema.Package = {
+          metadata: metadata,
+          data: PackageData
+      };
 
-    // Construct the response object
-    const response: apiSchema.Package = {
-        metadata: {
-            Name: metadata.Name,
-            Version: metadata.Version,
-            ID: metadata.ID
-        },
-        data: {
-            Content: encodedContent,
-            JSProgram: jsProgram
-        }
-    };
+      const action = Action.CREATE;
+      await prismaCalls.createPackageHistoryEntry(metadata.ID, 1, action); // User id is 1 for now
 
-    res.json(response);
+      await calculateAndStoreGithubMetrics(metadata.ID, githubInfo.owner, githubInfo.repo);
+      await uploadToS3(req.file.originalname, req.file.buffer);
 
+      res.json(Package);
   } catch (error) {
-    if (error instanceof Error) {
-        logger.info("S3 upload error: ", error.message);
-        res.status(500).send(error.message);
-    } else {
-        logger.info("Error in POST /package: ", error);
-        res.status(500).send("Internal Server Error");
-    }
+      logger.error("Error in POST /package: ", error);
+      res.status(500).send("Internal Server Error");
   }
 }
+
+
 // For: get package download
 export async function getPackageDownload(req: Request, res: Response) {
 	try {
@@ -366,6 +390,7 @@ export async function getPackageDownload(req: Request, res: Response) {
 		return res.status(500).send(`Error in getPackageDownload: ${error}`);
 	}
 }
+
 
 // For: put package update
 export async function updatePackage(req: Request, res: Response) {
@@ -404,4 +429,3 @@ export async function updatePackage(req: Request, res: Response) {
 		return res.status(500).send(`Server error: ${error}`);
 	}
 }
-

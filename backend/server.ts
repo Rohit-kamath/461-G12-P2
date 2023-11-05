@@ -25,7 +25,11 @@ app.get('/upload-page', (req, res) => { // This is just for testing purposes
 });
 
 app.post('/package', upload.single('packageContent'), async (req, res) => {
-    await apiPackage.uploadPackage(req, res);
+    try {
+        await apiPackage.uploadPackage(req, res);
+    } catch (error) {
+        res.status(500).send('Internal Server Error');
+    }
 });
 
 app.post('/packages', async (req, res) => {
