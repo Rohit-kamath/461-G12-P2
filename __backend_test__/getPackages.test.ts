@@ -12,7 +12,6 @@ describe('getPackages', () => {
                 Name: 'underscore',
             },
         };
-        let responseObject = {};
 
         const res: Partial<Response> = {
             setHeader: jest.fn().mockReturnThis(),
@@ -20,7 +19,7 @@ describe('getPackages', () => {
             json: jest.fn().mockReturnThis(),
             send: jest.fn().mockReturnValue({
                 json: jest.fn().mockImplementation((JSONdata) => {
-                    responseObject = JSONdata;
+                    return JSONdata;
                 }),
             }),
         };

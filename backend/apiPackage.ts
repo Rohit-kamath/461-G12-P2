@@ -368,19 +368,18 @@ export async function getPackageDownload(req: Request, res: Response) {
 			return res.status(400).send('Package name or version is undefined');
 		}
 		const dbPackage = await prismaCalls.getPackage(packageID as string);
-		if (!dbPackage) {
+		if (dbPackage === null) {
 			return res.status(404).send('Package not found');
 		}
-		// transformed for the apiSchema structure
-		// can't use map unless I change apischema/prismaschema
+        
 		const apiPackage: apiSchema.Package = {
 			metadata: {
-				Name: dbPackage.metadata.Name,
-				Version: dbPackage.metadata.Version,
-				ID: dbPackage.metadata.ID,
+				Name: dbPackage.metadata.name,
+				Version: dbPackage.metadata.version,
+				ID: dbPackage.metadata.id,
 			},
 			data: {
-				Content: dbPackage.data.Content,
+				Content: dbPackage.data.content,
 				URL: dbPackage.data.URL,
 				JSProgram: dbPackage.data.JSProgram,
 			},
