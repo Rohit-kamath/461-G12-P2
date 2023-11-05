@@ -11,19 +11,14 @@ export async function getMetaDataByQuery(queryName: apiSchema.PackageName, minVe
         const pageSize = 10;
         const recordsToSkip = (page - 1) * pageSize;
 
-        const whereCondition = {
-            version: {
-            [minInclusive ? 'gte' : 'gt']: maxVersion,
-            [maxInclusive ? 'lte' : 'lt']: minVersion,
-            },
-        };
-
-        if (queryName !== '*') {
-            (whereCondition as any).name = queryName;
-        }
-
         const packages = await prisma.packageMetadata.findMany({
-            where: whereCondition,
+            where: {
+                version: {
+                    [minInclusive ? 'gte' : 'gt']: maxVersion,
+                    [maxInclusive ? 'lte' : 'lt']: minVersion,
+                },
+                name: queryName === '*' ? undefined : queryName,
+            },
             skip: recordsToSkip, // Use skip to implement pagination
             take: pageSize, // Specify the number of records to retrieve for the current page
         });
@@ -35,7 +30,14 @@ export async function getMetaDataByQuery(queryName: apiSchema.PackageName, minVe
     }
 }
 
-export async function getPackageHistories(queryName: apiSchema.PackageName) {
+type FullHistoryEntry = prismaSchema.Prisma.PackageHistoryEntryGetPayload<{
+    include: {
+        metadata: true;
+        user: true;
+    };
+}>;
+
+export async function getPackageHistories(queryName: apiSchema.PackageName) : Promise<FullHistoryEntry[] | null>{
     try {
         const packageHistories = await prisma.packageHistoryEntry.findMany({
             where: {
@@ -93,9 +95,14 @@ export async function getMetaDataByRegEx(regEx: string): Promise<prismaSchema.Pa
         return null;
     }
 }
+type FullPackage = prismaSchema.Prisma.PackageGetPayload<{
+    include: {
+        metadata: true;
+        data: true;
+    };
+}>;
 
-export async function getPackage(queryID: apiSchema.PackageID): Promise<apiSchema.Package | null> {
-	// Assume this type is equivalent to the Prisma package type
+export async function getPackage(queryID: apiSchema.PackageID) : Promise<FullPackage | null>{
 	try {
 		const packageEntry = await prisma.package.findFirst({
 			where: {
@@ -108,7 +115,7 @@ export async function getPackage(queryID: apiSchema.PackageID): Promise<apiSchem
 				metadata: true,
 			},
 		});
-		return packageEntry as unknown as apiSchema.Package;
+		return packageEntry;
 	} catch (error) {
 		console.error(`Error in getPackage: ${error}`);
 		return null;
@@ -131,7 +138,6 @@ export async function updatePackageDetails(
 			},
 		});
 
-		// Return the updated package data
 		return {
 			Content: updatedData.content,
 			URL: updatedData.URL,
