@@ -1,19 +1,20 @@
-import { Octokit } from "@octokit/rest";
-import { ESLint } from "eslint";
-import { execSync,exec } from "child_process";
+import { Octokit } from '@octokit/rest';
+import { ESLint } from 'eslint';
+import { execSync, exec } from 'child_process';
 /* import {config} from "dotenv"; */
-
 
 export class correctness {
     //private octokit: Octokit;
     private errors = 0;
     private warnings = 0;
     private securityIssues = 0;
-    
 
-    constructor(private owner: string, private repo: string) {
+    constructor(
+        private owner: string,
+        private repo: string,
+    ) {
         // Initialize the Octokit client with an authentication token if needed
-       /*  config();
+        /*  config();
         const token = process.env.GITHUB_TOKEN;
         this.octokit = new Octokit({
             auth: token,
@@ -52,13 +53,11 @@ export class correctness {
         //     //////console.log("Error!", e);
         // }
         ////console.log(`Github Score: ${githubScore}, Eslint Score: ${eslintScore}`);
-        const finalScore = (0.2 * githubScore) + (0.8 * eslintScore);
+        const finalScore = 0.2 * githubScore + 0.8 * eslintScore;
         if (finalScore > 1) {
             return 1;
         }
         return finalScore;
-    
-
     }
     private calculateLowestPowerOf10(num1: number, num2: number): number {
         const sum = num1 + num2;
@@ -69,7 +68,6 @@ export class correctness {
         return power;
     }
     private hasTestInName(path: string): boolean {
-    
         const fs = require('fs');
         const stats = fs.statSync(path);
         if (stats.isDirectory()) {
@@ -78,18 +76,17 @@ export class correctness {
             }
             const files = fs.readdirSync(path);
             for (const file of files) {
-            if (this.hasTestInName(`${path}/${file}`)) {
-                return true;
-            }
+                if (this.hasTestInName(`${path}/${file}`)) {
+                    return true;
+                }
             }
         } else if (stats.isFile()) {
             if (path.includes('test')) {
-            return true;
+                return true;
             }
         }
         return false;
     }
-    
 
     private lintFiles(dir: string, linter: ESLint) {
         const fileRegex = /\.(ts|js)$/;
@@ -102,8 +99,7 @@ export class correctness {
             const stat = fs.statSync(filePath);
             if (stat.isDirectory()) {
                 this.lintFiles(filePath, linter);
-            }
-            else if (fileRegex.test(file)) {
+            } else if (fileRegex.test(file)) {
                 linter.lintFiles([filePath]).then((results) => {
                     for (const result of results) {
                         for (const message of result.messages) {
@@ -114,7 +110,7 @@ export class correctness {
                             } else if (message.severity === 1) {
                                 this.warnings = this.warnings + 1;
                             }
-                            if (message.ruleId === "no-eval" || message.ruleId === "no-implied-eval") {
+                            if (message.ruleId === 'no-eval' || message.ruleId === 'no-implied-eval') {
                                 this.securityIssues = this.securityIssues + 1;
                             }
                         }
@@ -129,17 +125,17 @@ export class correctness {
         const tempdir = `./temp/${this.owner}/${this.repo}`;
         const githuburl = `https://github.com/${this.owner}/${this.repo}.git`;
         execSync(`mkdir -p ${tempdir}`);
-        execSync(`cd ${tempdir}`)
-        execSync(`git clone ${githuburl} ${tempdir}`, {stdio: 'ignore'});
-        execSync(`ls ${tempdir}`)
+        execSync(`cd ${tempdir}`);
+        execSync(`git clone ${githuburl} ${tempdir}`, { stdio: 'ignore' });
+        execSync(`ls ${tempdir}`);
         // Example usage
         const hasTest = this.hasTestInName(tempdir);
         let test_suite_checker = 0;
         if (hasTest) {
             test_suite_checker = 1;
         }
-        ////////console.log(`Has test suite: ${test_suite_checker}`)        
-       /*  const linter = new ESLint();
+        ////////console.log(`Has test suite: ${test_suite_checker}`)
+        /*  const linter = new ESLint();
         this.lintFiles(tempdir, linter); */
         ////////console.log(`Errors: ${this.errors}, Warnings: ${this.warnings}, Security Issues: ${this.securityIssues}`);
         /* const results = linter.lintFiles(
@@ -164,9 +160,8 @@ export class correctness {
         /* const error_prop = this.errors / (this.errors + this.warnings + this.securityIssues + 1);
         const warning_prop = this.warnings / (this.errors + this.warnings + this.securityIssues + 1);
         const security_prop = this.securityIssues / (this.errors + this.warnings + this.securityIssues + 1); */
-        const eslintScore = (test_suite_checker);        
+        const eslintScore = test_suite_checker;
 
         return eslintScore;
-
     }
 }

@@ -1,24 +1,22 @@
 import { calculateBusFactor } from '../src/controllers/busFactor';
 
 interface Contributor {
-    login : string;
-    totalContributions : number;
+    login: string;
+    totalContributions: number;
 }
 
 describe('Bus Factor calculations', () => {
-
     afterEach(() => {
         jest.clearAllMocks();
     });
 
     describe('getContributors', () => {
         it('should correctly process contributor data', async () => {
-
-        const contributors: Contributor[] = [
-            { login: "user1", totalContributions: 140 },
-            { login: "user2", totalContributions: 60 },
-        ];
-        expect(contributors).not.toBeNull();
+            const contributors: Contributor[] = [
+                { login: 'user1', totalContributions: 140 },
+                { login: 'user2', totalContributions: 60 },
+            ];
+            expect(contributors).not.toBeNull();
             if (contributors) {
                 expect(contributors).toHaveLength(2);
                 expect(contributors[0].login).toBe('user1');
@@ -32,8 +30,8 @@ describe('Bus Factor calculations', () => {
     describe('calculateBusFactor', () => {
         it('should correctly calculate bus factor when contributors are present', async () => {
             const contributors: Contributor[] = [
-                { login: "user1", totalContributions: 140 },
-                { login: "user2", totalContributions: 60 },
+                { login: 'user1', totalContributions: 140 },
+                { login: 'user2', totalContributions: 60 },
             ];
 
             const result = await calculateBusFactor(contributors);

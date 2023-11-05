@@ -18,7 +18,7 @@ describe('Responsiveness Metric', () => {
         const mockIssues = [
             {
                 created_at: '2023-01-01T10:00:00Z',
-                closed_at: '2023-01-03T10:00:00Z'
+                closed_at: '2023-01-03T10:00:00Z',
             },
             // ... you can add more mock issues if needed
         ];
@@ -32,7 +32,7 @@ describe('Responsiveness Metric', () => {
 
     it('should calculate metric correctly for median <= 1', async () => {
         (responsivenessApi.fetchIssues as jest.Mock).mockResolvedValue([]);
-        responsiveness['score_list'] = [0.5, 0.8, 0.6]; 
+        responsiveness['score_list'] = [0.5, 0.8, 0.6];
 
         const result = await responsiveness.calculateMetric();
 
@@ -50,10 +50,10 @@ describe('Responsiveness Metric', () => {
 
     it('should calculate metric correctly for 1 < median <= 10', async () => {
         (responsivenessApi.fetchIssues as jest.Mock).mockResolvedValue([]);
-        responsiveness['score_list'] = [3, 4, 2]; 
+        responsiveness['score_list'] = [3, 4, 2];
 
         const result = await responsiveness.calculateMetric();
 
-        expect(result).toBeCloseTo(0.7778, 4);  // (1 - (3 - 1) / 9) = 0.7778
+        expect(result).toBeCloseTo(0.7778, 4); // (1 - (3 - 1) / 9) = 0.7778
     });
 });

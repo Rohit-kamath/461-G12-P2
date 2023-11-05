@@ -26,11 +26,13 @@ model Package {
 }
 
 model PackageMetadata {
-  id                  String               @id @db.VarChar(255)
-  name                String               @db.VarChar(255)
-  version             String               @db.VarChar(255)
-  package             Package?
-  PackageHistoryEntry PackageHistoryEntry?
+  id         String          @id @db.VarChar(255)
+  name       String          @db.VarChar(255)
+  version    String          @db.VarChar(255)
+  package    Package?
+  ratingId   Int?
+  rating     PackageRating?
+  historyEntries PackageHistoryEntry[]
 }
 
 model PackageData {
@@ -42,7 +44,8 @@ model PackageData {
 }
 
 model PackageRating {
-  id                   Int   @id @default(autoincrement())
+  id                   Int             @id @default(autoincrement())
+  metadataId           String          @unique
   busFactor            Float
   correctness          Float
   rampUp               Float
@@ -51,6 +54,7 @@ model PackageRating {
   goodPinningPractice  Float
   pullRequest          Float
   netScore             Float
+  metadata             PackageMetadata @relation(fields: [metadataId], references: [id])
 }
 
 enum Action {
