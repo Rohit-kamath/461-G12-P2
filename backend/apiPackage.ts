@@ -5,6 +5,29 @@ import * as prismaSchema from '@prisma/client';
 import JSZip from 'jszip';
 import { v4 as uuidv4 } from 'uuid';
 import semver from 'semver';
+import {getRequest} from '../src/utils/api.utils';
+
+async function getGithubUrl(npmUrl: string): Promise<string> {
+    const packageName = npmUrl.split('package/')[1];
+    const response = await fetch(npmUrl);
+    const text = await response.text();
+    const githubUrl = text.split('github.com')[1].split('"')[0];
+    const githubUrlWithPackageName = githubUrl.split('/')[0] + '/' + githubUrl.split('/')[1] + '/' + packageName;
+    return `https://github.com${githubUrlWithPackageName}`;
+}
+
+export async function getPackagePopularity(url : string) : Promise<{stars : number, forks : number}> {
+    if (url.includes('npmjs.com')) {
+        url = await getGithubUrl(url);
+    }
+    const urlParts = url.split('/');
+    const owner = urlParts[3];
+    const repo = urlParts[4];
+    const response = await getRequest(`/repos/${owner}/${repo}`);
+    const starsCount = response.stargazers_count;
+    const forksCount = response.forks_count;
+    return {stars: starsCount, forks: forksCount};
+}
 
 function getMaxVersion(versionRange: string) {
     versionRange = versionRange.replace(/-0/g, '');
@@ -107,6 +130,8 @@ export async function getPackagesByName(req: Request, res: Response) {
     }
 }
 
+type PackageMetaDataWithPopularity = apiSchema.PackageMetadata & { stars: number, forks: number };
+
 export async function getPackagesByRegEx(req: Request, res: Response) {
     try {
         if (req.body?.RegEx === undefined) {
@@ -117,14 +142,30 @@ export async function getPackagesByRegEx(req: Request, res: Response) {
         if (dbPackageMetaData === null) {
             return res.status(500).send(`Error in getPackagesByRegEx: dbPackageMetaData is null`);
         }
-        const apiPackageMetaData: apiSchema.PackageMetadata[] = dbPackageMetaData.map((dbPackageMetaData: prismaSchema.PackageMetadata) => {
-            const metaData: apiSchema.PackageMetadata = {
-                Name: dbPackageMetaData.name,
-                Version: dbPackageMetaData.version,
-                ID: dbPackageMetaData.id,
-            };
-            return metaData;
-        });
+        const apiPackageMetaData: PackageMetaDataWithPopularity[] = [];
+
+        for (const metaData of dbPackageMetaData) {
+            const url = await prismaCalls.getUrlFromId(metaData.id);
+
+            if (url === null) {
+                return res.status(500).send(`Error in getPackagesByRegEx: url is null`);
+            }
+
+            const { stars, forks } = await getPackagePopularity(url);
+
+            apiPackageMetaData.push({
+                Name: metaData.name,
+                Version: metaData.version,
+                ID: metaData.id,
+                stars : stars,
+                forks : forks
+            });
+        }
+
+        // Check if there is any valid data
+        if (apiPackageMetaData.length === 0) {
+            return res.status(500).send('All entries had errors');
+        }
         return res.status(200).json(apiPackageMetaData);
     } catch (error) {
         return res.status(500).send(`Error in getPackagesByRegEx: ${error}`);

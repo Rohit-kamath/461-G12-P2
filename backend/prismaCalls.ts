@@ -148,3 +148,27 @@ export async function updatePackageDetails(
 		return null;
 	}
 }
+
+export async function getUrlFromId(id : apiSchema.PackageID) {
+    try{
+        const packageMetaData = await prisma.packageMetadata.findUnique({
+            where: {
+                id: id
+            },
+            include: {
+                package: {
+                    include: {
+                        data: true
+                    }
+                }
+            }
+        });
+        if(!packageMetaData || !packageMetaData.package || !packageMetaData.package.data || !packageMetaData.package.data.URL){
+            return null;
+        }
+        return packageMetaData.package.data.URL;
+    }catch (error) {
+        console.error(`Error in getUrlFromId: ${error}`);
+        return null;
+    }
+}
