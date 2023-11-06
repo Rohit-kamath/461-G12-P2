@@ -111,13 +111,11 @@ export class Correctness {
     }
 
     private async linterAndTestChecker(owner: string, repo: string): Promise<number> {
-        console.log("Linter Owner:", owner); 
-        console.log("Linter Repo:", repo);
         const tempdir = path.join('temp', owner, repo);
 
         if (fs.existsSync(tempdir)) {
-            fs.rmSync(tempdir, { recursive: true, force: true });
-          }
+            fs.rmSync(tempdir, { recursive: true, force: true }); 
+        }
 
         fs.mkdirSync(tempdir, { recursive: true });
 
