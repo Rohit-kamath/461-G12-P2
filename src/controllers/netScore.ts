@@ -1,4 +1,4 @@
-import { correctness } from "./correctness";
+import { Correctness } from "./correctness";
 import { getBusFactor} from "./busFactor";
 import { calculateRampUp } from "./rampUp";
 import { Responsiveness } from "./responsiveness";
@@ -9,8 +9,8 @@ import {getPullRequest } from "./pullRequest";
 export class NET_SCORE {
     constructor(private owner: string, private repo: string) {}
     async calculate(): Promise<{NET_SCORE: number, RAMP_UP_SCORE: number, CORRECTNESS_SCORE: number, BUS_FACTOR_SCORE: number, RESPONSIVE_MAINTAINER_SCORE: number, LICENSE_SCORE: number}> {
-        // const correctnessobj = new correctness(this.owner, this.repo);
-        let CORRECTNESS_SCORE = 0;
+        const correctness = new Correctness(this.owner, this.repo);
+        const CORRECTNESS_SCORE = await correctness.check(this.owner, this.repo);
         const BUS_FACTOR_SCORE = await getBusFactor(this.owner, this.repo);
         const RAMP_UP_SCORE = await calculateRampUp(this.owner, this.repo);
         const responsiveness = new Responsiveness('someSharedProperty', this.owner, this.repo);
