@@ -1,6 +1,10 @@
 import * as prismaSchema from '@prisma/client';
 import { Action } from '@prisma/client'
+import { Action } from '@prisma/client'
 import * as apiSchema from './apiSchema';
+import createModuleLogger from '../src/logger';
+
+const logger = createModuleLogger('Prisma Calls');
 import createModuleLogger from '../src/logger';
 
 const logger = createModuleLogger('Prisma Calls');
@@ -30,6 +34,7 @@ export async function getMetaDataByQuery(queryName: apiSchema.PackageName, minVe
         return packages;
     } catch (error) {
         logger.info(`Error in getMetaDataArray: ${error}`);
+        logger.info(`Error in getMetaDataArray: ${error}`);
         return null;
     }
 }
@@ -57,6 +62,7 @@ export async function getPackageHistories(queryName: apiSchema.PackageName) : Pr
         return packageHistories;
     } catch (error) {
         logger.info(`Error in getPackageHistories: ${error}`);
+        logger.info(`Error in getPackageHistories: ${error}`);
         return null;
     }
 }
@@ -72,9 +78,53 @@ export async function uploadMetadataToDatabase(metadata: apiSchema.PackageMetada
         });
     } catch (error) {
         logger.info(`Error in uploadMetadataToDatabase: ${error}`);
+        logger.info(`Error in uploadMetadataToDatabase: ${error}`);
         throw new Error('Failed to upload metadata to the database.');
     }
 }
+
+export async function createPackageHistoryEntry(metadataId: string, userId: number, action: Action): Promise<void> {
+    try {
+        // Check if metadataId exists
+        const metadataExists = await prisma.packageMetadata.findUnique({
+            where: { id: metadataId },
+        });
+        if (!metadataExists) {
+            throw new Error(`No metadata found for ID: ${metadataId}`);
+        }
+
+        // Check if userId exists
+        const userExists = await prisma.user.findUnique({
+            where: { id: userId },
+        });
+        if (!userExists) {
+            throw new Error(`No user found for ID: ${userId}`);
+        }
+
+        // Create PackageHistoryEntry
+        await prisma.packageHistoryEntry.create({
+            data: {
+                metadataId: metadataId,
+                userId: userId,
+                action: action,
+                date: new Date(),
+            }
+        });
+    } catch (error) {
+        logger.info(`Error in createPackageHistoryEntry: ${error}`);
+        throw new Error('Failed to create package history entry in the database.');
+    }
+}
+
+export async function checkPackageHistoryExists(metadataId: string): Promise<boolean> {
+    const count = await prisma.packageHistoryEntry.count({
+        where: {
+            metadataId: metadataId,
+        },
+    });
+    return count > 0;
+}
+
 
 export async function createPackageHistoryEntry(metadataId: string, userId: number, action: Action): Promise<void> {
     try {
@@ -172,6 +222,29 @@ export async function storeMetricsInDatabase(metadataId: string, packageRating: 
     }
 }
 
+export async function storeMetricsInDatabase(metadataId: string, packageRating: apiSchema.PackageRating): Promise<void> {
+    try {
+        await prisma.packageRating.create({
+            data: {
+                metadataId: metadataId, 
+                busFactor: packageRating.BusFactor,
+                correctness: packageRating.Correctness,
+                rampUp: packageRating.RampUp,
+                responsiveMaintainer: packageRating.ResponsiveMaintainer,
+                licenseScore: packageRating.LicenseScore,
+                goodPinningPractice: packageRating.GoodPinningPractice,
+                pullRequest: packageRating.PullRequest,
+                netScore: packageRating.NetScore,
+            }
+        });
+
+        logger.info('Package rating metrics stored in the database successfully.');
+    } catch (error) {
+        logger.info(`Error in storeMetricsInDatabase: ${error}`);
+        throw new Error('Failed to store package rating metrics in the database.');
+    }
+}
+
 export async function getPackage(queryID: apiSchema.PackageID) : Promise<FullPackage | null>{
 
 	try {
@@ -220,6 +293,17 @@ export async function updatePackageDetails(
 	}
 }
 
+export async function checkMetricsExist(metadataId: string): Promise<boolean> {
+    try {
+        const existingMetrics = await prisma.packageRating.findUnique({
+            where: { metadataId: metadataId },
+        });
+        return existingMetrics !== null;
+    } catch (error) {
+        logger.error(`Error in checkMetricsExist: ${error}`);
+        throw error;
+    }
+}
 <<<<<<< HEAD
 export async function getUrlFromId(id : apiSchema.PackageID) {
     try{
