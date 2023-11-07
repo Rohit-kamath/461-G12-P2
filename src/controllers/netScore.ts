@@ -1,4 +1,4 @@
-import { Correctness } from './correctness';
+import { correctness } from './correctness';
 import { getBusFactor } from './busFactor';
 import { calculateRampUp } from './rampUp';
 import { Responsiveness } from './responsiveness';
@@ -22,8 +22,7 @@ export class NET_SCORE {
         GOOD_PINNING_PRACTICE_SCORE: number;
     }> {
         // const correctnessobj = new correctness(this.owner, this.repo);
-        const correctness = new Correctness(this.owner, this.repo);
-        const CORRECTNESS_SCORE = await correctness.check(this.owner, this.repo);
+        const CORRECTNESS_SCORE = 0;
         const BUS_FACTOR_SCORE = await getBusFactor(this.owner, this.repo);
         const RAMP_UP_SCORE = await calculateRampUp(this.owner, this.repo);
         const responsiveness = new Responsiveness('someSharedProperty', this.owner, this.repo);
