@@ -231,26 +231,15 @@ export async function checkMetricsExist(metadataId: string): Promise<boolean> {
     }
 }
 
-export async function getUrlFromId(id: apiSchema.PackageID) {
-    try {
-        const packageMetaData = await prisma.packageMetadata.findUnique({
-            where: {
-                id: id,
-            },
-            include: {
-                package: {
-                    include: {
-                        data: true,
-                    },
-                },
-            },
-        });
-        if (!packageMetaData || !packageMetaData.package || !packageMetaData.package.data || !packageMetaData.package.data.URL) {
-            return null;
-        }
-        return packageMetaData.package.data.URL;
-    } catch (error) {
-        console.error(`Error in getUrlFromId: ${error}`);
-        return null;
-    }
-}
+export async function getDownloadCount(packageId: string): Promise<number> {
+    const downloadEntries = await prisma.packageHistoryEntry.findMany({
+      where: {
+        metadata: {
+          id: packageId, // Filtering by the package ID
+        },
+        action: Action.DOWNLOAD, // Filtering by the action "DOWNLOAD"
+      },
+    });
+  
+    return downloadEntries.length; // Return the length of the filtered entries
+  }

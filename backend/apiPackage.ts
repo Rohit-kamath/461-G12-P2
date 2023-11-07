@@ -143,6 +143,8 @@ export async function getPackagesByName(req: Request, res: Response) {
     }
 }
 
+type PackageMetaDataPopularity = apiSchema.PackageMetadata & {DownloadCount: number};
+
 export async function getPackagesByRegEx(req: Request, res: Response) {
     try {
         if (req.body?.RegEx === undefined) {
@@ -153,14 +155,20 @@ export async function getPackagesByRegEx(req: Request, res: Response) {
         if (dbPackageMetaData === null) {
             return res.status(500).send(`Error in getPackagesByRegEx: dbPackageMetaData is null`);
         }
-        const apiPackageMetaData: apiSchema.PackageMetadata[] = dbPackageMetaData.map((dbPackageMetaData: prismaSchema.PackageMetadata) => {
-            const metaData: apiSchema.PackageMetadata = {
+        const apiPackageMetaData: PackageMetaDataPopularity[] = await Promise.all(
+            dbPackageMetaData.map(async (dbPackageMetaData: prismaSchema.PackageMetadata) => {
+              const downloadCount = await prismaCalls.getDownloadCount(dbPackageMetaData.id);
+          
+              const metaData: PackageMetaDataPopularity = {
                 Name: dbPackageMetaData.name,
                 Version: dbPackageMetaData.version,
                 ID: dbPackageMetaData.id,
-            };
-            return metaData;
-        });
+                DownloadCount: downloadCount,
+              };
+          
+              return metaData;
+            })
+          );
         return res.status(200).json(apiPackageMetaData);
     } catch (error) {
         return res.status(500).send(`Error in getPackagesByRegEx: ${error}`);
