@@ -314,6 +314,19 @@ export function parseGitHubUrl(url: string): { owner: string, repo: string } | n
   }
 }
 
+export function isPackageIngestible(metrics: apiSchema.PackageRating): boolean {
+  return (
+      metrics.BusFactor >= 0.5 &&
+      // metrics.Correctness >= 0.5 && (until correctness is fixed)
+      metrics.RampUp >= 0.5 &&
+      metrics.ResponsiveMaintainer >= 0.5 &&
+      metrics.LicenseScore >= 0.5 &&
+      // metrics.GoodPinningPractice >= 0.5 && spec says to only include phase 1 metrics (I think)
+      // metrics.PullRequest >= 0.5
+      metrics.NetScore >= 0.5
+  );
+}
+
 
 export async function uploadPackage(req: Request, res: Response) {
   try {
@@ -355,6 +368,12 @@ export async function uploadPackage(req: Request, res: Response) {
       await prismaCalls.createPackageHistoryEntry(metadata.ID, 1, action); // User id is 1 for now
 
       const metrics = await calculateGithubMetrics(githubInfo.owner, githubInfo.repo);
+
+      if (!isPackageIngestible(metrics)) {
+        logger.info("Package is not uploaded due to the disqualified rating.");
+        return res.status(424).send('Package is not uploaded due to the disqualified rating');
+      }
+      
       await storeGithubMetrics(metadata.ID, metrics);
 
       await uploadToS3(req.file.originalname, req.file.buffer);

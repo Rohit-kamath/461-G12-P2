@@ -1,4 +1,7 @@
 import { getRequest } from '../utils/api.utils';
+import createModuleLogger from '../logger';
+
+const logger = createModuleLogger('License');
 
 export async function getLicenseScore(owner: string, repo: string): Promise<number> {
     try {
@@ -8,7 +11,7 @@ export async function getLicenseScore(owner: string, repo: string): Promise<numb
         const match = licenseRegex.test(readMe);
         return match ? 1 : 0;
     } catch (error) {
-        console.log(error);
+        logger.info(error);
         return 0;
     }
 }

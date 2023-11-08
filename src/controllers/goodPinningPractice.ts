@@ -1,4 +1,7 @@
 import { getRequest } from '../utils/api.utils';
+import createModuleLogger from '../logger';
+
+const logger = createModuleLogger('Good Pinning Practice');
 
 interface Dependency {
     name: string;
@@ -20,7 +23,7 @@ export async function getDependencies(owner: string, repo: string): Promise<Depe
         }
         return dependencyArray;
     } catch (error: any) {
-        console.log('Error in getDependencies: with repo: ' + repo + ' and owner: ' + owner, error);
+        logger.info('Error in getDependencies: with repo: ' + repo + ' and owner: ' + owner, error);
         process.exit(1);
     }
 }
@@ -37,5 +40,6 @@ export async function calculateGoodPinningPractice(owner: string, repo: string):
             }
         });
     }
+
     return totalDependencies === 0 ? 1 : pinnedDependencies / totalDependencies;
 }
