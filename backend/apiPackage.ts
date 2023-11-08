@@ -261,34 +261,35 @@ export async function uploadToS3(fileName: string, fileBuffer: Buffer): Promise<
 }
 
 
-export async function calculateAndStoreGithubMetrics(metadataId: string, owner: string, repo: string): Promise<void> {
+export async function calculateGithubMetrics(owner: string, repo: string): Promise<apiSchema.PackageRating> {
   try {
       const netScoreCalculator = new NET_SCORE(owner, repo);
-      const {
-          NET_SCORE: netScoreValue,
-          RAMP_UP_SCORE,
-          CORRECTNESS_SCORE,
-          BUS_FACTOR_SCORE,
-          RESPONSIVE_MAINTAINER_SCORE,
-          LICENSE_SCORE,
-          GOOD_PINNING_PRACTICE_SCORE,
-          PULL_REQUEST_SCORE,
-      } = await netScoreCalculator.calculate();
+      const metrics = await netScoreCalculator.calculate();
 
-      await prismaCalls.storeMetricsInDatabase(metadataId, {
-        BusFactor: BUS_FACTOR_SCORE,
-        Correctness: CORRECTNESS_SCORE,
-        RampUp: RAMP_UP_SCORE,
-        ResponsiveMaintainer: RESPONSIVE_MAINTAINER_SCORE,
-        LicenseScore: LICENSE_SCORE,
-        GoodPinningPractice: GOOD_PINNING_PRACTICE_SCORE, 
-        PullRequest: PULL_REQUEST_SCORE,
-        NetScore: netScoreValue,
-    });
-
-      console.log('Metrics for the GitHub repository stored successfully.');
+      return {
+          BusFactor: metrics.BUS_FACTOR_SCORE,
+          Correctness: metrics.CORRECTNESS_SCORE,
+          RampUp: metrics.RAMP_UP_SCORE,
+          ResponsiveMaintainer: metrics.RESPONSIVE_MAINTAINER_SCORE,
+          LicenseScore: metrics.LICENSE_SCORE,
+          GoodPinningPractice: metrics.GOOD_PINNING_PRACTICE_SCORE,
+          PullRequest: metrics.PULL_REQUEST_SCORE,
+          NetScore: metrics.NET_SCORE,
+      };
   } catch (error) {
-      console.error(`Failed to calculate or store metrics: ${error}`);
+      logger.info(`Failed to calculate metrics: ${error}`);
+      throw error;
+  }
+}
+
+
+export async function storeGithubMetrics(metadataId: string, packageRating: apiSchema.PackageRating): Promise<void> {
+  try {
+      await prismaCalls.storeMetricsInDatabase(metadataId, packageRating);
+      logger.info('Package rating metrics stored in the database successfully.');
+  } catch (error) {
+      logger.info(`Error in storeGithubMetrics: ${error}`);
+      throw error;
   }
 }
 
@@ -348,7 +349,9 @@ export async function uploadPackage(req: Request, res: Response) {
       const action = Action.CREATE;
       await prismaCalls.createPackageHistoryEntry(metadata.ID, 1, action); // User id is 1 for now
 
-      await calculateAndStoreGithubMetrics(metadata.ID, githubInfo.owner, githubInfo.repo);
+      const metrics = await calculateGithubMetrics(githubInfo.owner, githubInfo.repo);
+      await storeGithubMetrics(metadata.ID, metrics);
+      
       await uploadToS3(req.file.originalname, req.file.buffer);
 
       res.json(Package);
