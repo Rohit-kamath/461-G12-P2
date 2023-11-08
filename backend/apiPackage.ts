@@ -206,6 +206,10 @@ export async function getGithubUrlFromZip(zipBuffer: Buffer): Promise<string> {
       url = `https://github.com/${url.substring(7)}`;
     }
 
+    if (url.startsWith('git@github.com:')) {
+      url = `https://github.com/${url.substring(15)}`;
+    }
+
     url = url.replace(/\.git$/, '');
 
     logger.info(`GitHub URL extracted: ${url}`);
@@ -335,8 +339,9 @@ export async function uploadPackage(req: Request, res: Response) {
       };
 
 
-      const packageExists = await prismaCalls.checkPackageHistoryExists(metadata.ID);
+      const packageExists = await prismaCalls.checkPackageExists(metadata.Name, metadata.Version);
       if (packageExists) {
+          logger.info("Package exists already.");
           return res.status(409).send('Package Exists Already');
       }
       await prismaCalls.uploadMetadataToDatabase(metadata);
@@ -351,7 +356,7 @@ export async function uploadPackage(req: Request, res: Response) {
 
       const metrics = await calculateGithubMetrics(githubInfo.owner, githubInfo.repo);
       await storeGithubMetrics(metadata.ID, metrics);
-      
+
       await uploadToS3(req.file.originalname, req.file.buffer);
 
       res.json(Package);

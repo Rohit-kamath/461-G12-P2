@@ -109,10 +109,11 @@ export async function createPackageHistoryEntry(metadataId: string, userId: numb
     }
 }
 
-export async function checkPackageHistoryExists(metadataId: string): Promise<boolean> {
-    const count = await prisma.packageHistoryEntry.count({
+export async function checkPackageExists(packageName: string, packageVersion: string): Promise<boolean> {
+    const count = await prisma.packageMetadata.count({
         where: {
-            metadataId: metadataId,
+            name: packageName,
+            version: packageVersion,
         },
     });
     return count > 0;
