@@ -339,7 +339,7 @@ export function isPackageIngestible(metrics: apiSchema.PackageRating): boolean {
 }
 
 
-export async function getGitHubUrlFromNpmUrl(npmUrl: string): Promise<string | null> {
+export async function getGitHubUrlFromNpmUrl(npmUrl: string): Promise<string | null>{
   try {
       // Extract the package name from the npm URL
       const packageNameMatch = npmUrl.match(/npmjs\.com\/package\/([^/]+)/);
@@ -377,6 +377,34 @@ export async function getGitHubUrlFromNpmUrl(npmUrl: string): Promise<string | n
       return null;
   } catch (error) {
       logger.info("Error in getGitHubUrlFromNpmUrl:", error);
+      return null;
+  }
+}
+
+
+export async function linkCheck(url: string): Promise<string | null> {
+  try {
+      // Check if the URL is a GitHub URL
+      if (url.includes("github.com")) {
+          // It's already a GitHub URL, so return it as is
+          return url;
+      }
+
+      // Check if the URL is an NPM URL
+      if (url.includes("npmjs.com/package")) {
+          // Convert NPM URL to GitHub URL
+          const githubUrl = await getGitHubUrlFromNpmUrl(url);
+          if (!githubUrl) {
+              throw new Error(`Failed to convert NPM URL to GitHub URL: ${url}`);
+          }
+          return githubUrl;
+      }
+
+      // If the URL is neither GitHub nor NPM, return null or throw an error
+      logger.info("Provided URL is neither a GitHub nor an NPM URL:", url);
+      return null;
+  } catch (error) {
+      logger.error(`Error in linkCheck: ${error}`);
       return null;
   }
 }
@@ -435,9 +463,14 @@ export async function uploadPackage(req: Request, res: Response) {
         fileName = req.file.originalname;
       }
       else if (req.body.URL) {
-        const zipBuffer = await downloadGitHubRepoZip(req.body.URL);
+        const url = await linkCheck(req.body.URL);
+        if (!url) {
+          logger.info("Invalid or unsupported URL provided.");
+          return res.status(400).send('Invalid or unsupported URL provided.');
+      }
+        const zipBuffer = await downloadGitHubRepoZip(url);
         metadata = await extractMetadataFromZip(zipBuffer);
-        githubInfo = parseGitHubUrl(req.body.URL);
+        githubInfo = parseGitHubUrl(url);
         encodedContent = zipBuffer.toString('base64');
         fileName = `${metadata.Name}.zip`;
       }
