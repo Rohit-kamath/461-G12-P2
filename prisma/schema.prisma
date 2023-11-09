@@ -30,7 +30,6 @@ model PackageMetadata {
   name       String          @db.VarChar(255)
   version    String          @db.VarChar(255)
   package    Package?
-  ratingId   Int?
   rating     PackageRating?
   historyEntries PackageHistoryEntry[]
 }

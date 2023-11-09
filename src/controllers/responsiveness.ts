@@ -1,5 +1,8 @@
 import { MetricParent } from '../helpers/MetricParent';
 import * as responsivenessApi from '../utils/responsivenessApi';
+import createModuleLogger from '../logger';
+
+const logger = createModuleLogger('Responsiveness');
 
 export class Responsiveness extends MetricParent {
     private repoOwner: string;
@@ -24,7 +27,7 @@ export class Responsiveness extends MetricParent {
                 }
             }
         } catch (error) {
-            console.error('Error fetching data:', error);
+            logger.info('Error fetching data:', error);
             return Promise.reject(error);
         }
     }
