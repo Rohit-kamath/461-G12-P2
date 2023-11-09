@@ -237,9 +237,6 @@ export async function extractMetadataFromZip(filebuffer: Buffer): Promise<apiSch
   try {
     const packageContent = await extractFileFromZip(filebuffer, "package.json");
     const packageJson = JSON.parse(packageContent);
-    console.log(`Extracted package.json content: ${packageContent}`)
-    console.log(`Extracted package.json content: ${packageJson.name}`);
-    console.log(`Extracted package.json content: ${packageJson.version}`);
     return {
       Name: packageJson.name,
       Version: packageJson.version,
@@ -322,7 +319,7 @@ export function parseGitHubUrl(url: string): { owner: string, repo: string } | n
           repo: match[2].replace('.git', '')
       };
   } else {
-      console.info('Invalid GitHub URL provided:', url);
+      logger.info('Invalid GitHub URL provided:', url);
       return null;
   }
 }
