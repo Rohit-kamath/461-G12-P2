@@ -1,12 +1,12 @@
 import * as prismaSchema from '@prisma/client';
-import { Action } from '@prisma/client'
+import { Action } from '@prisma/client';
 import * as apiSchema from './apiSchema';
 import createModuleLogger from '../src/logger';
 
 const logger = createModuleLogger('Prisma Calls');
 const prisma = new prismaSchema.PrismaClient();
 
-export async function getMetaDataByQuery(queryName: apiSchema.PackageName, minVersion: string, maxVersion: string, minInclusive: boolean, maxInclusive: boolean, offset : number): Promise<prismaSchema.PackageMetadata[] | null> {
+export async function getMetaDataByQuery(queryName: apiSchema.PackageName, minVersion: string, maxVersion: string, minInclusive: boolean, maxInclusive: boolean, offset: number): Promise<prismaSchema.PackageMetadata[] | null> {
     try {
         // Ensure that the offset is at least 1 (treat 0 as page 1)
         const page = Math.max(1, offset);
@@ -30,6 +30,7 @@ export async function getMetaDataByQuery(queryName: apiSchema.PackageName, minVe
         return packages;
     } catch (error) {
         logger.info(`Error in getMetaDataArray: ${error}`);
+        logger.info(`Error in getMetaDataArray: ${error}`);
         return null;
     }
 }
@@ -41,7 +42,7 @@ type FullHistoryEntry = prismaSchema.Prisma.PackageHistoryEntryGetPayload<{
     };
 }>;
 
-export async function getPackageHistories(queryName: apiSchema.PackageName) : Promise<FullHistoryEntry[] | null>{
+export async function getPackageHistories(queryName: apiSchema.PackageName): Promise<FullHistoryEntry[] | null> {
     try {
         const packageHistories = await prisma.packageHistoryEntry.findMany({
             where: {
@@ -57,6 +58,7 @@ export async function getPackageHistories(queryName: apiSchema.PackageName) : Pr
         return packageHistories;
     } catch (error) {
         logger.info(`Error in getPackageHistories: ${error}`);
+        logger.info(`Error in getPackageHistories: ${error}`);
         return null;
     }
 }
@@ -67,10 +69,11 @@ export async function uploadMetadataToDatabase(metadata: apiSchema.PackageMetada
             data: {
                 name: metadata.Name,
                 version: metadata.Version,
-                id: metadata.ID
-            }
+                id: metadata.ID,
+            },
         });
     } catch (error) {
+        logger.info(`Error in uploadMetadataToDatabase: ${error}`);
         logger.info(`Error in uploadMetadataToDatabase: ${error}`);
         throw new Error('Failed to upload metadata to the database.');
     }
@@ -101,7 +104,7 @@ export async function createPackageHistoryEntry(metadataId: string, userId: numb
                 userId: userId,
                 action: action,
                 date: new Date(),
-            }
+            },
         });
     } catch (error) {
         logger.info(`Error in createPackageHistoryEntry: ${error}`);
@@ -153,7 +156,7 @@ export async function storeMetricsInDatabase(metadataId: string, packageRating: 
     try {
         await prisma.packageRating.create({
             data: {
-                metadataId: metadataId, 
+                metadataId: metadataId,
                 busFactor: packageRating.BusFactor,
                 correctness: packageRating.Correctness,
                 rampUp: packageRating.RampUp,
@@ -162,7 +165,7 @@ export async function storeMetricsInDatabase(metadataId: string, packageRating: 
                 goodPinningPractice: packageRating.GoodPinningPractice,
                 pullRequest: packageRating.PullRequest,
                 netScore: packageRating.NetScore,
-            }
+            },
         });
 
         logger.info('Package rating metrics stored in the database successfully.');
@@ -172,52 +175,48 @@ export async function storeMetricsInDatabase(metadataId: string, packageRating: 
     }
 }
 
-export async function getPackage(queryID: apiSchema.PackageID) : Promise<FullPackage | null>{
-
-	try {
-		const packageEntry = await prisma.package.findFirst({
-			where: {
-				metadata: {
-					id: queryID,
-				},
-			},
-			include: {
-				data: true,
-				metadata: true,
-			},
-		});
-		return packageEntry;
-	} catch (error) {
-		console.error(`Error in getPackage: ${error}`);
-		return null;
-	}
+export async function getPackage(queryID: apiSchema.PackageID): Promise<FullPackage | null> {
+    try {
+        const packageEntry = await prisma.package.findFirst({
+            where: {
+                metadata: {
+                    id: queryID,
+                },
+            },
+            include: {
+                data: true,
+                metadata: true,
+            },
+        });
+        return packageEntry;
+    } catch (error) {
+        console.error(`Error in getPackage: ${error}`);
+        return null;
+    }
 }
 
 // For update endpoint
-export async function updatePackageDetails(
-	packageId: apiSchema.PackageID,
-	packageData: apiSchema.PackageData,
-): Promise<apiSchema.PackageData | null> {
-	try {
-		// metadata has been validated in updatePackage
-		const updatedData = await prisma.packageData.update({
-			where: { id: packageId },
-			data: {
-				content: packageData.Content ?? '', // nullish  to handle optional fields
-				URL: packageData.URL ?? '',
-				JSProgram: packageData.JSProgram ?? '',
-			},
-		});
+export async function updatePackageDetails(packageId: apiSchema.PackageID, packageData: apiSchema.PackageData): Promise<apiSchema.PackageData | null> {
+    try {
+        // metadata has been validated in updatePackage
+        const updatedData = await prisma.packageData.update({
+            where: { id: packageId },
+            data: {
+                content: packageData.Content ?? '', // nullish  to handle optional fields
+                URL: packageData.URL ?? '',
+                JSProgram: packageData.JSProgram ?? '',
+            },
+        });
 
-		return {
-			Content: updatedData.content,
-			URL: updatedData.URL,
-			JSProgram: updatedData.JSProgram,
-		};
-	} catch (error) {
-		console.error(`Error in updatePackageDetails: ${error}`);
-		return null;
-	}
+        return {
+            Content: updatedData.content,
+            URL: updatedData.URL,
+            JSProgram: updatedData.JSProgram,
+        };
+    } catch (error) {
+        console.error(`Error in updatePackageDetails: ${error}`);
+        return null;
+    }
 }
 
 export async function checkMetricsExist(metadataId: string): Promise<boolean> {
@@ -231,3 +230,16 @@ export async function checkMetricsExist(metadataId: string): Promise<boolean> {
         throw error;
     }
 }
+
+export async function getDownloadCount(packageId: string): Promise<number> {
+    const downloadEntries = await prisma.packageHistoryEntry.findMany({
+      where: {
+        metadata: {
+          id: packageId, // Filtering by the package ID
+        },
+        action: Action.DOWNLOAD, // Filtering by the action "DOWNLOAD"
+      },
+    });
+  
+    return downloadEntries.length; // Return the length of the filtered entries
+  }
