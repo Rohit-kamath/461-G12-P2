@@ -234,13 +234,31 @@ export async function checkMetricsExist(metadataId: string): Promise<boolean> {
 
 export async function getDownloadCount(packageId: string): Promise<number> {
     const downloadEntries = await prisma.packageHistoryEntry.findMany({
-      where: {
-        metadata: {
-          id: packageId, // Filtering by the package ID
-        },
+        where: {
+            metadata: {
+            id: packageId, // Filtering by the package ID
+            },
         action: Action.DOWNLOAD, // Filtering by the action "DOWNLOAD"
-      },
+        },
     });
-  
+
     return downloadEntries.length; // Return the length of the filtered entries
-  }
+}
+
+
+export async function resetDatabase() {
+    try {
+        await prisma.package.deleteMany();
+        logger.info('Deleted packages');
+        await prisma.packageData.deleteMany();
+        logger.info('Deleted package data');
+        await prisma.packageRating.deleteMany();
+        logger.info('Deleted package ratings');
+        await prisma.packageHistoryEntry.deleteMany();
+        logger.info('Deleted package history');
+        await prisma.packageMetadata.deleteMany();
+        logger.info('Deleted package metadata');
+    } catch (error) {
+        logger.info('Error resetting database:', error);
+    }
+}
