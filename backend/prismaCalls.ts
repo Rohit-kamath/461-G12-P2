@@ -6,6 +6,20 @@ import createModuleLogger from '../src/logger';
 const logger = createModuleLogger('Prisma Calls');
 const prisma = new prismaSchema.PrismaClient();
 
+type FullPackage = prismaSchema.Prisma.PackageGetPayload<{
+    include: {
+        metadata: true;
+        data: true;
+    };
+}>;
+
+type FullHistoryEntry = prismaSchema.Prisma.PackageHistoryEntryGetPayload<{
+    include: {
+        metadata: true;
+        user: true;
+    };
+}>;
+
 export async function getMetaDataByQuery(queryName: apiSchema.PackageName, minVersion: string, maxVersion: string, minInclusive: boolean, maxInclusive: boolean, offset: number): Promise<prismaSchema.PackageMetadata[] | null> {
     try {
         // Ensure that the offset is at least 1 (treat 0 as page 1)
@@ -34,13 +48,6 @@ export async function getMetaDataByQuery(queryName: apiSchema.PackageName, minVe
         return null;
     }
 }
-
-type FullHistoryEntry = prismaSchema.Prisma.PackageHistoryEntryGetPayload<{
-    include: {
-        metadata: true;
-        user: true;
-    };
-}>;
 
 export async function getPackageHistories(queryName: apiSchema.PackageName): Promise<FullHistoryEntry[] | null> {
     try {
@@ -146,12 +153,6 @@ export async function getMetaDataByRegEx(regEx: string): Promise<prismaSchema.Pa
         return null;
     }
 }
-type FullPackage = prismaSchema.Prisma.PackageGetPayload<{
-    include: {
-        metadata: true;
-        data: true;
-    };
-}>;
 
 export async function storeMetricsInDatabase(metadataId: string, packageRating: apiSchema.PackageRating): Promise<void> {
     try {
