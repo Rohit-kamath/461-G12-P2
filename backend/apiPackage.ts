@@ -153,24 +153,34 @@ export async function getPackagesByRegEx(req: Request, res: Response) {
 
 export async function extractFileFromZip(zipBuffer: Buffer, filename: string): Promise<string> {
   const zip = await JSZip.loadAsync(zipBuffer);
-  let file = zip.file(filename);
-  
-  // If the specific file is not found, search for any matching files in the ZIP.
-  if (!file) {
-    const files = zip.file(new RegExp(`^.*${filename}$`)); // This will return an array of matching files.
-    if (files.length > 0) {
-      file = files[0]; // Use the first match.
-    }
+
+  // Determine if there's a single root directory
+  const rootDir = Object.keys(zip.files).find(path => path.endsWith("/") && path.split('/').length === 2);
+
+  let file;
+
+  if (rootDir) {
+      // If a root directory exists, prepend it to the filename
+      file = zip.file(`${rootDir}${filename}`);
+  } else {
+      // Otherwise, search for the file at the root of the zip
+      file = zip.file(new RegExp(`^${filename}$`));
   }
-  
-  if (!file) {
-    logger.info(`${filename} not found inside the zip.`)
-    throw new Error(`${filename} not found inside the zip.`);
+
+  // Handle the case where file is an array
+  if (Array.isArray(file)) {
+      file = file.length > 0 ? file[0] : null;
   }
-  
+
+  if (!file) {
+      logger.info(`${filename} not found inside the zip.`);
+      throw new Error(`${filename} not found inside the zip.`);
+  }
+
   // Extract and return the file content as a string
   return file.async('string');
 }
+
 
 
 export async function getGithubUrlFromZip(zipBuffer: Buffer): Promise<string> {
@@ -227,7 +237,8 @@ export async function extractMetadataFromZip(filebuffer: Buffer): Promise<apiSch
   try {
     const packageContent = await extractFileFromZip(filebuffer, "package.json");
     const packageJson = JSON.parse(packageContent);
-    console.log(`Extracted package.json content: ${packageJson.name, packageJson.version}`);
+    console.log(`Extracted package.json content: ${packageContent}`)
+    console.log(`Extracted package.json content: ${packageJson.name}`);
     console.log(`Extracted package.json content: ${packageJson.version}`);
     return {
       Name: packageJson.name,
