@@ -10,6 +10,7 @@ import createModuleLogger from '../src/logger';
 import { NET_SCORE } from '../src/controllers/netScore';
 import semver from 'semver';
 import { Action } from '@prisma/client';
+import axios from 'axios'
 
 const logger = createModuleLogger('API Package Calls');
 
@@ -226,7 +227,8 @@ export async function extractMetadataFromZip(filebuffer: Buffer): Promise<apiSch
   try {
     const packageContent = await extractFileFromZip(filebuffer, "package.json");
     const packageJson = JSON.parse(packageContent);
-
+    console.log(`Extracted package.json content: ${packageJson.name, packageJson.version}`);
+    console.log(`Extracted package.json content: ${packageJson.version}`);
     return {
       Name: packageJson.name,
       Version: packageJson.version,
@@ -314,37 +316,133 @@ export function parseGitHubUrl(url: string): { owner: string, repo: string } | n
   }
 }
 
+
 export function isPackageIngestible(metrics: apiSchema.PackageRating): boolean {
   return (
-      metrics.BusFactor >= 0.5 &&
+      metrics.BusFactor >= 0.0 &&
       // metrics.Correctness >= 0.5 && (until correctness is fixed)
-      metrics.RampUp >= 0.5 &&
-      metrics.ResponsiveMaintainer >= 0.5 &&
-      metrics.LicenseScore >= 0.5 &&
+      metrics.RampUp >= 0.0 &&
+      metrics.ResponsiveMaintainer >= 0.0 &&
+      metrics.LicenseScore >= 0.0 &&
       // metrics.GoodPinningPractice >= 0.5 && spec says to only include phase 1 metrics (I think)
       // metrics.PullRequest >= 0.5
-      metrics.NetScore >= 0.5
+      metrics.NetScore >= 0.0
   );
+}
+
+
+export async function getGitHubUrlFromNpmUrl(npmUrl: string): Promise<string | null> {
+  try {
+      // Extract the package name from the npm URL
+      const packageNameMatch = npmUrl.match(/npmjs\.com\/package\/([^/]+)/);
+      if (!packageNameMatch) {
+          logger.info("Could not extract package name from npm URL");
+          return null;
+      }
+      const packageName = packageNameMatch[1];
+
+      // Fetch the package data from npm
+      const response = await axios.get(`https://registry.npmjs.org/${packageName}`);
+      const packageData = response.data;
+
+      // Get the repository URL from package data
+      let repoUrl = packageData.repository?.url;
+      if (!repoUrl) {
+          logger.info("Repository URL not found in npm package data");
+          return null;
+      }
+
+      // Format the repository URL to get the GitHub URL
+      repoUrl = repoUrl.replace(/^git\+/, '').replace(/\.git$/, '');
+      if (repoUrl.startsWith('https://github.com/')) {
+          // URL is already in the correct format
+          return repoUrl;
+      } else if (repoUrl.startsWith('github:')) {
+          // Convert 'github:' shorthand to a full URL
+          return `https://github.com/${repoUrl.substring(7)}`;
+      } else if (repoUrl.startsWith('git@github.com:')) {
+          // Convert SSH format to HTTPS URL
+          return `https://github.com/${repoUrl.substring(15).replace(/\.git$/, '')}`;
+      }
+
+      logger.info("Unknown repository URL format:", repoUrl);
+      return null;
+  } catch (error) {
+      logger.info("Error in getGitHubUrlFromNpmUrl:", error);
+      return null;
+  }
+}
+
+
+export async function downloadGitHubRepoZip(githubUrl: string): Promise<Buffer> {
+  try {
+      // Extract owner and repository name from the GitHub URL
+      const match = githubUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
+      if (!match) {
+          throw new Error(`Invalid GitHub URL: ${githubUrl}`);
+      }
+
+      const owner = match[1];
+      const repo = match[2];
+
+      // Construct the ZIP download URL
+      const zipUrl = `https://github.com/${owner}/${repo}/archive/refs/heads/master.zip`;
+
+      // Download the ZIP file
+      const response = await axios.get(zipUrl, { responseType: 'arraybuffer' });
+      if (response.status !== 200) {
+          throw new Error(`Failed to download ZIP from ${zipUrl}`);
+      }
+
+      // Convert the response to a Buffer
+      const zipBuffer = Buffer.from(response.data, 'binary');
+      return zipBuffer;
+  } catch (error) {
+      logger.error(`Error in downloadGitHubRepoZip: ${error}`);
+      throw error;
+  }
 }
 
 
 export async function uploadPackage(req: Request, res: Response) {
   try {
-      if (!req.file) {
-          logger.info("No file provided in the upload.");
+      let metadata: apiSchema.PackageMetadata;
+      let githubInfo: { owner: string, repo: string } | null;
+      let encodedContent: string;
+      let fileName: string;
+
+      if (!req.file && !req.body.URL) {
+          logger.info("No file or URL provided in the upload.");
+          return res.status(400).send('No file or URL uploaded');
+      }
+      else if (req.file && req.body.URL) {
+          logger.info("Must upload either file or URL, not both.");
           return res.status(400).send('No file uploaded');
       }
+      else if (req.file) {
+        metadata = await extractMetadataFromZip(req.file.buffer);
+        const url = await getGithubUrlFromZip(req.file.buffer);
+        githubInfo = parseGitHubUrl(url);
+        encodedContent = req.file.buffer.toString('base64');
+        fileName = req.file.originalname;
+      }
+      else if (req.body.URL) {
+        const zipBuffer = await downloadGitHubRepoZip(req.body.URL);
+        metadata = await extractMetadataFromZip(zipBuffer);
+        githubInfo = parseGitHubUrl(req.body.URL);
+        encodedContent = zipBuffer.toString('base64');
+        fileName = `${metadata.Name}.zip`;
+      }
+      else {
+        logger.info("Must upload a proper zip or provide a URL");
+        return res.status(400).send('Invalid upload type');
+      }
 
-      const metadata = await extractMetadataFromZip(req.file.buffer);
-
-      const url = await getGithubUrlFromZip(req.file.buffer);
-      const githubInfo = parseGitHubUrl(url);
       if (!githubInfo) {
           logger.info("Invalid GitHub repository URL.");
           return res.status(400).send('Invalid GitHub repository URL.');
       }
 
-      const encodedContent = req.file.buffer.toString('base64');
       const jsProgram = "if (process.argv.length === 7) {\nconsole.log('Success')\nprocess.exit(0)\n} else {\nconsole.log('Failed')\nprocess.exit(1)\n}\n";
       const PackageData: apiSchema.PackageData = {
           Content: encodedContent,
@@ -357,6 +455,13 @@ export async function uploadPackage(req: Request, res: Response) {
           logger.info("Package exists already.");
           return res.status(409).send('Package Exists Already');
       }
+
+      const metrics = await calculateGithubMetrics(githubInfo.owner, githubInfo.repo);
+      if (!isPackageIngestible(metrics)) {
+        logger.info("Package is not uploaded due to the disqualified rating.");
+        return res.status(424).send('Package is not uploaded due to the disqualified rating');
+      }
+
       await prismaCalls.uploadMetadataToDatabase(metadata);
 
       const Package: apiSchema.Package = {
@@ -367,16 +472,9 @@ export async function uploadPackage(req: Request, res: Response) {
       const action = Action.CREATE;
       await prismaCalls.createPackageHistoryEntry(metadata.ID, 1, action); // User id is 1 for now
 
-      const metrics = await calculateGithubMetrics(githubInfo.owner, githubInfo.repo);
-
-      if (!isPackageIngestible(metrics)) {
-        logger.info("Package is not uploaded due to the disqualified rating.");
-        return res.status(424).send('Package is not uploaded due to the disqualified rating');
-      }
-      
       await storeGithubMetrics(metadata.ID, metrics);
 
-      await uploadToS3(req.file.originalname, req.file.buffer);
+      await uploadToS3(fileName, Buffer.from(encodedContent, 'base64'));
 
       res.json(Package);
   } catch (error) {

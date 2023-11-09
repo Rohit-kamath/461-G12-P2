@@ -11,7 +11,8 @@ export async function getLicenseScore(owner: string, repo: string): Promise<numb
         const match = licenseRegex.test(readMe);
         return match ? 1 : 0;
     } catch (error) {
-        logger.info(error);
+        console.log(error);
+        logger.info('Error in License: with repo: ' + repo + ' and owner: ' + owner, error)
         return 0;
     }
 }
