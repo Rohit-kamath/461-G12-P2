@@ -1,5 +1,8 @@
 //import { Request, Response, NextFunction } from 'express';
 import * as RampUpAPI from '../utils/rampUpAPI';
+import createModuleLogger from '../logger';
+
+const logger = createModuleLogger('Ramp Up');
 
 export const calculateRampUp = async (owner: string, repo: string) => {
     /* const { owner, repo } = req.query as { owner: string; repo: string }; */
@@ -47,7 +50,7 @@ export const calculateRampUp = async (owner: string, repo: string) => {
         return rampUpScore;
     } catch (error) {
         // Handle any potential errors during the calculation process.
-        console.error('Error computing the ramp-up score:', error);
+        logger.info('Error computing the ramp-up score:', error);
         return 0;
     }
 };

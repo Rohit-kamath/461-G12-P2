@@ -1,5 +1,8 @@
 import { getRequest } from '../utils/api.utils';
 import { response } from 'express';
+import createModuleLogger from '../logger';
+
+const logger = createModuleLogger('Bus Factor');
 
 interface Contributor {
     login: string;
@@ -20,7 +23,7 @@ export const getContributors = async (owner: string, repo: string): Promise<Cont
         contributors.sort((a, b) => b.totalContributions - a.totalContributions);
         return contributors;
     } catch (error: any) {
-        console.log(`Error in getContributors: with repo: ${repo} and owner: ${owner}, response: ${JSON.stringify(response, null, 2)}, error: ${error}`);
+        logger.info(`Error in getContributors: with repo: ${repo} and owner: ${owner}, response: ${JSON.stringify(response, null, 2)}, error: ${error}`);
         return null;
     }
 };
