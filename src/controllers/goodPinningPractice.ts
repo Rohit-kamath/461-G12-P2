@@ -8,15 +8,14 @@ interface Dependency {
 export async function getDependencies(owner: string, repo: string): Promise<Dependency[] | null> {
     try {
         const response = await getRequest(`/repos/${owner}/${repo}/contents/package.json`);
-        const packageJson = Buffer.from(response.content, 'base64').toString('ascii');
+        const packageJson = Buffer.from(response.content, 'base64').toString('utf-8');
         const dependencies = JSON.parse(packageJson).dependencies;
         const dependencyArray: Dependency[] = [];
         for (const dependency in dependencies) {
-            const dependencyObject: Dependency = {
+            dependencyArray.push({
                 name: dependency,
                 version: dependencies[dependency],
-            };
-            dependencyArray.push(dependencyObject);
+            });
         }
         return dependencyArray;
     } catch (error: any) {

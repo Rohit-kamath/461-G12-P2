@@ -29,9 +29,7 @@ export class NET_SCORE {
         const RESPONSIVE_MAINTAINER_SCORE = await responsiveness.calculateMetric();
         const LICENSE_SCORE = await getLicenseScore(this.owner, this.repo);
         const GOOD_PINNING_PRACTICE_SCORE = await calculateGoodPinningPractice(this.owner, this.repo);
-        console.log(`GOOD_PINNING_PRACTICE_SCORE: ${GOOD_PINNING_PRACTICE_SCORE}`);
         const PULL_REQUEST_SCORE = await getPullRequest(this.owner, this.repo);
-        console.log(PULL_REQUEST_SCORE);
         const NET_SCORE = CORRECTNESS_SCORE * 0.25 + BUS_FACTOR_SCORE * 0.15 + RAMP_UP_SCORE * 0.25 + RESPONSIVE_MAINTAINER_SCORE * 0.3 + LICENSE_SCORE * 0.05;
         return {
             NET_SCORE: parseFloat(NET_SCORE.toFixed(3)),
