@@ -22,6 +22,8 @@ const s3 = new AWS.S3({
     region: 'us-east-2',
 });
 
+type PackageMetaDataPopularity = apiSchema.PackageMetadata & {DownloadCount: number};
+
 async function getGithubUrl(npmUrl: string): Promise<string> {
     const packageName = npmUrl.split('package/')[1];
     const response = await fetch(npmUrl);
@@ -98,14 +100,20 @@ export async function getPackages(req: Request, res: Response) {
         if (dbPackageMetaData === null) {
             return res.status(500).send(`Error in getPackageMetaData: packageMetaData is null`);
         }
-        const apiPackageMetaData: apiSchema.PackageMetadata[] = dbPackageMetaData.map((dbPackageMetaData: prismaSchema.PackageMetadata) => {
-            const metaData: apiSchema.PackageMetadata = {
+        const apiPackageMetaData: PackageMetaDataPopularity[] = await Promise.all(
+            dbPackageMetaData.map(async (dbPackageMetaData: prismaSchema.PackageMetadata) => {
+              const downloadCount = await prismaCalls.getDownloadCount(dbPackageMetaData.id);
+          
+              const metaData: PackageMetaDataPopularity = {
                 Name: dbPackageMetaData.name,
                 Version: dbPackageMetaData.version,
                 ID: dbPackageMetaData.id,
-            };
-            return metaData;
-        });
+                DownloadCount: downloadCount,
+              };
+          
+              return metaData;
+            })
+          );
         res.setHeader('offset', offset);
         return res.status(200).json(apiPackageMetaData);
     } catch (error) {
@@ -144,8 +152,6 @@ export async function getPackagesByName(req: Request, res: Response) {
         return res.status(500).send(`Error in getPackagesByName: ${error}`);
     }
 }
-
-type PackageMetaDataPopularity = apiSchema.PackageMetadata & {DownloadCount: number};
 
 export async function getPackagesByRegEx(req: Request, res: Response) {
     try {
