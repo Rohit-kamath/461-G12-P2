@@ -1,10 +1,9 @@
-import express from "express";
-import multer from "multer";
-import * as apiPackage from "./apiPackage";
+import express from 'express';
+import multer from 'multer';
+import * as apiPackage from './apiPackage';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import path from 'path';
-
 
 dotenv.config();
 
@@ -20,7 +19,8 @@ app.use(express.static('Frontend'));
 const storage = multer.memoryStorage(); // Store the file in memory
 const upload = multer({ storage: storage });
 
-app.get('/upload-page', (req, res) => { // This is just for testing purposes
+app.get('/upload-page', (req, res) => {
+    // This is just for testing purposes
     res.sendFile(path.join(__dirname, '../Frontend/testwebsite.html'));
 });
 
@@ -62,19 +62,18 @@ app.listen(port, () => {
 
 //GET package download
 app.get('/package/:id', async (req, res) => {
-	try {
-		await apiPackage.getPackageDownload(req, res);
-	} catch (error) {
-		res.status(500).send('Internal Server Error');
-	}
+    try {
+        await apiPackage.getPackageDownload(req, res);
+    } catch (error) {
+        res.status(500).send('Internal Server Error');
+    }
 });
 
 //PUT package update
 app.put('/packages/:id', async (req, res) => {
-	try {
-		await apiPackage.updatePackage(req, res);
-	} catch (error) {
-		res.status(500).send('Internal Server Error');
-	}
+    try {
+        await apiPackage.updatePackage(req, res);
+    } catch (error) {
+        res.status(500).send('Internal Server Error');
+    }
 });
-

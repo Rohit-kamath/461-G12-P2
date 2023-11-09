@@ -59,7 +59,7 @@ model PackageRating {
 enum Action {
   CREATE
   UPDATE
-  DELETE
+  DOWNLOAD
   RATE
 }
 
