@@ -12,6 +12,7 @@ import semver from 'semver';
 import { getRequest } from '../src/utils/api.utils';
 import { Action } from '@prisma/client';
 import axios from 'axios'
+//import { empty } from '@prisma/client/runtime/library';
 
 const logger = createModuleLogger('API Package Calls');
 
@@ -619,4 +620,47 @@ export async function updatePackage(req: Request, res: Response) {
         console.error(`Error in updatePackage: ${error}`);
         return res.status(500).send(`Server error: ${error}`);
     }
+}
+
+
+export async function callResetDatabase(req: Request, res: Response) {
+  try {
+    const bucketName = process.env.AWS_S3_BUCKET_NAME;
+    if (!bucketName) {
+      throw new Error("AWS S3 bucket name is not defined in environment variables.");
+    }
+
+    await emptyS3Bucket(bucketName);
+    logger.info('S3 Bucket content deleted.');
+    await prismaCalls.resetDatabase();
+    logger.info('Registry is reset.');
+    res.status(200).send('Registry is reset.');
+    
+  } catch (error) {
+    const errorMessage = (error instanceof Error) ? error.message : 'Unknown error occurred';
+    logger.error(`Error resetting database or S3 bucket: ${errorMessage}`);
+    res.status(500).send(`Internal Server Error: ${errorMessage}`);
+  }
+}
+
+
+async function emptyS3Bucket(bucketName: string) {
+  try {
+    let listedObjects;
+    do {
+      listedObjects = await s3.listObjectsV2({ Bucket: bucketName }).promise();
+
+      if (listedObjects.Contents && listedObjects.Contents.length > 0) {
+        const deleteParams = {
+          Bucket: bucketName,
+          Delete: { Objects: listedObjects.Contents.filter(item => item.Key).map(item => ({ Key: item.Key! })) }
+        };
+        await s3.deleteObjects(deleteParams).promise();
+      }
+    } while (listedObjects.IsTruncated);
+  } catch (error) {
+    const errorMessage = (error instanceof Error) ? error.message : 'Unknown error occurred';
+    logger.error(`Error emptying S3 bucket: ${errorMessage}`);
+    throw new Error(`Failed to empty S3 bucket: ${errorMessage}`);
+  }
 }
