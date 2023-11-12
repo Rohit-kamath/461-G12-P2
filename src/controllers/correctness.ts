@@ -1,10 +1,19 @@
 import { Octokit } from '@octokit/rest';
 import { ESLint } from 'eslint';
-import { execSync, exec } from 'child_process';
-/* import {config} from "dotenv"; */
+import { config } from 'dotenv';
+import fs from 'fs';
+import path from 'path';
+import { execSync } from 'child_process';
 
-export class correctness {
-    //private octokit: Octokit;
+config(); // Load environment variables from .env file
+
+interface RepoData {
+    stars_count: number;
+    forks_count: number;
+}
+
+export class Correctness {
+    private octokit: Octokit;
     private errors = 0;
     private warnings = 0;
     private securityIssues = 0;
@@ -13,155 +22,145 @@ export class correctness {
         private owner: string,
         private repo: string,
     ) {
-        // Initialize the Octokit client with an authentication token if needed
-        /*  config();
         const token = process.env.GITHUB_TOKEN;
-        this.octokit = new Octokit({
-            auth: token,
-        }); */
+        if (!token) {
+            throw new Error('GITHUB_TOKEN is not set in the environment variables.');
+        }
+        this.octokit = new Octokit({ auth: token });
     }
 
-    async check(): Promise<number> {
-        //////console.log("HEREEEE");
-        // Get the repository information using the GitHub API
-        /* try {
-            const response = await this.octokit.repos.get({
-                owner: this.owner,
-                repo: this.repo,
+    public async check(owner: string, repo: string): Promise<number> {
+        repo = repo.trim().replace('\r', '');
+        const repoData = await this.fetchRepoData(owner, repo);
+
+        if (repoData === null) return 0;
+
+        const githubScore = this.calculateGitHubScore(repoData.stars_count, repoData.forks_count);
+
+        const eslintScore = await this.linterAndTestChecker(owner, repo);
+
+        return this.calculateFinalScore(githubScore, eslintScore);
+    }
+
+    public async fetchRepoData(owner: string, repo: string): Promise<RepoData | null> {
+        try {
+            const { data } = await this.octokit.repos.get({
+                owner,
+                repo,
             });
+            return {
+                stars_count: data.stargazers_count,
+                forks_count: data.forks_count,
+            };
+        } catch (error) {
+            console.error('Error fetching repo data:', error);
+            return null;
         }
-        catch (error: any) {
-            ////////console.log(error);
-            return 0;
-        } 
-        const { data: repoData } = await this.octokit.repos.get({
-            owner: this.owner,
-            repo: this.repo,
-        }); */
-        const stars = 0;
-        const forks = 0;
-        const stars_count = 0;
-        const forks_count = 0;
-        /* ////console.log(`Stars: ${stars}, Forks: ${forks}`); */
-        // Calculate a score based on the number of stars, forks, and watchers
-        const power = this.calculateLowestPowerOf10(stars_count, forks_count);
-        const githubScore = (stars_count + forks_count) / power;
-        let eslintScore = await this.LinterandTestChecker();
-        // try {
-        //     eslintScore = await this.LinterandTestChecker();
-        // } catch(e) {
-        //     //////console.log("Error!", e);
-        // }
-        ////console.log(`Github Score: ${githubScore}, Eslint Score: ${eslintScore}`);
-        const finalScore = 0.2 * githubScore + 0.8 * eslintScore;
-        if (finalScore > 1) {
-            return 1;
-        }
-        return finalScore;
     }
-    private calculateLowestPowerOf10(num1: number, num2: number): number {
-        const sum = num1 + num2;
-        let power = 1;
-        while (power < sum) {
-            power *= 10;
-        }
-        return power;
+
+    public calculateGitHubScore(stars: number, forks: number): number {
+        return Math.min(1, (stars + forks) / 1000);
     }
-    private hasTestInName(path: string): boolean {
-        const fs = require('fs');
-        const stats = fs.statSync(path);
-        if (stats.isDirectory()) {
-            if (path.includes('test')) {
-                return true;
-            }
-            const files = fs.readdirSync(path);
-            for (const file of files) {
-                if (this.hasTestInName(`${path}/${file}`)) {
-                    return true;
+
+    private calculateFinalScore(githubScore: number, eslintScore: number): number {
+        return Math.min(1, 0.2 * githubScore + 0.8 * eslintScore);
+    }
+
+    public async lintFiles(dir: string): Promise<void> {
+        const linter = new ESLint();
+        const fileRegex = /\.(ts|js)$/;
+        const files = fs.readdirSync(dir);
+
+        for (const file of files) {
+            const filePath = path.join(dir, file);
+            const stat = fs.statSync(filePath);
+
+            if (stat.isDirectory()) {
+                await this.lintFiles(filePath);
+            } else if (fileRegex.test(file)) {
+                const results = await linter.lintFiles([filePath]);
+                for (const result of results) {
+                    for (const message of result.messages) {
+                        if (message.severity === 2) {
+                            this.errors++;
+                        } else if (message.severity === 1) {
+                            this.warnings++;
+                        }
+                        if (message.ruleId === 'no-eval' || message.ruleId === 'no-implied-eval') {
+                            this.securityIssues++;
+                        }
+                    }
                 }
             }
-        } else if (stats.isFile()) {
-            if (path.includes('test')) {
+        }
+    }
+
+    public hasTestInName(dirPath: string): boolean {
+        const stats = fs.statSync(dirPath);
+        if (stats.isDirectory()) {
+            if (dirPath.includes('test')) {
                 return true;
+            }
+            const files = fs.readdirSync(dirPath);
+            for (const file of files) {
+                if (this.hasTestInName(path.join(dirPath, file))) {
+                    return true;
+                }
             }
         }
         return false;
     }
 
-    private lintFiles(dir: string, linter: ESLint) {
-        const fileRegex = /\.(ts|js)$/;
-        const fs = require('fs');
-        const path = require('path');
-        const files = fs.readdirSync(dir);
-        let numFiles = 0;
-        for (const file of files) {
-            const filePath = path.join(dir, file);
-            const stat = fs.statSync(filePath);
-            if (stat.isDirectory()) {
-                this.lintFiles(filePath, linter);
-            } else if (fileRegex.test(file)) {
-                linter.lintFiles([filePath]).then((results) => {
-                    for (const result of results) {
-                        for (const message of result.messages) {
-                            ////////console.log(`Message: ${message.severity}, ${message.ruleId}`);
-                            numFiles = numFiles + 1;
-                            if (message.severity === 2) {
-                                this.errors = this.errors + 1;
-                            } else if (message.severity === 1) {
-                                this.warnings = this.warnings + 1;
-                            }
-                            if (message.ruleId === 'no-eval' || message.ruleId === 'no-implied-eval') {
-                                this.securityIssues = this.securityIssues + 1;
-                            }
-                        }
-                    }
-                });
-            }
-        }
-        //////console.log(`Errors: ${this.errors}, Warnings: ${this.warnings}, Security Issues: ${this.securityIssues}, NumFiles: ${numFiles}`);
-    }
+    public async linterAndTestChecker(owner: string, repo: string): Promise<number> {
+        const tempdir = path.join('temp', owner, repo);
 
-    private async LinterandTestChecker(): Promise<number> {
-        const tempdir = `./temp/${this.owner}/${this.repo}`;
-        const githuburl = `https://github.com/${this.owner}/${this.repo}.git`;
-        execSync(`mkdir -p ${tempdir}`);
-        execSync(`cd ${tempdir}`);
-        execSync(`git clone ${githuburl} ${tempdir}`, { stdio: 'ignore' });
-        execSync(`ls ${tempdir}`);
-        // Example usage
+        if (fs.existsSync(tempdir)) {
+            fs.rmSync(tempdir, { recursive: true, force: true });
+        }
+
+        fs.mkdirSync(tempdir, { recursive: true });
+
+        const githuburl = `https://github.com/${owner}/${repo}.git`;
+
+        // Cloning repo to the temp directory
+        execSync(`git clone --depth 1 ${githuburl} ${tempdir}`, { stdio: 'ignore' });
+
+        // Might need this later depending on if we run into issues with missing packages from repos
+
+        // Change into the directory
+        // process.chdir(tempdir);
+
+        // // Install dependencies, catching any errors (optional if you choose to do so)
+        // try {
+        //     execSync('npm install', { stdio: 'ignore' });
+        // } catch (error) {
+        //     console.error('Failed to install dependencies:', error);
+        //     // Handle the error as necessary for your application
+        // }
+
+        // Check if the repo has any tests
         const hasTest = this.hasTestInName(tempdir);
-        let test_suite_checker = 0;
-        if (hasTest) {
-            test_suite_checker = 1;
-        }
-        ////////console.log(`Has test suite: ${test_suite_checker}`)
-        /*  const linter = new ESLint();
-        this.lintFiles(tempdir, linter); */
-        ////////console.log(`Errors: ${this.errors}, Warnings: ${this.warnings}, Security Issues: ${this.securityIssues}`);
-        /* const results = linter.lintFiles(
-            files.filter((file) => /\.(js|ts)$/.test(file))
-        );
-        let errors = 0;
-        let warnings = 0;
-        let securityIssues = 0;
-        for (const result of results) {
-            for (const message of result.messages) {
-                if (message.severity === 2) {
-                    errors = errors + 1;
-                } else if (message.severity === 1) {
-                    warnings = warnings + 1;
-                }
-                if (message.ruleId === "no-eval" || message.ruleId === "no-implied-eval") {
-                    securityIssues = securityIssues + 1;
-                }
-            }
-        } */
-        await exec(`rm -rf ${tempdir}`);
-        /* const error_prop = this.errors / (this.errors + this.warnings + this.securityIssues + 1);
-        const warning_prop = this.warnings / (this.errors + this.warnings + this.securityIssues + 1);
-        const security_prop = this.securityIssues / (this.errors + this.warnings + this.securityIssues + 1); */
-        const eslintScore = test_suite_checker;
+        const testSuiteScore = hasTest ? 1 : 0;
 
-        return eslintScore;
+        await this.lintFiles(tempdir);
+
+        execSync(`rm -rf ${tempdir}`, { stdio: 'ignore' });
+
+        try {
+            const tempRoot = path.join('temp');
+            if (fs.existsSync(tempRoot)) {
+                fs.rmSync(tempRoot, { recursive: true, force: true });
+            }
+        } catch (error) {
+            console.error('Failed to delete temp directory:', error);
+        }
+
+        // Calculate the eslintScore based on errors and warnings
+        const maxIssues = 250;
+        const issuesCount = this.errors + this.warnings;
+        const eslintScore = Math.max(0, 1 - issuesCount / maxIssues);
+
+        // Combining the test suite score with the eslint score
+        return testSuiteScore * 0.6 + eslintScore * 0.4;
     }
 }
