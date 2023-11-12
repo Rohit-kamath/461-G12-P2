@@ -1,30 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, ChangeEvent } from 'react';
 import axios from 'axios';
 
 function App() {
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     setSelectedFiles(files || null);
   };
 
-  const uploadZipFiles = async () => {
-    if (!selectedFiles || selectedFiles.length === 0) {
-      setUploadStatus('No file selected');
-      return;
-    }
-
+  const uploadZipFile = async (file: File) => {
     const formData = new FormData();
-
-    // Append each file to the formData
-    for (let i = 0; i < selectedFiles.length; i++) {
-      formData.append(`zipFiles[${i}]`, selectedFiles[i]);
-    }
+    formData.append('zipFile', file);
 
     try {
-      setUploadStatus('Uploading...');
+      setUploadStatus(`Uploading ${file.name}...`);
 
       const response = await axios.post('http://localhost:5000/package', formData, {
         headers: {
@@ -32,9 +23,21 @@ function App() {
         },
       });
 
-      setUploadStatus('Upload successful: ' + response.data);
+      setUploadStatus(`Upload successful for ${file.name}: ${response.data}`);
     } catch (error: any) {
-      setUploadStatus('Error: ' + (error as Error).message);
+      setUploadStatus(`Error uploading ${file.name}: ${error.message}`);
+    }
+  };
+
+  const uploadZipFiles = () => {
+    if (!selectedFiles || selectedFiles.length === 0) {
+      setUploadStatus('No files selected');
+      return;
+    }
+
+    // Iterate over each file and upload individually
+    for (let i = 0; i < selectedFiles.length; i++) {
+      uploadZipFile(selectedFiles[i]);
     }
   };
 
