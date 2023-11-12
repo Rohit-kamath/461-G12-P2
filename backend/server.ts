@@ -40,6 +40,14 @@ app.post('/packages', async (req, res) => {
     }
 });
 
+app.delete('/reset', async (req, res) => {
+    try {
+        await apiPackage.callResetDatabase(req, res);
+    } catch (error) {
+        res.status(500).send('Internal Server Error');
+    }
+});
+
 app.get('/packages/byName/:name', async (req, res) => {
     try {
         await apiPackage.getPackagesByName(req, res);
