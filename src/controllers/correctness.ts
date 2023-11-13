@@ -5,7 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
 
-config(); // Load environment variables from .env file
+config(); 
 
 interface RepoData {
     stars_count: number;
@@ -17,6 +17,7 @@ export class Correctness {
     private errors = 0;
     private warnings = 0;
     private securityIssues = 0;
+    private maxDepth = 10;
 
     constructor(
         private owner: string,
@@ -66,31 +67,32 @@ export class Correctness {
         return Math.min(1, 0.2 * githubScore + 0.8 * eslintScore);
     }
 
-    public async lintFiles(dir: string): Promise<void> {
-        const linter = new ESLint();
-        const fileRegex = /\.(ts|js)$/;
+    private async lintFiles(dir: string, depth = 0): Promise<void> {
+        if (depth > this.maxDepth) {
+            return; // Avoid going too deep into directory structures
+        }
+
         const files = fs.readdirSync(dir);
 
         for (const file of files) {
             const filePath = path.join(dir, file);
-            const stat = fs.statSync(filePath);
+            const stat = fs.lstatSync(filePath); // Use lstat to get symlink info
 
-            if (stat.isDirectory()) {
-                await this.lintFiles(filePath);
-            } else if (fileRegex.test(file)) {
-                const results = await linter.lintFiles([filePath]);
-                for (const result of results) {
-                    for (const message of result.messages) {
-                        if (message.severity === 2) {
-                            this.errors++;
-                        } else if (message.severity === 1) {
-                            this.warnings++;
-                        }
-                        if (message.ruleId === 'no-eval' || message.ruleId === 'no-implied-eval') {
+            if (stat.isSymbolicLink()) {
+                continue; // skipping symbolic links to prevent infinite loops
+            } else if (stat.isDirectory()) {
+                await this.lintFiles(filePath, depth + 1);
+            } else if (/\.ts$|\.js$/.test(file)) { // Simplified file check
+                const results = await new ESLint().lintFiles([filePath]);
+                results.forEach(result => {
+                    result.messages.forEach(message => {
+                        if (message.severity === 2) this.errors++;
+                        else if (message.severity === 1) this.warnings++;
+                        if (message.ruleId && ['no-eval', 'no-implied-eval'].includes(message.ruleId)) {
                             this.securityIssues++;
                         }
-                    }
-                }
+                    });
+                });
             }
         }
     }
