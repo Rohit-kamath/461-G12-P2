@@ -1,13 +1,10 @@
-import { correctness } from './correctness';
+import { Correctness } from './correctness';
 import { getBusFactor } from './busFactor';
 import { calculateRampUp } from './rampUp';
 import { Responsiveness } from './responsiveness';
 import { getLicenseScore } from './license';
 import { calculateGoodPinningPractice } from './goodPinningPractice';
 import { getPullRequest } from './pullRequest';
-import createModuleLogger from '../logger';
-
-const logger = createModuleLogger('Net Score');
 
 export class NET_SCORE {
     constructor(
@@ -25,23 +22,18 @@ export class NET_SCORE {
         GOOD_PINNING_PRACTICE_SCORE: number;
     }> {
         // const correctnessobj = new correctness(this.owner, this.repo);
-        const CORRECTNESS_SCORE = 0;
-        logger.info(`CORRECTNESS_SCORE: ${CORRECTNESS_SCORE}`)
+        const correctness = new Correctness(this.owner, this.repo);
+        const CORRECTNESS_SCORE = await correctness.check(this.owner, this.repo);
         const BUS_FACTOR_SCORE = await getBusFactor(this.owner, this.repo);
-        logger.info(`BUS_FACTOR_SCORE: ${BUS_FACTOR_SCORE}`)
         const RAMP_UP_SCORE = await calculateRampUp(this.owner, this.repo);
-        logger.info(`RAMP_UP_SCORE: ${RAMP_UP_SCORE}`)
         const responsiveness = new Responsiveness('someSharedProperty', this.owner, this.repo);
         const RESPONSIVE_MAINTAINER_SCORE = await responsiveness.calculateMetric();
-        logger.info(`RESPONSIVE_MAINTAINER_SCORE: ${RESPONSIVE_MAINTAINER_SCORE}`);
         const LICENSE_SCORE = await getLicenseScore(this.owner, this.repo);
-        logger.info(`LICENSE_SCORE: ${LICENSE_SCORE}`);
         const GOOD_PINNING_PRACTICE_SCORE = await calculateGoodPinningPractice(this.owner, this.repo);
-        logger.info(`GOOD_PINNING_PRACTICE_SCORE: ${GOOD_PINNING_PRACTICE_SCORE}`);
+        console.log(`GOOD_PINNING_PRACTICE_SCORE: ${GOOD_PINNING_PRACTICE_SCORE}`);
         const PULL_REQUEST_SCORE = await getPullRequest(this.owner, this.repo);
-        logger.info(`PULL_REQUEST_SCORE: ${GOOD_PINNING_PRACTICE_SCORE}`);
+        console.log(PULL_REQUEST_SCORE);
         const NET_SCORE = CORRECTNESS_SCORE * 0.25 + BUS_FACTOR_SCORE * 0.15 + RAMP_UP_SCORE * 0.25 + RESPONSIVE_MAINTAINER_SCORE * 0.3 + LICENSE_SCORE * 0.05;
-        logger.info(`NET_SCORE: ${NET_SCORE}`)
         return {
             NET_SCORE: parseFloat(NET_SCORE.toFixed(3)),
             RAMP_UP_SCORE: parseFloat(RAMP_UP_SCORE.toFixed(3)),
