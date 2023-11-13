@@ -7,7 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import AWS from 'aws-sdk';
 import { ManagedUpload } from 'aws-sdk/clients/s3';
 import createModuleLogger from '../src/logger';
-import { NET_SCORE } from '../src/controllers/netScore';
+import { NetScore } from '../src/controllers/netScore';
 import semver from 'semver';
 import { getRequest } from '../src/utils/api.utils';
 import { Action } from '@prisma/client';
@@ -31,19 +31,6 @@ async function getGithubUrl(npmUrl: string): Promise<string> {
     const githubUrl = text.split('github.com')[1].split('"')[0];
     const githubUrlWithPackageName = githubUrl.split('/')[0] + '/' + githubUrl.split('/')[1] + '/' + packageName;
     return `https://github.com${githubUrlWithPackageName}`;
-}
-
-export async function getPackagePopularity(url: string): Promise<{ stars: number; forks: number }> {
-    if (url.includes('npmjs.com')) {
-        url = await getGithubUrl(url);
-    }
-    const urlParts = url.split('/');
-    const owner = urlParts[3];
-    const repo = urlParts[4];
-    const response = await getRequest(`/repos/${owner}/${repo}`);
-    const starsCount = response.stargazers_count;
-    const forksCount = response.forks_count;
-    return { stars: starsCount, forks: forksCount };
 }
 
 function getMaxVersion(versionRange: string) {
@@ -306,7 +293,7 @@ export async function uploadToS3(fileName: string, fileBuffer: Buffer): Promise<
 
 export async function calculateGithubMetrics(owner: string, repo: string): Promise<apiSchema.PackageRating> {
   try {
-      const netScoreCalculator = new NET_SCORE(owner, repo);
+      const netScoreCalculator = new NetScore(owner, repo);
       const metrics = await netScoreCalculator.calculate();
 
       return {
