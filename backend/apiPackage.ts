@@ -9,10 +9,8 @@ import { ManagedUpload } from 'aws-sdk/clients/s3';
 import createModuleLogger from '../src/logger';
 import { NetScore } from '../src/controllers/netScore';
 import semver from 'semver';
-import { getRequest } from '../src/utils/api.utils';
 import { Action } from '@prisma/client';
 import axios from 'axios'
-//import { empty } from '@prisma/client/runtime/library';
 
 const logger = createModuleLogger('API Package Calls');
 
@@ -23,15 +21,6 @@ const s3 = new AWS.S3({
 });
 
 type PackageMetaDataPopularity = apiSchema.PackageMetadata & {DownloadCount: number};
-
-async function getGithubUrl(npmUrl: string): Promise<string> {
-    const packageName = npmUrl.split('package/')[1];
-    const response = await fetch(npmUrl);
-    const text = await response.text();
-    const githubUrl = text.split('github.com')[1].split('"')[0];
-    const githubUrlWithPackageName = githubUrl.split('/')[0] + '/' + githubUrl.split('/')[1] + '/' + packageName;
-    return `https://github.com${githubUrlWithPackageName}`;
-}
 
 function getMaxVersion(versionRange: string) {
     versionRange = versionRange.replace(/-0/g, '');
