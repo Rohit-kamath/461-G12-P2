@@ -7,7 +7,7 @@ import path from 'path';
 
 dotenv.config();
 
-const port = 3000;
+const port = process.env.PORT || 3000;
 const app = express();
 
 // Enable CORS for all routes
@@ -19,10 +19,15 @@ app.use(express.static('Frontend'));
 const storage = multer.memoryStorage(); // Store the file in memory
 const upload = multer({ storage: storage });
 
-app.get('/upload-page', (req, res) => {
+app.get('*', (req, res) => {
+    res.sendFile(path.join('Frontend/dist', 'index.html'));
+});
+
+/*app.get('/upload-page', (req, res) => {
     // This is just for testing purposes
     res.sendFile(path.join(__dirname, '../Frontend/testwebsite.html'));
 });
+*/
 
 app.post('/package', upload.single('packageContent'), async (req, res) => {
     try {
