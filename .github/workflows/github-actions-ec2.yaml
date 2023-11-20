@@ -28,9 +28,25 @@ jobs:
           HOST_DNS: ${{ secrets.HOST_DNS }}
           USERNAME: ${{ secrets.USERNAME }}
           TARGET_DIR: ${{ secrets.TARGET_DIR }}
+          GITHUB_TOKEN: ${{ secrets.TOKEN_GITHUB }}
+          LOG_LEVEL: ${{ secrets.LOG_LEVEL }}
+          LOG_FILE: ${{ secrets.LOG_FILE }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_S3_BUCKET_NAME: ${{ secrets.AWS_S3_BUCKET_NAME }}
         run: |
           echo "$EC2_SSH_KEY" > private_key.pem
           chmod 600 private_key.pem
-          ssh -i private_key.pem $USERNAME@$HOST_DNS "sudo yum update -y && sudo rm -rf ${TARGET_DIR} && git clone https://github.com/Rohit-kamath/461-G12-P2.git ${TARGET_DIR}"
+          ssh -i private_key.pem $USERNAME@$HOST_DNS << 'ENDSSH'
+            sudo yum update -y
+            sudo rm -rf ${TARGET_DIR}
+            git clone https://github.com/Rohit-kamath/461-G12-P2.git ${TARGET_DIR}
+            cd ${TARGET_DIR}
+            sudo docker build -t my-node-app .
+            sudo docker stop my-node-app-container || true
+            sudo docker rm my-node-app-container || true
+            sudo docker run -d -e TOKEN_GITHUB="${TOKEN_GITHUB}" -e LOG_LEVEL="${LOG_LEVEL}" -e LOG_FILE="${LOG_FILE}" -e DATABASE_URL="${DATABASE_URL}" -e AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" -e AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}" -e AWS_S3_BUCKET_NAME="${AWS_S3_BUCKET_NAME}" --name my-node-app-container -p 80:3000 my-node-app
+          ENDSSH
           rm -f private_key.pem
 

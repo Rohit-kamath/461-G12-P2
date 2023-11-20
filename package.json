@@ -4,13 +4,15 @@
   "description": "Project Members: 1) Dev Thakkar 2) Jonathan Dow 3) Rohan Sagar (rsagar@purdue.edu) 4) Dongwon Kim",
   "main": "index.js",
   "scripts": {
-    "start": "npm run prettier-format && tsc && node dist/index.js",
+    "start": "node dist/backend/server.js",
     "dev": "npm run prettier-format && nodemon --exec ts-node src/index.ts",
     "prettier-format": "prettier --config .prettierrc 'src/**/*.ts' --write",
     "test": "jest",
     "lint": "eslint . --ext .ts",
-    "format": "prettier --write ."
-
+    "format": "prettier --write .",
+    "build": "tsc",
+    "prisma:migrate": "prisma migrate dev --name init",
+    "postinstall": "npm run build && npm run prisma:migrate"
   },
   "keywords": [],
   "author": "",
@@ -22,6 +24,8 @@
     "@types/jest": "^29.5.5",
     "@types/multer": "^1.4.9",
     "@types/node": "^20.8.7",
+    "@types/react": "^18.2.37",
+    "@types/react-dom": "^18.2.7",
     "@types/uuid": "^9.0.6",
     "@typescript-eslint/eslint-plugin": "^6.7.5",
     "@typescript-eslint/parser": "^6.7.5",
@@ -41,8 +45,7 @@
     "prettier": "^3.0.3",
     "prisma": "^5.5.2",
     "ts-jest": "^29.1.1",
-    "ts-node": "^10.9.1",
-    "typescript": "^5.2.2"
+    "ts-node": "^10.9.1"
   },
   "dependencies": {
     "@octokit/rest": "^20.0.2",
@@ -175,6 +178,8 @@
     "proxy-from-env": "^1.1.0",
     "punycode": "^2.3.0",
     "queue-microtask": "^1.2.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "react-dropzone": "^14.2.3",
     "readable-stream": "^3.6.2",
     "resolve-from": "^4.0.0",
@@ -195,12 +200,15 @@
     "text-table": "^0.2.0",
     "type-check": "^0.4.0",
     "type-fest": "^0.20.2",
+    "typescript": "^5.2.2",
     "universal-github-app-jwt": "^1.1.1",
     "universal-user-agent": "^6.0.0",
     "universalify": "^2.0.0",
     "uri-js": "^4.4.1",
     "util-deprecate": "^1.0.2",
     "uuid": "^9.0.1",
+    "vite": "^4.5.0",
+    "@vitejs/plugin-react": "^4.1.1",
     "which": "^2.0.2",
     "winston": "^3.11.0",
     "wrappy": "^1.0.2",
