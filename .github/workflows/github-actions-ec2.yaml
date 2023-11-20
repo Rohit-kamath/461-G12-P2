@@ -38,7 +38,7 @@ jobs:
         run: |
           echo "$EC2_SSH_KEY" > private_key.pem
           chmod 600 private_key.pem
-          ssh -i private_key.pem $USERNAME@$HOST_DNS << 'ENDSSH'
+          ssh -i private_key.pem $USERNAME@$HOST_DNS << "ENDSSH"
             sudo yum update -y
             sudo rm -rf ${TARGET_DIR}
             git clone https://github.com/RobertRoz3/461-G12-P2.git ${TARGET_DIR}
