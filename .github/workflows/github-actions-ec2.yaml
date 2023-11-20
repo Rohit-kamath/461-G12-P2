@@ -42,20 +42,20 @@ jobs:
           ssh -i private_key.pem $USERNAME@$HOST_DNS << "ENDSSH"
             echo "Updating System..."
             sudo yum update -y
-            echo "Removing existing TARGET_DIR: ${TARGET_DIR}"
-            sudo rm -rf ${TARGET_DIR}
-            echo "Creating TARGET_DIR: ${TARGET_DIR}"
+            echo "Removing existing TARGET_DIR: \${TARGET_DIR}"
+            sudo rm -rf \${TARGET_DIR}
+            echo "Creating TARGET_DIR: \${TARGET_DIR}"
             mkdir -p ${TARGET_DIR}
-            echo "Cloning repo into TARGET_DIR: ${TARGET_DIR}"
-            git clone https://github.com/RobertRoz3/461-G12-P2.git ${TARGET_DIR}
-            cd ${TARGET_DIR}
-            echo "Listing files in TARGET_DIR: ${TARGET_DIR}"
+            echo "Cloning repo into TARGET_DIR: \${TARGET_DIR}"
+            git clone https://github.com/RobertRoz3/461-G12-P2.git \${TARGET_DIR}
+            cd \${TARGET_DIR}
+            echo "Listing files in TARGET_DIR: \${TARGET_DIR}"
             ls -l
             echo "Building Docker image..."
             sudo docker build -t my-node-app .
             sudo docker stop my-node-app-container || true
             sudo docker rm my-node-app-container || true
-            sudo docker run -d -e TOKEN_GITHUB="${TOKEN_GITHUB}" -e LOG_LEVEL="${LOG_LEVEL}" -e LOG_FILE="${LOG_FILE}" -e DATABASE_URL="${DATABASE_URL}" -e AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" -e AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}" -e AWS_S3_BUCKET_NAME="${AWS_S3_BUCKET_NAME}" --name my-node-app-container -p 80:3000 my-node-app
+            sudo docker run -d -e TOKEN_GITHUB="\${TOKEN_GITHUB}" -e LOG_LEVEL="\${LOG_LEVEL}" -e LOG_FILE="\${LOG_FILE}" -e DATABASE_URL="\${DATABASE_URL}" -e AWS_ACCESS_KEY_ID="\${AWS_ACCESS_KEY_ID}" -e AWS_SECRET_ACCESS_KEY="\${AWS_SECRET_ACCESS_KEY}" -e AWS_S3_BUCKET_NAME="\${AWS_S3_BUCKET_NAME}" --name my-node-app-container -p 80:3000 my-node-app
             echo "Deployment script completed."
           ENDSSH
           rm -f private_key.pem
