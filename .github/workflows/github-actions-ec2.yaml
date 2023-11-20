@@ -38,6 +38,7 @@ jobs:
         run: |
           echo "$EC2_SSH_KEY" > private_key.pem
           chmod 600 private_key.pem
+          echo "Testing variable TRAGET_DIR: ${TARGET_DIR}"
           ssh -i private_key.pem $USERNAME@$HOST_DNS << "ENDSSH"
             echo "Updating System..."
             sudo yum update -y
