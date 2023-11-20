@@ -11,8 +11,7 @@
     "lint": "eslint . --ext .ts",
     "format": "prettier --write .",
     "build": "tsc",
-    "prisma:migrate": "prisma migrate dev --name init",
-    "postinstall": "npm run build && npm run prisma:migrate"
+    "prisma:migrate": "prisma migrate dev --name init"
   },
   "keywords": [],
   "author": "",
