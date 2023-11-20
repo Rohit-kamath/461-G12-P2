@@ -41,7 +41,7 @@ jobs:
           ssh -i private_key.pem $USERNAME@$HOST_DNS << 'ENDSSH'
             sudo yum update -y
             sudo rm -rf ${TARGET_DIR}
-            git clone https://github.com/Rohit-kamath/461-G12-P2.git ${TARGET_DIR}
+            git clone https://github.com/RobertRoz3/461-G12-P2.git ${TARGET_DIR}
             cd ${TARGET_DIR}
             sudo docker build -t my-node-app .
             sudo docker stop my-node-app-container || true
