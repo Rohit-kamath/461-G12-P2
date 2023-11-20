@@ -331,7 +331,7 @@ export function parseGitHubUrl(url: string): { owner: string, repo: string } | n
 
 
 export function isPackageIngestible(metrics: apiSchema.PackageRating): boolean {
-  return (
+    return (
       metrics.BusFactor >= 0.0 &&
       // metrics.Correctness >= 0.5 && (until correctness is fixed)
       metrics.RampUp >= 0.0 &&
