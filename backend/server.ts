@@ -4,11 +4,17 @@ import * as apiPackage from './apiPackage';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import path from 'path';
+import { loadConfig } from '../src/awsParamStore';
 
 dotenv.config();
 
 const port = process.env.PORT || 3000;
 const app = express();
+
+// Load the config from AWS Parameter Store
+(async () => {
+    await loadConfig();
+})();
 
 // Enable CORS for all routes
 app.use(cors());
@@ -19,11 +25,14 @@ app.use(express.static('Frontend'));
 const storage = multer.memoryStorage(); // Store the file in memory
 const upload = multer({ storage: storage });
 
+
 app.get('*', (req, res) => {
-    res.sendFile(path.join('Frontend/dist', 'index.html'));
+    res.sendFile(path.join(__dirname, '../../Frontend/dist', 'index.html'));
 });
 
-/*app.get('/upload-page', (req, res) => {
+
+/*
+app.get('/upload-page', (req, res) => {
     // This is just for testing purposes
     res.sendFile(path.join(__dirname, '../Frontend/testwebsite.html'));
 });
