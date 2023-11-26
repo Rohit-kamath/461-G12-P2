@@ -1,8 +1,5 @@
 import AWS from 'aws-sdk';
 import dotenv from 'dotenv';
-import createModuleLogger from '../src/logger';
-
-const logger = createModuleLogger('Parameter Store');
 
 dotenv.config();
 
@@ -30,7 +27,6 @@ if (process.env.BOOTSTRAP_AWS_ACCESS_KEY_ID && process.env.BOOTSTRAP_AWS_SECRET_
 
 AWS.config.update(ssmConfig);
 const ssm = new AWS.SSM();
-
 export const loadConfig = async () => {
     try {
     // Define the parameters you want to load
@@ -53,14 +49,15 @@ export const loadConfig = async () => {
 
         if (data.Parameter && data.Parameter.Value) {
             process.env[paramName] = data.Parameter.Value;
+            //console.log(`${paramName}: ${process.env[paramName]}`);
         } 
         else {
-            logger.info(`Parameter ${paramName} not found`);
+            console.log(`Parameter ${paramName} not found`);
             throw new Error(`Parameter ${paramName} not found`);
         }
     }
     } catch (error) {
-        logger.error('Error loading config:', error);
+        // logger.error('Error loading config:', error);
         console.error('Error loading config:', error);
         throw error;
     }
