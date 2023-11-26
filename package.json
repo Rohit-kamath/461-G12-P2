@@ -62,7 +62,7 @@
     "argparse": "^2.0.1",
     "async-lock": "^1.4.0",
     "asynckit": "^0.4.0",
-    "aws-sdk": "^2.1483.0",
+    "aws-sdk": "^2.1502.0",
     "axios": "^1.6.0",
     "balanced-match": "^1.0.2",
     "before-after-hook": "^2.2.3",
