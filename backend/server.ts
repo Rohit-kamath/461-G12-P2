@@ -18,7 +18,7 @@ logger.info('Starting server...');
 app.use(cors());
 
 // Serve static files from the "Frontend" directory
-app.use(express.static('Frontend'));
+app.use(express.static('Frontend/dist'));
 
 const storage = multer.memoryStorage(); // Store the file in memory
 const upload = multer({ storage: storage });
