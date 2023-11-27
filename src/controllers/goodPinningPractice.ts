@@ -1,4 +1,7 @@
 import { getRequest } from '../utils/api.utils';
+import createModuleLogger from '../logger';
+
+const logger = createModuleLogger('Good Pinning Practice');
 
 interface Dependency {
     name: string;
@@ -8,19 +11,18 @@ interface Dependency {
 export async function getDependencies(owner: string, repo: string): Promise<Dependency[] | null> {
     try {
         const response = await getRequest(`/repos/${owner}/${repo}/contents/package.json`);
-        const packageJson = Buffer.from(response.content, 'base64').toString('ascii');
+        const packageJson = Buffer.from(response.content, 'base64').toString('utf-8');
         const dependencies = JSON.parse(packageJson).dependencies;
         const dependencyArray: Dependency[] = [];
         for (const dependency in dependencies) {
-            const dependencyObject: Dependency = {
+            dependencyArray.push({
                 name: dependency,
                 version: dependencies[dependency],
-            };
-            dependencyArray.push(dependencyObject);
+            });
         }
         return dependencyArray;
     } catch (error: any) {
-        console.log('Error in getDependencies: with repo: ' + repo + ' and owner: ' + owner, error);
+        logger.info('Error in getDependencies: with repo: ' + repo + ' and owner: ' + owner, error);
         process.exit(1);
     }
 }
@@ -37,5 +39,6 @@ export async function calculateGoodPinningPractice(owner: string, repo: string):
             }
         });
     }
+
     return totalDependencies === 0 ? 1 : pinnedDependencies / totalDependencies;
 }

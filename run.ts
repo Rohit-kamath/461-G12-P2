@@ -1,6 +1,6 @@
 import { readFileSync, existsSync } from 'fs';
 import { execSync } from 'child_process';
-import { NET_SCORE } from './src/controllers/netScore';
+import { NetScore } from './src/controllers/netScore';
 
 class PackageClassifier {
     urls: string[];
@@ -68,7 +68,7 @@ async function main() {
                 const owner = temp[1];
                 let repo = temp[2];
                 repo = repo.replace(/\.git$/, '');
-                const NScore = new NET_SCORE(owner, repo);
+                const NScore = new NetScore(owner, repo);
                 const scoreResults = await NScore.calculate();
                 const URL = urls[i];
                 const score_results_with_url = { URL, ...scoreResults };

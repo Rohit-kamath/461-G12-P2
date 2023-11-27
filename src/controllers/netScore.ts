@@ -1,4 +1,3 @@
-
 import { Correctness } from './correctness';
 import { getBusFactor } from './busFactor';
 import { calculateRampUp } from './rampUp';
@@ -7,7 +6,7 @@ import { getLicenseScore } from './license';
 import { calculateGoodPinningPractice } from './goodPinningPractice';
 import { getPullRequest } from './pullRequest';
 
-export class NET_SCORE {
+export class NetScore {
     constructor(
         private owner: string,
         private repo: string,

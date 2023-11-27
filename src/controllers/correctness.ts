@@ -1,11 +1,11 @@
-import { Octokit } from "@octokit/rest";
-import { ESLint } from "eslint";
-import { config } from "dotenv";
+import { Octokit } from '@octokit/rest';
+import { ESLint } from 'eslint';
+import { config } from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
 
-config(); // Load environment variables from .env file
+config(); 
 
 interface RepoData {
     stars_count: number;
@@ -17,8 +17,12 @@ export class Correctness {
     private errors = 0;
     private warnings = 0;
     private securityIssues = 0;
+    private maxDepth = 10;
 
-    constructor(private owner: string, private repo: string) {
+    constructor(
+        private owner: string,
+        private repo: string,
+    ) {
         const token = process.env.GITHUB_TOKEN;
         if (!token) {
             throw new Error('GITHUB_TOKEN is not set in the environment variables.');
@@ -26,75 +30,74 @@ export class Correctness {
         this.octokit = new Octokit({ auth: token });
     }
 
-    async check(owner: string, repo: string): Promise<number> {
-        
+    public async check(owner: string, repo: string): Promise<number> {
         repo = repo.trim().replace('\r', '');
         const repoData = await this.fetchRepoData(owner, repo);
-    
-        if (repoData === null) return 0; 
-    
+
+        if (repoData === null) return 0;
+
         const githubScore = this.calculateGitHubScore(repoData.stars_count, repoData.forks_count);
-    
+
         const eslintScore = await this.linterAndTestChecker(owner, repo);
-        
+
         return this.calculateFinalScore(githubScore, eslintScore);
-    
     }
 
-    private async fetchRepoData(owner: string, repo: string): Promise<RepoData | null> {
+    public async fetchRepoData(owner: string, repo: string): Promise<RepoData | null> {
         try {
             const { data } = await this.octokit.repos.get({
                 owner,
                 repo,
             });
-            return { 
-                stars_count: data.stargazers_count, 
-                forks_count: data.forks_count 
-            }; 
-            } catch (error) {
-                console.error("Error fetching repo data:", error);
-                return null;
-            }
+            return {
+                stars_count: data.stargazers_count,
+                forks_count: data.forks_count,
+            };
+        } catch (error) {
+            console.error('Error fetching repo data:', error);
+            return null;
         }
+    }
 
-    private calculateGitHubScore(stars: number, forks: number): number {
+    public calculateGitHubScore(stars: number, forks: number): number {
         return Math.min(1, (stars + forks) / 1000);
     }
 
     private calculateFinalScore(githubScore: number, eslintScore: number): number {
-        return Math.min(1, (0.2 * githubScore) + (0.8 * eslintScore));
+        return Math.min(1, 0.2 * githubScore + 0.8 * eslintScore);
     }
 
-    private async lintFiles(dir: string): Promise<void> {
-        const linter = new ESLint();
-        const fileRegex = /\.(ts|js)$/;
+    private async lintFiles(dir: string, depth = 0): Promise<void> {
+        if (depth > this.maxDepth) {
+            return; // Avoid going too deep into directory structures
+        }
+
         const files = fs.readdirSync(dir);
 
         for (const file of files) {
             const filePath = path.join(dir, file);
-            const stat = fs.statSync(filePath);
+            const stat = fs.lstatSync(filePath); // Use lstat to get symlink info
 
-            if (stat.isDirectory()) {
-                await this.lintFiles(filePath);
-            } else if (fileRegex.test(file)) {
-                const results = await linter.lintFiles([filePath]);
-                for (const result of results) {
-                    for (const message of result.messages) {
-                        if (message.severity === 2) {
-                            this.errors++;
-                        } else if (message.severity === 1) {
-                            this.warnings++;
-                        }
-                        if (message.ruleId === "no-eval" || message.ruleId === "no-implied-eval") {
+            if (stat.isSymbolicLink()) {
+                continue; // skipping symbolic links to prevent infinite loops
+            } else if (stat.isDirectory()) {
+                await this.lintFiles(filePath, depth + 1);
+            } else if (/\.ts$|\.js$/.test(file)) { // Simplified file check
+                const results = await new ESLint().lintFiles([filePath]);
+                results.forEach(result => {
+                    result.messages.forEach(message => {
+                        if (message.severity === 2) this.errors++;
+                        else if (message.severity === 1) this.warnings++;
+                        if (message.ruleId && ['no-eval', 'no-implied-eval'].includes(message.ruleId)) {
                             this.securityIssues++;
                         }
-                    }
-                }
+                    });
+                });
             }
         }
     }
 
-    private hasTestInName(dirPath: string): boolean {
+    public hasTestInName(dirPath: string): boolean {
         const stats = fs.statSync(dirPath);
         if (stats.isDirectory()) {
             if (dirPath.includes('test')) {
@@ -110,11 +113,11 @@ export class Correctness {
         return false;
     }
 
-    private async linterAndTestChecker(owner: string, repo: string): Promise<number> {
+    public async linterAndTestChecker(owner: string, repo: string): Promise<number> {
         const tempdir = path.join('temp', owner, repo);
 
         if (fs.existsSync(tempdir)) {
-            fs.rmSync(tempdir, { recursive: true, force: true }); 
+            fs.rmSync(tempdir, { recursive: true, force: true });
         }
 
         fs.mkdirSync(tempdir, { recursive: true });
@@ -145,12 +148,21 @@ export class Correctness {
 
         execSync(`rm -rf ${tempdir}`, { stdio: 'ignore' });
 
+        try {
+            const tempRoot = path.join('temp');
+            if (fs.existsSync(tempRoot)) {
+                fs.rmSync(tempRoot, { recursive: true, force: true });
+            }
+        } catch (error) {
+            console.error('Failed to delete temp directory:', error);
+        }
+
         // Calculate the eslintScore based on errors and warnings
         const maxIssues = 250;
         const issuesCount = this.errors + this.warnings;
-        const eslintScore = Math.max(0, 1 - (issuesCount / maxIssues));
+        const eslintScore = Math.max(0, 1 - issuesCount / maxIssues);
 
         // Combining the test suite score with the eslint score
-        return (testSuiteScore * 0.6) + (eslintScore * 0.4);
+        return testSuiteScore * 0.6 + eslintScore * 0.4;
     }
 }
