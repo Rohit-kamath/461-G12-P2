@@ -11,6 +11,10 @@ import { NetScore } from '../src/controllers/netScore';
 import semver from 'semver';
 import { Action } from '@prisma/client';
 import axios from 'axios'
+import webpack, { Configuration } from 'webpack';
+import tmp from 'tmp-promise';
+import fs from 'fs-extra';
+import path from 'path';
 
 const logger = createModuleLogger('API Package Calls');
 
@@ -446,69 +450,69 @@ export async function downloadGitHubRepoZip(githubUrl: string): Promise<Buffer> 
 
 
 export async function uploadPackage(req: Request, res: Response) {
-  try {
-      let metadata: apiSchema.PackageMetadata;
-      let githubInfo: { owner: string, repo: string } | null;
-      let encodedContent: string;
-      let fileName: string;
+    try {
+        let metadata: apiSchema.PackageMetadata;
+        let githubInfo: { owner: string, repo: string } | null;
+        let encodedContent: string;
+        let fileName: string;
 
-      if (!req.file && !req.body.URL) {
-          logger.info("No file or URL provided in the upload.");
-          return res.status(400).send('No file or URL uploaded');
-      }
-      else if (req.file && req.body.URL) {
-          logger.info("Must upload either file or URL, not both.");
-          return res.status(400).send('No file uploaded');
-      }
-      else if (req.file) {
-        metadata = await extractMetadataFromZip(req.file.buffer);
-        const url = await getGithubUrlFromZip(req.file.buffer);
-        githubInfo = parseGitHubUrl(url);
-        encodedContent = req.file.buffer.toString('base64');
-        fileName = req.file.originalname;
-      }
-      else if (req.body.URL) {
-        const url = await linkCheck(req.body.URL);
-        if (!url) {
-          logger.info("Invalid or unsupported URL provided.");
-          return res.status(400).send('Invalid or unsupported URL provided.');
-      }
+        if (!req.file && !req.body.URL) {
+            logger.info("No file or URL provided in the upload.");
+            return res.status(400).send('No file or URL uploaded');
+        }
+        else if (req.file && req.body.URL) {
+            logger.info("Must upload either file or URL, not both.");
+            return res.status(400).send('No file uploaded');
+        }
+        else if (req.file) {
+            metadata = await extractMetadataFromZip(req.file.buffer);
+            const url = await getGithubUrlFromZip(req.file.buffer);
+            githubInfo = parseGitHubUrl(url);
+            encodedContent = req.file.buffer.toString('base64');
+            fileName = req.file.originalname;
+        }
+        else if (req.body.URL) {
+            const url = await linkCheck(req.body.URL);
+            if (!url) {
+            logger.info("Invalid or unsupported URL provided.");
+            return res.status(400).send('Invalid or unsupported URL provided.');
+        }
         const zipBuffer = await downloadGitHubRepoZip(url);
         metadata = await extractMetadataFromZip(zipBuffer);
         githubInfo = parseGitHubUrl(url);
         encodedContent = zipBuffer.toString('base64');
         fileName = `${metadata.Name}.zip`;
-      }
-      else {
-        logger.info("Must upload a proper zip or provide a URL");
-        return res.status(400).send('Invalid upload type');
-      }
+        }
+        else {
+            logger.info("Must upload a proper zip or provide a URL");
+            return res.status(400).send('Invalid upload type');
+        }
 
-      if (!githubInfo) {
-          logger.info("Invalid GitHub repository URL.");
-          return res.status(400).send('Invalid GitHub repository URL.');
-      }
+        if (!githubInfo) {
+            logger.info("Invalid GitHub repository URL.");
+            return res.status(400).send('Invalid GitHub repository URL.');
+        }
 
-      const jsProgram = "if (process.argv.length === 7) {\nconsole.log('Success')\nprocess.exit(0)\n} else {\nconsole.log('Failed')\nprocess.exit(1)\n}\n";
-      const PackageData: apiSchema.PackageData = {
-          Content: encodedContent,
-          JSProgram: jsProgram
-      };
+        const jsProgram = "if (process.argv.length === 7) {\nconsole.log('Success')\nprocess.exit(0)\n} else {\nconsole.log('Failed')\nprocess.exit(1)\n}\n";
+        const PackageData: apiSchema.PackageData = {
+            Content: encodedContent,
+            JSProgram: jsProgram
+        };
 
 
-      const packageExists = await prismaCalls.checkPackageExists(metadata.Name, metadata.Version);
-      if (packageExists) {
-          logger.info("Package exists already.");
-          return res.status(409).send('Package Exists Already');
-      }
+        const packageExists = await prismaCalls.checkPackageExists(metadata.Name, metadata.Version);
+        if (packageExists) {
+            logger.info("Package exists already.");
+            return res.status(409).send('Package Exists Already');
+        }
 
-      const metrics = await calculateGithubMetrics(githubInfo.owner, githubInfo.repo);
-      if (!isPackageIngestible(metrics)) {
-        logger.info("Package is not uploaded due to the disqualified rating.");
-        return res.status(424).send('Package is not uploaded due to the disqualified rating');
-      }
+        const metrics = await calculateGithubMetrics(githubInfo.owner, githubInfo.repo);
+        if (!isPackageIngestible(metrics)) {
+            logger.info("Package is not uploaded due to the disqualified rating.");
+            return res.status(424).send('Package is not uploaded due to the disqualified rating');
+        }
 
-      await prismaCalls.uploadMetadataToDatabase(metadata);
+        await prismaCalls.uploadMetadataToDatabase(metadata);
 
         const Package: apiSchema.Package = {
             metadata: metadata,
@@ -517,17 +521,149 @@ export async function uploadPackage(req: Request, res: Response) {
 
         const action = Action.CREATE;
         await prismaCalls.createPackageHistoryEntry(metadata.ID, 1, action); // User id is 1 for now
-
-      await storeGithubMetrics(metadata.ID, metrics);
-
-      await uploadToS3(fileName, Buffer.from(encodedContent, 'base64'));
-
+        
+        await storeGithubMetrics(metadata.ID, metrics);
+        
+        await uploadToS3(fileName, Buffer.from(encodedContent, 'base64'));
+        
         res.json(Package);
     } catch (error) {
         logger.error('Error in POST /package: ', error);
         res.status(500).send('Internal Server Error');
     }
 }
+
+
+// debloat functions
+export async function debloatPackageById(packageId: string): Promise<void> {
+    try {
+        // Fetch the package by ID
+        const packageEntry = await prismaCalls.getPackage(packageId);
+        if (!packageEntry || !packageEntry.data) {
+            throw new Error(`Package with ID ${packageId} not found`);
+        }
+
+        // Debloat
+        const debloatedBuffer = await debloatPackage(Buffer.from(packageEntry.data.content, 'base64'));
+
+        // Update with debloated content
+        await prismaCalls.updatePackageDetails(packageId, {
+            ...packageEntry.data,
+            Content: debloatedBuffer.toString('base64')
+        });
+    } catch (error) {
+        console.error(`Error in debloatPackageById: ${error}`);
+        throw error;
+    }
+}
+
+export async function debloatPackage(buffer: Buffer): Promise<Buffer> {
+    const { path: tmpDir, cleanup } = await tmp.dir({ unsafeCleanup: true });
+
+    try {
+        const zip = await JSZip.loadAsync(buffer);
+        await unzipToDirectory(zip, tmpDir);
+
+        // Perform tree shaking using Webpack
+        await treeShake(tmpDir);
+
+        // Re-zip the contents and return the buffer
+        const debloatedBuffer = await rezipDirectory(tmpDir);
+        return debloatedBuffer;
+    } catch (error) {
+        console.error('Error debloating package:', error);
+        throw error;
+    } finally {
+        await cleanup();
+    }
+}
+
+export async function unzipToDirectory(zip: JSZip, directoryPath: string): Promise<void> {
+    await fs.ensureDir(directoryPath);
+    for (const [filename, fileData] of Object.entries(zip.files)) {
+        if (!fileData.dir) {
+            const content = await fileData.async('nodebuffer');
+            const filePath = path.join(directoryPath, filename);
+            await fs.outputFile(filePath, content);
+        }
+    }
+}
+
+async function treeShake(directoryPath: string): Promise<void> {
+    const entryPoint = await findEntryPoint(directoryPath);
+    if (!entryPoint) {
+        throw new Error('Entry point not found');
+    }
+
+    const config: Configuration = {
+        mode: 'production',
+        entry: entryPoint,
+        output: {
+            path: directoryPath,
+            filename: 'bundle.js'
+        },
+        optimization: {
+            usedExports: true
+        }
+    };
+
+    return new Promise((resolve, reject) => {
+        webpack(config, (err, stats) => {
+            if (err) {
+                reject(new Error(`Webpack error: ${err.message}`));
+                return;
+            }
+            if (stats && stats.hasErrors()) {
+                reject(new Error('Webpack compilation error'));
+                return;
+            }
+            resolve();
+        });
+    });
+}
+
+async function findEntryPoint(directoryPath: string): Promise<string | null> {
+    const commonEntryPoints = ['index.js', 'main.js'];
+    for (const entry of commonEntryPoints) {
+        if (await fs.pathExists(path.join(directoryPath, entry))) {
+            return path.join(directoryPath, entry);
+        }
+    }
+    // Fallback to reading package.json
+    const packageJsonPath = path.join(directoryPath, 'package.json');
+    if (await fs.pathExists(packageJsonPath)) {
+        const packageJson = await fs.readJson(packageJsonPath);
+        if (packageJson.main) {
+            return path.join(directoryPath, packageJson.main);
+        }
+    }
+    return null;
+}
+
+
+export async function rezipDirectory(directoryPath: string): Promise<Buffer> {
+    const zip = new JSZip();
+    await addDirectoryToZip(zip, directoryPath, directoryPath);
+    return zip.generateAsync({ type: "nodebuffer" });
+}
+
+async function addDirectoryToZip(zip: JSZip, directoryPath: string, rootPath: string) {
+    const entries = await fs.readdir(directoryPath, { withFileTypes: true });
+    for (const entry of entries) {
+        const fullPath = path.join(directoryPath, entry.name);
+        if (entry.isDirectory()) {
+            // Recursively add subdirectory
+            await addDirectoryToZip(zip, fullPath, rootPath);
+        } else {
+            // Add file to zip
+            const fileContent = await fs.readFile(fullPath);
+            const zipPath = path.relative(rootPath, fullPath); // Get the relative path for the ZIP structure
+            zip.file(zipPath, fileContent);
+        }
+    }
+}
+// end of debloat functions
+
 
 // For: get package download
 export async function getPackageDownload(req: Request, res: Response) {
