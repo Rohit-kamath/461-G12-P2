@@ -11,6 +11,10 @@ import { NetScore } from '../src/controllers/netScore';
 import semver from 'semver';
 import { Action } from '@prisma/client';
 import axios from 'axios'
+import webpack, { Configuration } from 'webpack';
+import tmp from 'tmp-promise';
+import fs from 'fs-extra';
+import path from 'path';
 
 const logger = createModuleLogger('API Package Calls');
 
@@ -445,7 +449,7 @@ export async function downloadGitHubRepoZip(githubUrl: string): Promise<Buffer> 
 }
 
 
-export async function uploadPackage(req: Request, res: Response) {
+export async function uploadPackage(req: Request, res: Response, shouldDebloat: boolean) {
   try {
       let metadata: apiSchema.PackageMetadata;
       let githubInfo: { owner: string, repo: string } | null;
@@ -461,10 +465,11 @@ export async function uploadPackage(req: Request, res: Response) {
           return res.status(400).send('No file uploaded');
       }
       else if (req.file) {
-        metadata = await extractMetadataFromZip(req.file.buffer);
-        const url = await getGithubUrlFromZip(req.file.buffer);
+        const fileBuffer = shouldDebloat ? await debloatPackage(req.file.buffer) : req.file.buffer;
+        metadata = await extractMetadataFromZip(fileBuffer);
+        const url = await getGithubUrlFromZip(fileBuffer);
         githubInfo = parseGitHubUrl(url);
-        encodedContent = req.file.buffer.toString('base64');
+        encodedContent = fileBuffer.toString('base64');
         fileName = req.file.originalname;
       }
       else if (req.body.URL) {
@@ -474,9 +479,10 @@ export async function uploadPackage(req: Request, res: Response) {
           return res.status(400).send('Invalid or unsupported URL provided.');
       }
         const zipBuffer = await downloadGitHubRepoZip(url);
-        metadata = await extractMetadataFromZip(zipBuffer);
+        const debloatedBuffer = shouldDebloat ? await debloatPackage(zipBuffer) : zipBuffer;
+        metadata = await extractMetadataFromZip(debloatedBuffer);
         githubInfo = parseGitHubUrl(url);
-        encodedContent = zipBuffer.toString('base64');
+        encodedContent = debloatedBuffer.toString('base64');
         fileName = `${metadata.Name}.zip`;
       }
       else {
@@ -529,6 +535,117 @@ export async function uploadPackage(req: Request, res: Response) {
     }
 }
 
+
+// debloat functions
+async function debloatPackage(buffer: Buffer): Promise<Buffer> {
+    const { path: tmpDir, cleanup } = await tmp.dir({ unsafeCleanup: true });
+
+    try {
+        const zip = await JSZip.loadAsync(buffer);
+        await unzipToDirectory(zip, tmpDir);
+
+        // Perform tree shaking using Webpack
+        await treeShake(tmpDir);
+
+        // Re-zip the contents and return the buffer
+        const debloatedBuffer = await rezipDirectory(tmpDir);
+        return debloatedBuffer;
+    } catch (error) {
+        console.error('Error debloating package:', error);
+        throw error;
+    } finally {
+        await cleanup();
+    }
+}
+
+export async function unzipToDirectory(zip: JSZip, directoryPath: string): Promise<void> {
+    await fs.ensureDir(directoryPath);
+    for (const [filename, fileData] of Object.entries(zip.files)) {
+        if (!fileData.dir) {
+            const content = await fileData.async('nodebuffer');
+            const filePath = path.join(directoryPath, filename);
+            await fs.outputFile(filePath, content);
+        }
+    }
+}
+
+async function treeShake(directoryPath: string): Promise<void> {
+    const entryPoint = await findEntryPoint(directoryPath);
+    if (!entryPoint) {
+        throw new Error('Entry point not found');
+    }
+
+    const config: Configuration = {
+        mode: 'production',
+        entry: entryPoint,
+        output: {
+            path: directoryPath,
+            filename: 'bundle.js'
+        },
+        optimization: {
+            usedExports: true
+        }
+    };
+
+    return new Promise((resolve, reject) => {
+        webpack(config, (err, stats) => {
+            if (err) {
+                reject(new Error(`Webpack error: ${err.message}`));
+                return;
+            }
+            if (stats && stats.hasErrors()) {
+                reject(new Error('Webpack compilation error'));
+                return;
+            }
+            resolve();
+        });
+    });
+}
+
+async function findEntryPoint(directoryPath: string): Promise<string | null> {
+    const commonEntryPoints = ['index.js', 'main.js'];
+    for (const entry of commonEntryPoints) {
+        if (await fs.pathExists(path.join(directoryPath, entry))) {
+            return path.join(directoryPath, entry);
+        }
+    }
+    // Fallback to reading package.json
+    const packageJsonPath = path.join(directoryPath, 'package.json');
+    if (await fs.pathExists(packageJsonPath)) {
+        const packageJson = await fs.readJson(packageJsonPath);
+        if (packageJson.main) {
+            return path.join(directoryPath, packageJson.main);
+        }
+    }
+    return null;
+}
+
+
+export async function rezipDirectory(directoryPath: string): Promise<Buffer> {
+    const zip = new JSZip();
+    await addDirectoryToZip(zip, directoryPath, directoryPath);
+    return zip.generateAsync({ type: "nodebuffer" });
+}
+
+async function addDirectoryToZip(zip: JSZip, directoryPath: string, rootPath: string) {
+    const entries = await fs.readdir(directoryPath, { withFileTypes: true });
+    for (const entry of entries) {
+        const fullPath = path.join(directoryPath, entry.name);
+        if (entry.isDirectory()) {
+            // Recursively add subdirectory
+            await addDirectoryToZip(zip, fullPath, rootPath);
+        } else {
+            // Add file to zip
+            const fileContent = await fs.readFile(fullPath);
+            const zipPath = path.relative(rootPath, fullPath); // Get the relative path for the ZIP structure
+            zip.file(zipPath, fileContent);
+        }
+    }
+}
+
+
+// end of debloat functions
+
 // For: get package download
 export async function getPackageDownload(req: Request, res: Response) {
     try {
@@ -561,13 +678,12 @@ export async function getPackageDownload(req: Request, res: Response) {
 }
 
 // For: put package update
-export async function updatePackage(req: Request, res: Response) {
+export async function updatePackage(req: Request, res: Response, shouldDebloat: boolean) {
     try {
-        // Validate required package fields from the request body
         const { metadata, data } = req.body as apiSchema.Package;
 
         // Validate required fields
-        if (!metadata || !data || !metadata.Name || !metadata.Version || !metadata.ID) {
+        if (!metadata || !data || !metadata.Name || !metadata.Version || !metadata.ID  || !data.Content) {
             return res.status(400).send('All fields are required and must be valid.');
         }
 
@@ -580,24 +696,26 @@ export async function updatePackage(req: Request, res: Response) {
             return res.status(400).send('Package ID in the URL does not match the ID in the request body.');
         }
 
-        //update the package data only
-        try {
-            const updatedData = await prismaCalls.updatePackageDetails(packageId, data);
-            return res.status(200).json({ Data: updatedData });
-        } catch (error) {
-            if (error instanceof Error) {
-                if (error.message.includes('do not match')) {
-                    return res.status(400).send('Package ID, name, or version do not match.');
-                }
-                return res.status(404).send('Package does not exist.');
-            }
+        // Decode the package content 
+        let packageContent = Buffer.from(data.Content, 'base64');
+
+        // Apply debloat if required
+        if (shouldDebloat) {
+            packageContent = await debloatPackage(packageContent);
         }
+
+        // Update the package data
+        const updatedData = await prismaCalls.updatePackageDetails(packageId, {
+            ...data,
+            Content: packageContent.toString('base64') // Re-encode the package content 
+        });
+
+        return res.status(200).json({ Data: updatedData });
     } catch (error) {
         console.error(`Error in updatePackage: ${error}`);
         return res.status(500).send(`Server error: ${error}`);
     }
 }
-
 
 export async function callResetDatabase(req: Request, res: Response) {
   try {
