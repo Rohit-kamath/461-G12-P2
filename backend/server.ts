@@ -24,9 +24,12 @@ app.get('/upload-page', (req, res) => {
     res.sendFile(path.join(__dirname, '../Frontend/testwebsite.html'));
 });
 
+//package upload
 app.post('/package', upload.single('packageContent'), async (req, res) => {
     try {
-        await apiPackage.uploadPackage(req, res);
+        const shouldDebloat = req.body.debloat === 'true'
+
+        await apiPackage.uploadPackage(req, res, shouldDebloat);
     } catch (error) {
         res.status(500).send('Internal Server Error');
     }
@@ -80,7 +83,9 @@ app.get('/package/:id', async (req, res) => {
 //PUT package update
 app.put('/packages/:id', async (req, res) => {
     try {
-        await apiPackage.updatePackage(req, res);
+        const shouldDebloat = req.body.debloat === 'true';
+
+        await apiPackage.updatePackage(req, res, shouldDebloat);
     } catch (error) {
         res.status(500).send('Internal Server Error');
     }
