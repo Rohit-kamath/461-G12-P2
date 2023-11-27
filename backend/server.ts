@@ -24,6 +24,7 @@ app.get('/upload-page', (req, res) => {
     res.sendFile(path.join(__dirname, '../Frontend/testwebsite.html'));
 });
 
+//package upload
 app.post('/package', upload.single('packageContent'), async (req, res) => {
     try {
         await apiPackage.uploadPackage(req, res);
@@ -83,5 +84,16 @@ app.put('/packages/:id', async (req, res) => {
         await apiPackage.updatePackage(req, res);
     } catch (error) {
         res.status(500).send('Internal Server Error');
+    }
+});
+
+//PUT package debloat
+app.put('/package/debloat/:id', async (req, res) => {
+    try {
+        const packageId = req.params.id;
+        await apiPackage.debloatPackageById(packageId);
+        res.status(200).send(`Package ${packageId} successfully debloated`);
+    } catch (error) {
+        res.status(500).send(`Internal Server Error`);
     }
 });
