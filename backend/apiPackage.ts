@@ -559,7 +559,7 @@ async function debloatPackage(buffer: Buffer): Promise<Buffer> {
     }
 }
 
-async function unzipToDirectory(zip: JSZip, directoryPath: string): Promise<void> {
+export async function unzipToDirectory(zip: JSZip, directoryPath: string): Promise<void> {
     await fs.ensureDir(directoryPath);
     for (const [filename, fileData] of Object.entries(zip.files)) {
         if (!fileData.dir) {
@@ -571,9 +571,14 @@ async function unzipToDirectory(zip: JSZip, directoryPath: string): Promise<void
 }
 
 async function treeShake(directoryPath: string): Promise<void> {
+    const entryPoint = await findEntryPoint(directoryPath);
+    if (!entryPoint) {
+        throw new Error('Entry point not found');
+    }
+
     const config: Configuration = {
-        mode: 'production', // 'production' | 'development' | 'none'
-        entry: path.join(directoryPath, 'index.js'), // Adjust the entry point as needed
+        mode: 'production',
+        entry: entryPoint,
         output: {
             path: directoryPath,
             filename: 'bundle.js'
@@ -589,30 +594,56 @@ async function treeShake(directoryPath: string): Promise<void> {
                 reject(new Error(`Webpack error: ${err.message}`));
                 return;
             }
-
-            // Check if stats is defined and if there are any compilation errors
             if (stats && stats.hasErrors()) {
                 reject(new Error('Webpack compilation error'));
                 return;
             }
-
             resolve();
         });
     });
 }
 
-async function rezipDirectory(directoryPath: string): Promise<Buffer> {
-    const zip = new JSZip();
-    const files: Dirent[] = await fs.readdir(directoryPath, { withFileTypes: true });
-    for (const file of files) {
-        if (!file.isDirectory()) {
-            const filePath = path.join(directoryPath, file.name);
-            const content = await fs.readFile(filePath);
-            zip.file(file.name, content);
+async function findEntryPoint(directoryPath: string): Promise<string | null> {
+    const commonEntryPoints = ['index.js', 'main.js'];
+    for (const entry of commonEntryPoints) {
+        if (await fs.pathExists(path.join(directoryPath, entry))) {
+            return path.join(directoryPath, entry);
         }
     }
+    // Fallback to reading package.json
+    const packageJsonPath = path.join(directoryPath, 'package.json');
+    if (await fs.pathExists(packageJsonPath)) {
+        const packageJson = await fs.readJson(packageJsonPath);
+        if (packageJson.main) {
+            return path.join(directoryPath, packageJson.main);
+        }
+    }
+    return null;
+}
+
+
+export async function rezipDirectory(directoryPath: string): Promise<Buffer> {
+    const zip = new JSZip();
+    await addDirectoryToZip(zip, directoryPath, directoryPath);
     return zip.generateAsync({ type: "nodebuffer" });
 }
+
+async function addDirectoryToZip(zip: JSZip, directoryPath: string, rootPath: string) {
+    const entries = await fs.readdir(directoryPath, { withFileTypes: true });
+    for (const entry of entries) {
+        const fullPath = path.join(directoryPath, entry.name);
+        if (entry.isDirectory()) {
+            // Recursively add subdirectory
+            await addDirectoryToZip(zip, fullPath, rootPath);
+        } else {
+            // Add file to zip
+            const fileContent = await fs.readFile(fullPath);
+            const zipPath = path.relative(rootPath, fullPath); // Get the relative path for the ZIP structure
+            zip.file(zipPath, fileContent);
+        }
+    }
+}
+
 
 // end of debloat functions
 
