@@ -15,7 +15,6 @@ import webpack, { Configuration } from 'webpack';
 import tmp from 'tmp-promise';
 import fs from 'fs-extra';
 import path from 'path';
-import { Dirent } from 'fs'; 
 
 const logger = createModuleLogger('API Package Calls');
 
