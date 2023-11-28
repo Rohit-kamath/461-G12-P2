@@ -268,24 +268,26 @@ export async function uploadToS3(fileName: string, fileBuffer: Buffer): Promise<
 }
 
 export async function calculateGithubMetrics(owner: string, repo: string): Promise<apiSchema.PackageRating> {
-  try {
-      const netScoreCalculator = new NetScore(owner, repo);
-      const metrics = await netScoreCalculator.calculate();
+    try {
+        logger.info(`Calculating metrics for ${owner}/${repo}`)
+        const netScoreCalculator = new NetScore(owner, repo);
+        const metrics = await netScoreCalculator.calculate();
+        logger.info(`Metrics calculated: ${JSON.stringify(metrics)}`);
 
-      return {
-          BusFactor: metrics.BUS_FACTOR_SCORE,
-          Correctness: metrics.CORRECTNESS_SCORE,
-          RampUp: metrics.RAMP_UP_SCORE,
-          ResponsiveMaintainer: metrics.RESPONSIVE_MAINTAINER_SCORE,
-          LicenseScore: metrics.LICENSE_SCORE,
-          GoodPinningPractice: metrics.GOOD_PINNING_PRACTICE_SCORE,
-          PullRequest: metrics.PULL_REQUEST_SCORE,
-          NetScore: metrics.NET_SCORE,
-      };
-  } catch (error) {
-      logger.info(`Failed to calculate metrics: ${error}`);
-      throw error;
-  }
+        return {
+            BusFactor: metrics.BUS_FACTOR_SCORE,
+            Correctness: metrics.CORRECTNESS_SCORE,
+            RampUp: metrics.RAMP_UP_SCORE,
+            ResponsiveMaintainer: metrics.RESPONSIVE_MAINTAINER_SCORE,
+            LicenseScore: metrics.LICENSE_SCORE,
+            GoodPinningPractice: metrics.GOOD_PINNING_PRACTICE_SCORE,
+            PullRequest: metrics.PULL_REQUEST_SCORE,
+            NetScore: metrics.NET_SCORE,
+        };
+    } catch (error) {
+        logger.info(`Failed to calculate metrics: ${error}`);
+        throw error;
+    }
 }
 
 
