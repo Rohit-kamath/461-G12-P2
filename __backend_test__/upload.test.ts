@@ -7,7 +7,7 @@
 this is the request body for the POST /package route
 */
 //make sure it returns something and a 200 status code. It doesn't matter what exactly it returns, just that it returns something
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
 describe('upload', () => {
     it('should return 200 status code and something', async () => {
         try{
