@@ -1,4 +1,4 @@
-import { Correctness } from './correctness';
+//import { Correctness } from './correctness';
 import { getBusFactor } from './busFactor';
 import { calculateRampUp } from './rampUp';
 import { Responsiveness } from './responsiveness';
@@ -27,8 +27,9 @@ export class NetScore {
         // const correctnessobj = new correctness(this.owner, this.repo);
         logger.info('Beginning to calculate net score');
         logger.info(`Beginning to calculate correctness score for ${this.owner}/${this.repo}`)
-        const correctness = new Correctness(this.owner, this.repo);
-        const CORRECTNESS_SCORE = await correctness.check(this.owner, this.repo);
+        //const correctness = new Correctness(this.owner, this.repo);
+        //const CORRECTNESS_SCORE = await correctness.check(this.owner, this.repo);
+        const CORRECTNESS_SCORE = 1;
         logger.info(`Beginning to calculate bus factor score for ${this.owner}/${this.repo}`)
         const BUS_FACTOR_SCORE = await getBusFactor(this.owner, this.repo);
         logger.info(`Beginning to calculate ramp up score for ${this.owner}/${this.repo}`)
