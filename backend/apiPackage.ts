@@ -33,6 +33,7 @@ function getMaxVersion(versionRange: string) {
         return versions[versions.length - 1];
     } else {
         console.log('Error in getMaxVersion: No versions found in range');
+        logger.info('Error in getMaxVersion: No versions found in range');
         process.exit(1);
     }
 }
@@ -68,15 +69,15 @@ export async function getPackages(req: Request, res: Response){
         res.setHeader('offset', offset);
         const packageQueries = req.body as apiSchema.PackageQuery[];
         const packageMetaDataArray: PackageMetaDataPopularity[] = [];
-        console.log(packageQueries);
         for (const packageQuery of packageQueries) {
-            console.log(packageQuery)
             if (packageQuery.Name === undefined) {
                 console.log("packaageQuery.Name is undefined");
+                logger.info("getPackages: packaageQuery.Name is undefined");
                 return res.status(400).send(`Error in getPackageMetaData: Name is undefined`);
             }
             if (packageQuery.Version === undefined) {
                 console.log("packaageQuery.Version is undefined");
+                logger.info("getPackages: packaageQuery.Version is undefined");
                 return res.status(400).send(`Error in getPackageMetaData: Version is undefined`);
             }
             const queryName = packageQuery.Name as string;
@@ -105,6 +106,7 @@ export async function getPackages(req: Request, res: Response){
         return res.status(200).json(packageMetaDataArray);
     } catch (error) {
         console.log(error);
+        logger.info(`Error in getPackages: ${error}`);
         return res.status(500).send(`Error in getPackageMetaData: ${error}`);
     } 
 }
@@ -112,17 +114,20 @@ export async function getPackages(req: Request, res: Response){
 export async function getPackagesByName(req: Request, res: Response) {
     try {
         if (req.params?.name === undefined) {
+            logger.info(`Error in getPackagesByName: Name is undefined`);
             return res.status(400).send(`Error in getPackagesByName: Name is undefined`);
         }
         const queryName = req.params.name;
         const apiPackageHistories = await prismaCalls.getPackageHistories(queryName);
         
         if (apiPackageHistories === null) {
+            logger.info(`Error in getPackagesByName: apiPackageHistories is null`);
             return res.status(500).send(`Error in getPackagesByName: dbPackageHistories is null`);
         }
         
         return res.status(200).json(apiPackageHistories);
     } catch (error) {
+        logger.info(`Error in getPackagesByName: ${error}`);
         return res.status(500).send(`Error in getPackagesByName: ${error}`);
     }
 }
@@ -131,11 +136,13 @@ export async function getPackagesByName(req: Request, res: Response) {
 export async function getPackagesByRegEx(req: Request, res: Response) {
     try {
         if (req.body?.RegEx === undefined) {
+            logger.info(`Error in getPackagesByRegEx: RegEx is undefined`);
             return res.status(400).send(`Error in getPackagesByRegEx: RegEx is undefined`);
         }
         const regEx: string = req.body.RegEx;
         const dbPackageMetaData = await prismaCalls.getMetaDataByRegEx(regEx);
         if (dbPackageMetaData === null) {
+            logger.info(`Error in getPackagesByRegEx: dbPackageMetaData is null`);
             return res.status(500).send(`Error in getPackagesByRegEx: dbPackageMetaData is null`);
         }
         const apiPackageMetaData: PackageMetaDataPopularity[] = await Promise.all(
@@ -157,6 +164,7 @@ export async function getPackagesByRegEx(req: Request, res: Response) {
           );
         return res.status(200).json(apiPackageMetaData);
     } catch (error) {
+        logger.info(`Error in getPackagesByRegEx: ${error}`);
         return res.status(500).send(`Error in getPackagesByRegEx: ${error}`);
     }
 }
@@ -196,11 +204,13 @@ export async function extractFileFromZip(zipBuffer: Buffer, filename: string): P
 export async function getGithubUrlFromZip(zipBuffer: Buffer): Promise<string> {
     try {
         if (!zipBuffer || zipBuffer.length === 0) {
+            logger.info('getGithubUrlFromZip: Empty or invalid zip buffer provided');
             throw new Error('Empty or invalid zip buffer provided');
         }
 
         const packageJsonString = await extractFileFromZip(zipBuffer, 'package.json');
         if (!packageJsonString) {
+            logger.info('getGithubUrlFromZip: package.json not found or empty in the zip file')
             throw new Error('package.json not found or empty in the zip file');
         }
 
@@ -211,8 +221,10 @@ export async function getGithubUrlFromZip(zipBuffer: Buffer): Promise<string> {
             packageJson = JSON.parse(packageJsonString);
         } catch (error) {
             if (error instanceof Error) {
+                logger.info(`getGithubUrlFromZip: Failed to parse package.json: ${error.message}`)
                 throw new Error('Failed to parse package.json: ' + error.message);
             } else {
+                logger.info(`getGithubUrlFromZip: Failed to parse package.json: Unknown error occurred`)
                 throw new Error('Failed to parse package.json: Unknown error occurred');
             }
         }
@@ -220,6 +232,7 @@ export async function getGithubUrlFromZip(zipBuffer: Buffer): Promise<string> {
         let url = packageJson.repository?.url || packageJson.repository;
 
         if (!url || typeof url !== 'string') {
+            logger.info(`getGithubUrlFromZip: GitHub repository URL not found in package.json`)
             throw new Error('GitHub repository URL not found in package.json');
         }
 
@@ -236,6 +249,7 @@ export async function getGithubUrlFromZip(zipBuffer: Buffer): Promise<string> {
         logger.info(`GitHub URL extracted: ${url}`);
         return url;
     } catch (error) {
+        logger.info(`getGitHubUrlFromZip: An error occurred while extracting the GitHub URL: ${error}`);
         logger.info(`An error occurred while extracting the GitHub URL: ${error}`);
         throw error;
     }
@@ -252,6 +266,7 @@ export async function extractMetadataFromZip(filebuffer: Buffer): Promise<apiSch
             ID: uuidv4(),
         };
     } catch (error) {
+        logger.info(`extractMetadataFromZip: An error occurred while extracting metadata from zip: ${error}`);
         logger.info('An error occurred while extracting metadata from zip:', error);
         throw error;
     }
@@ -262,6 +277,7 @@ export async function uploadToS3(fileName: string, fileBuffer: Buffer): Promise<
         const bucketName = process.env.S3_BUCKET_NAME;
 
         if (!bucketName) {
+            logger.info(`UploadToS3: S3 bucket name not configured.`);
             throw new Error('S3 bucket name not configured.');
         }
 
@@ -274,6 +290,7 @@ export async function uploadToS3(fileName: string, fileBuffer: Buffer): Promise<
         // Uploading files to the bucket
         s3.upload(params, function (err: Error, data: ManagedUpload.SendData) {
             if (err) {
+                logger.info(`UploadToS3: An error occurred while uploading to S3: ${err}`);
                 reject(err);
             } else {
                 resolve(data);
@@ -300,6 +317,7 @@ export async function calculateGithubMetrics(owner: string, repo: string): Promi
             NetScore: metrics.NET_SCORE,
         };
     } catch (error) {
+        logger.info(`CalculateGithubMetrics: Failed to calculate metrics: ${error}`);
         logger.info(`Failed to calculate metrics: ${error}`);
         throw error;
     }
@@ -551,6 +569,7 @@ async function debloatPackage(buffer: Buffer): Promise<Buffer> {
         const debloatedBuffer = await rezipDirectory(tmpDir);
         return debloatedBuffer;
     } catch (error) {
+        logger.info(`debloatPackage: Error debloating package: ${error}`);
         console.error('Error debloating package:', error);
         throw error;
     } finally {
@@ -572,6 +591,7 @@ export async function unzipToDirectory(zip: JSZip, directoryPath: string): Promi
 async function treeShake(directoryPath: string): Promise<void> {
     const entryPoint = await findEntryPoint(directoryPath);
     if (!entryPoint) {
+        logger.info(`treeShake: Entry point not found`);
         throw new Error('Entry point not found');
     }
 
@@ -590,10 +610,12 @@ async function treeShake(directoryPath: string): Promise<void> {
     return new Promise((resolve, reject) => {
         webpack(config, (err, stats) => {
             if (err) {
+                logger.info(`treeShake: Webpack error: ${err.message}`);
                 reject(new Error(`Webpack error: ${err.message}`));
                 return;
             }
             if (stats && stats.hasErrors()) {
+                logger.info(`treeShake: Webpack compilation error`);
                 reject(new Error('Webpack compilation error'));
                 return;
             }
@@ -652,10 +674,12 @@ export async function getPackageDownload(req: Request, res: Response) {
         const packageID = req.query.name;
 
         if (packageID === undefined) {
+            logger.info(`Error in getPackageDownload: Package name is undefined`);
             return res.status(400).send('Package name or version is undefined');
         }
         const dbPackage = await prismaCalls.getPackage(packageID as string);
         if (dbPackage === null) {
+            logger.info(`Error in getPackageDownload: Package not found`)
             return res.status(404).send('Package not found');
         }
 
@@ -673,6 +697,7 @@ export async function getPackageDownload(req: Request, res: Response) {
         };
         return res.status(200).json(apiPackage);
     } catch (error) {
+        logger.info(`Error in getPackageDownload: ${error}`)
         return res.status(500).send(`Error in getPackageDownload: ${error}`);
     }
 }
@@ -684,15 +709,18 @@ export async function updatePackage(req: Request, res: Response, shouldDebloat: 
 
         // Validate required fields
         if (!metadata || !data || !metadata.Name || !metadata.Version || !metadata.ID  || !data.Content) {
+            logger.info(`Error in updatePackage: All fields are required and must be valid.`);
             return res.status(400).send('All fields are required and must be valid.');
         }
 
         const packageId = req.params.id;
         if (!packageId) {
+            logger.info(`Error in updatePackage: Package ID is required.`);
             return res.status(400).send('Package ID is required.');
         }
 
         if (packageId !== metadata.ID) {
+            logger.info(`Error in updatePackage: Package ID in the URL does not match the ID in the request body.`);
             return res.status(400).send('Package ID in the URL does not match the ID in the request body.');
         }
 
@@ -712,6 +740,7 @@ export async function updatePackage(req: Request, res: Response, shouldDebloat: 
 
         return res.status(200).json({ Data: updatedData });
     } catch (error) {
+        logger.info(`Error in updatePackage: ${error}`);
         console.error(`Error in updatePackage: ${error}`);
         return res.status(500).send(`Server error: ${error}`);
     }
@@ -721,40 +750,41 @@ export async function callResetDatabase(req: Request, res: Response) {
   try {
     const bucketName = process.env.S3_BUCKET_NAME;
     if (!bucketName) {
-      throw new Error("AWS S3 bucket name is not defined in environment variables.");
+        logger.info(`callResetDatabase: AWS S3 bucket name is not defined in environment variables.`)
+        throw new Error("AWS S3 bucket name is not defined in environment variables.");
     }
 
-    await emptyS3Bucket(bucketName);
-    logger.info('S3 Bucket content deleted.');
-    await prismaCalls.resetDatabase();
-    logger.info('Registry is reset.');
-    res.status(200).send('Registry is reset.');
+        await emptyS3Bucket(bucketName);
+        logger.info('S3 Bucket content deleted.');
+        await prismaCalls.resetDatabase();
+        logger.info('Registry is reset.');
+        res.status(200).send('Registry is reset.');
     
   } catch (error) {
-    const errorMessage = (error instanceof Error) ? error.message : 'Unknown error occurred';
-    logger.error(`Error resetting database or S3 bucket: ${errorMessage}`);
-    res.status(500).send(`Internal Server Error: ${errorMessage}`);
+        const errorMessage = (error instanceof Error) ? error.message : 'Unknown error occurred';
+        logger.error(`Error resetting database or S3 bucket: ${errorMessage}`);
+        res.status(500).send(`Internal Server Error: ${errorMessage}`);
   }
 }
 
 
 async function emptyS3Bucket(bucketName: string) {
-  try {
-    let listedObjects;
-    do {
-      listedObjects = await s3.listObjectsV2({ Bucket: bucketName }).promise();
+    try {
+        let listedObjects;
+        do {
+            listedObjects = await s3.listObjectsV2({ Bucket: bucketName }).promise();
 
-      if (listedObjects.Contents && listedObjects.Contents.length > 0) {
-        const deleteParams = {
-          Bucket: bucketName,
-          Delete: { Objects: listedObjects.Contents.filter(item => item.Key).map(item => ({ Key: item.Key! })) }
-        };
-        await s3.deleteObjects(deleteParams).promise();
-      }
-    } while (listedObjects.IsTruncated);
-  } catch (error) {
-    const errorMessage = (error instanceof Error) ? error.message : 'Unknown error occurred';
-    logger.error(`Error emptying S3 bucket: ${errorMessage}`);
-    throw new Error(`Failed to empty S3 bucket: ${errorMessage}`);
-  }
+            if (listedObjects.Contents && listedObjects.Contents.length > 0) {
+                    const deleteParams = {
+                    Bucket: bucketName,
+                    Delete: { Objects: listedObjects.Contents.filter(item => item.Key).map(item => ({ Key: item.Key! })) }
+                };
+                await s3.deleteObjects(deleteParams).promise();
+            }
+        } while (listedObjects.IsTruncated);
+    } catch (error) {
+        const errorMessage = (error instanceof Error) ? error.message : 'Unknown error occurred';
+        logger.error(`Error emptying S3 bucket: ${errorMessage}`);
+        throw new Error(`Failed to empty S3 bucket: ${errorMessage}`);
+    }
 }
