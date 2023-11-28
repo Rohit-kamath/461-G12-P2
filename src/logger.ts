@@ -3,8 +3,8 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const LOG_LEVEL = process.env.LOG_LEVEL || '0';
-const LOG_FILE = process.env.LOG_FILE;
+const LOG_LEVEL = process.env.LOG_LEVEL || '1';
+const LOG_FILE = process.env.LOG_FILE || 'combined.log';
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
 let winstonLogLevel: 'silent' | 'info' | 'debug';

@@ -19,8 +19,8 @@ import path from 'path';
 const logger = createModuleLogger('API Package Calls');
 
 const s3 = new AWS.S3({
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    accessKeyId: process.env.ACCESS_KEY_ID_AWS,
+    secretAccessKey: process.env.SECRET_ACCESS_KEY_AWS,
     region: 'us-east-2',
 });
 
@@ -115,31 +115,18 @@ export async function getPackagesByName(req: Request, res: Response) {
             return res.status(400).send(`Error in getPackagesByName: Name is undefined`);
         }
         const queryName = req.params.name;
-        const dbPackageHistories = await prismaCalls.getPackageHistories(queryName);
-        if (dbPackageHistories === null) {
+        const apiPackageHistories = await prismaCalls.getPackageHistories(queryName);
+        
+        if (apiPackageHistories === null) {
             return res.status(500).send(`Error in getPackagesByName: dbPackageHistories is null`);
         }
-        const apiPackageHistories: apiSchema.PackageHistoryEntry[] | null = dbPackageHistories.map((dbPackageHistory) => {
-            const historyEntry: apiSchema.PackageHistoryEntry = {
-                User: {
-                    name: dbPackageHistory.user.name,
-                    isAdmin: dbPackageHistory.user.isAdmin,
-                },
-                Date: dbPackageHistory.date.toISOString(),
-                PackageMetadata: {
-                    Name: dbPackageHistory.metadata.name,
-                    Version: dbPackageHistory.metadata.version,
-                    ID: dbPackageHistory.metadata.id,
-                },
-                Action: dbPackageHistory.action,
-            };
-            return historyEntry;
-        });
+        
         return res.status(200).json(apiPackageHistories);
     } catch (error) {
         return res.status(500).send(`Error in getPackagesByName: ${error}`);
     }
 }
+
 
 export async function getPackagesByRegEx(req: Request, res: Response) {
     try {
@@ -272,7 +259,7 @@ export async function extractMetadataFromZip(filebuffer: Buffer): Promise<apiSch
 
 export async function uploadToS3(fileName: string, fileBuffer: Buffer): Promise<ManagedUpload.SendData> {
     return new Promise((resolve, reject) => {
-        const bucketName = process.env.AWS_S3_BUCKET_NAME;
+        const bucketName = process.env.S3_BUCKET_NAME;
 
         if (!bucketName) {
             throw new Error('S3 bucket name not configured.');
@@ -296,24 +283,26 @@ export async function uploadToS3(fileName: string, fileBuffer: Buffer): Promise<
 }
 
 export async function calculateGithubMetrics(owner: string, repo: string): Promise<apiSchema.PackageRating> {
-  try {
-      const netScoreCalculator = new NetScore(owner, repo);
-      const metrics = await netScoreCalculator.calculate();
+    try {
+        logger.info(`Calculating metrics for ${owner}/${repo}`)
+        const netScoreCalculator = new NetScore(owner, repo);
+        const metrics = await netScoreCalculator.calculate();
+        logger.info(`Metrics calculated: ${JSON.stringify(metrics)}`);
 
-      return {
-          BusFactor: metrics.BUS_FACTOR_SCORE,
-          Correctness: metrics.CORRECTNESS_SCORE,
-          RampUp: metrics.RAMP_UP_SCORE,
-          ResponsiveMaintainer: metrics.RESPONSIVE_MAINTAINER_SCORE,
-          LicenseScore: metrics.LICENSE_SCORE,
-          GoodPinningPractice: metrics.GOOD_PINNING_PRACTICE_SCORE,
-          PullRequest: metrics.PULL_REQUEST_SCORE,
-          NetScore: metrics.NET_SCORE,
-      };
-  } catch (error) {
-      logger.info(`Failed to calculate metrics: ${error}`);
-      throw error;
-  }
+        return {
+            BusFactor: metrics.BUS_FACTOR_SCORE,
+            Correctness: metrics.CORRECTNESS_SCORE,
+            RampUp: metrics.RAMP_UP_SCORE,
+            ResponsiveMaintainer: metrics.RESPONSIVE_MAINTAINER_SCORE,
+            LicenseScore: metrics.LICENSE_SCORE,
+            GoodPinningPractice: metrics.GOOD_PINNING_PRACTICE_SCORE,
+            PullRequest: metrics.PULL_REQUEST_SCORE,
+            NetScore: metrics.NET_SCORE,
+        };
+    } catch (error) {
+        logger.info(`Failed to calculate metrics: ${error}`);
+        throw error;
+    }
 }
 
 
@@ -346,7 +335,7 @@ export function parseGitHubUrl(url: string): { owner: string, repo: string } | n
 
 
 export function isPackageIngestible(metrics: apiSchema.PackageRating): boolean {
-  return (
+    return (
       metrics.BusFactor >= 0.0 &&
       // metrics.Correctness >= 0.5 && (until correctness is fixed)
       metrics.RampUp >= 0.0 &&
@@ -533,7 +522,7 @@ export async function uploadPackage(req: Request, res: Response, shouldDebloat: 
         };
 
         const action = Action.CREATE;
-        await prismaCalls.createPackageHistoryEntry(metadata.ID, 1, action); // User id is 1 for now
+        await prismaCalls.createPackageHistoryEntry(metadata.ID, action); // User id is 1 for now
 
       await storeGithubMetrics(metadata.ID, metrics);
 
@@ -730,7 +719,7 @@ export async function updatePackage(req: Request, res: Response, shouldDebloat: 
 
 export async function callResetDatabase(req: Request, res: Response) {
   try {
-    const bucketName = process.env.AWS_S3_BUCKET_NAME;
+    const bucketName = process.env.S3_BUCKET_NAME;
     if (!bucketName) {
       throw new Error("AWS S3 bucket name is not defined in environment variables.");
     }

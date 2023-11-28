@@ -1,4 +1,4 @@
-import React, { useState, ChangeEvent } from 'react';
+import { useState, ChangeEvent } from 'react';
 import axios from 'axios';
 
 function App() {
@@ -12,12 +12,12 @@ function App() {
 
   const uploadZipFile = async (file: File) => {
     const formData = new FormData();
-    formData.append('zipFile', file);
+    formData.append('packageContent', file);
 
     try {
       setUploadStatus(`Uploading ${file.name}...`);
 
-      const response = await axios.post('http://localhost:5000/package', formData, {
+      const response = await axios.post('/package', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

@@ -4,6 +4,9 @@ import { config } from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
+import createModuleLogger from '../logger';
+
+const logger = createModuleLogger('Correctness');
 
 config(); 
 
@@ -32,14 +35,19 @@ export class Correctness {
 
     public async check(owner: string, repo: string): Promise<number> {
         repo = repo.trim().replace('\r', '');
+        logger.info('Fetching repo data');
+
         const repoData = await this.fetchRepoData(owner, repo);
 
         if (repoData === null) return 0;
 
+        logger.info('Calculating GitHub score');
         const githubScore = this.calculateGitHubScore(repoData.stars_count, repoData.forks_count);
 
+        logger.info('Calculating ESLint score');
         const eslintScore = await this.linterAndTestChecker(owner, repo);
 
+        logger.info('Successfully calculated GitHub & ESLint score, calculating final score');
         return this.calculateFinalScore(githubScore, eslintScore);
     }
 
@@ -69,49 +77,101 @@ export class Correctness {
 
     private async lintFiles(dir: string, depth = 0): Promise<void> {
         if (depth > this.maxDepth) {
-            return; // Avoid going too deep into directory structures
+            logger.info(`Max depth of ${this.maxDepth} reached, skipping directory ${dir}`);
+            return;
         }
 
-        const files = fs.readdirSync(dir);
+        let files;
+        try {
+            files = fs.readdirSync(dir);
+        } catch (error) {
+            logger.error(`Error reading directory ${dir}: ${error}`);
+            return;
+        }
 
+        logger.info(`Linting ${files.length} files in ${dir}`);
         for (const file of files) {
             const filePath = path.join(dir, file);
-            const stat = fs.lstatSync(filePath); // Use lstat to get symlink info
+            let stat;
+            try {
+                stat = fs.lstatSync(filePath);
+            } catch (error) {
+                logger.error(`Error accessing file ${filePath}: ${error}`);
+                continue;
+            }
 
             if (stat.isSymbolicLink()) {
-                continue; // skipping symbolic links to prevent infinite loops
+                try {
+                    const resolvedLink = fs.realpathSync(filePath);
+                    logger.info(`Resolved symbolic link ${filePath} to ${resolvedLink}`);
+                    await this.lintFiles(resolvedLink, depth + 1);
+                } catch (error) {
+                    logger.error(`Error resolving symbolic link ${filePath}: ${error}`);
+                }
+                continue;
             } else if (stat.isDirectory()) {
                 await this.lintFiles(filePath, depth + 1);
-            } else if (/\.ts$|\.js$/.test(file)) { // Simplified file check
-                const results = await new ESLint().lintFiles([filePath]);
-                results.forEach(result => {
-                    result.messages.forEach(message => {
-                        if (message.severity === 2) this.errors++;
-                        else if (message.severity === 1) this.warnings++;
-                        if (message.ruleId && ['no-eval', 'no-implied-eval'].includes(message.ruleId)) {
-                            this.securityIssues++;
-                        }
-                    });
-                });
+            } else if (/\.(ts|js)$/.test(file)) {
+                await this.lintFile(filePath);
             }
         }
     }
 
-    public hasTestInName(dirPath: string): boolean {
-        const stats = fs.statSync(dirPath);
+    private async lintFile(filePath: string): Promise<void> {
+        logger.info(`Linting file ${filePath}`);
+        const results = await new ESLint().lintFiles([filePath]);
+        results.forEach(result => {
+            result.messages.forEach(message => {
+                if (message.severity === 2) this.errors++;
+                else if (message.severity === 1) this.warnings++;
+                if (message.ruleId && ['no-eval', 'no-implied-eval'].includes(message.ruleId)) {
+                    this.securityIssues++;
+                }
+            });
+        });
+        logger.info(`Linting complete for file ${filePath}`);
+    }
+
+    public hasTestInName(dirPath: string, visited = new Set()): boolean {
+        logger.info(`Checking if ${dirPath} has test in name`);
+    
+        // Check if we have already visited this directory to prevent infinite recursion
+        if (visited.has(dirPath)) {
+            return false;
+        }
+        visited.add(dirPath);
+    
+        let stats;
+        try {
+            stats = fs.statSync(dirPath);
+        } catch (error) {
+            logger.error(`Error accessing directory ${dirPath}: ${error}`);
+            return false;
+        }
+    
         if (stats.isDirectory()) {
-            if (dirPath.includes('test')) {
+            if (dirPath.toLowerCase().includes('test')) {
                 return true;
             }
-            const files = fs.readdirSync(dirPath);
+            let files;
+            try {
+                files = fs.readdirSync(dirPath);
+            } catch (error) {
+                logger.error(`Error reading directory ${dirPath}: ${error}`);
+                return false;
+            }
+    
             for (const file of files) {
-                if (this.hasTestInName(path.join(dirPath, file))) {
+                const filePath = path.join(dirPath, file);
+                if (this.hasTestInName(filePath, visited)) {
                     return true;
                 }
             }
         }
+    
         return false;
     }
+    
 
     public async linterAndTestChecker(owner: string, repo: string): Promise<number> {
         const tempdir = path.join('temp', owner, repo);
