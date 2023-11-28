@@ -90,3 +90,17 @@ app.put('/packages/:id', async (req, res) => {
         res.status(500).send('Internal Server Error');
     }
 });
+
+//make a catch all route that returns a 501 not implemented
+app.all('*', (req, res) => {
+    res.status(501).send('Not Implemented');
+});
+
+app.use((req, res) => {
+    res.status(501).json({
+      error: {
+        message: 'Not Implemented',
+      },
+    });
+  });
+  
