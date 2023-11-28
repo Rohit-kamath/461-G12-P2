@@ -18,7 +18,7 @@ describe('App Selenium Test', () => {
 
   test('uploads zip files successfully', async () => {
     // Open the application in the browser
-    await driver.get('http://localhost:3000'); // Update the URL if needed
+    await driver.get('http://localhost:5000'); // Update the URL if needed
 
     // Find the file input element and upload a file
     const fileInput = await driver.findElement(By.css('input[type="file"]'));

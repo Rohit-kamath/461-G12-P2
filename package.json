@@ -1,7 +1,7 @@
 {
   "name": "ece461_team11",
   "version": "1.0.0",
-  "description": "Project Members: 1) Dev Thakkar 2) Jonathan Dow 3) Rohan Sagar (rsagar@purdue.edu) 4) Dongwon Kim",
+  "description": "Project Members: 1) Rohit Kamath 2) Robert Rozhanskyy 3) Rachit Bisht 4) Ty Runner",
   "main": "index.js",
   "scripts": {
     "start": "node dist/backend/server.js",
