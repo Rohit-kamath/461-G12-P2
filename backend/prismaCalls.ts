@@ -13,13 +13,6 @@ type FullPackage = prismaSchema.Prisma.PackageGetPayload<{
     };
 }>;
 
-type FullHistoryEntry = prismaSchema.Prisma.PackageHistoryEntryGetPayload<{
-    include: {
-        metadata: true;
-        user: true;
-    };
-}>;
-
 export async function getMetaDataByQuery(queryName: apiSchema.PackageName, minVersion: string, maxVersion: string, minInclusive: boolean, maxInclusive: boolean, offset: number): Promise<prismaSchema.PackageMetadata[] | null> {
     try {
         // Ensure that the offset is at least 1 (treat 0 as page 1)
@@ -49,7 +42,7 @@ export async function getMetaDataByQuery(queryName: apiSchema.PackageName, minVe
     }
 }
 
-export async function getPackageHistories(queryName: apiSchema.PackageName): Promise<FullHistoryEntry[] | null> {
+export async function getPackageHistories(queryName: apiSchema.PackageName): Promise<apiSchema.PackageHistoryEntry[] | null> {
     try {
         const packageHistories = await prisma.packageHistoryEntry.findMany({
             where: {
@@ -58,17 +51,25 @@ export async function getPackageHistories(queryName: apiSchema.PackageName): Pro
                 },
             },
             include: {
-                user: true,
                 metadata: true,
             },
         });
-        return packageHistories;
+
+        return packageHistories.map(history => ({
+            Date: history.date.toISOString(),
+            PackageMetadata: {
+                Name: history.metadata.name,
+                Version: history.metadata.version,
+                ID: history.metadata.id,
+            },
+            Action: history.action,
+        }));
     } catch (error) {
-        logger.info(`Error in getPackageHistories: ${error}`);
         logger.info(`Error in getPackageHistories: ${error}`);
         return null;
     }
 }
+
 
 export async function uploadMetadataToDatabase(metadata: apiSchema.PackageMetadata): Promise<void> {
     try {
@@ -86,7 +87,7 @@ export async function uploadMetadataToDatabase(metadata: apiSchema.PackageMetada
     }
 }
 
-export async function createPackageHistoryEntry(metadataId: string, userId: number, action: Action): Promise<void> {
+export async function createPackageHistoryEntry(metadataId: string, action: Action): Promise<void> {
     try {
         // Check if metadataId exists
         const metadataExists = await prisma.packageMetadata.findUnique({
@@ -96,19 +97,10 @@ export async function createPackageHistoryEntry(metadataId: string, userId: numb
             throw new Error(`No metadata found for ID: ${metadataId}`);
         }
 
-        // Check if userId exists
-        const userExists = await prisma.user.findUnique({
-            where: { id: userId },
-        });
-        if (!userExists) {
-            throw new Error(`No user found for ID: ${userId}`);
-        }
-
         // Create PackageHistoryEntry
         await prisma.packageHistoryEntry.create({
             data: {
                 metadataId: metadataId,
-                userId: userId,
                 action: action,
                 date: new Date(),
             },

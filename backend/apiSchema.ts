@@ -18,15 +18,6 @@ export type PackageData = {
     JSProgram?: string; // Description: A JavaScript program
 };
 
-export type User = {
-    name: string;
-    isAdmin: boolean; // Description: Is this user an admin?
-};
-
-export type UserAuthenticationInfo = {
-    password: string; // Description: Password for a user. Per the spec, this should be a "strong" password.
-};
-
 export type PackageID = string;
 
 export type PackageRating = {
@@ -42,7 +33,6 @@ export type PackageRating = {
 };
 
 export type PackageHistoryEntry = {
-    User: User;
     Date: string; // Description: Date of activity using ISO-8601 Datetime standard in UTC format.
     PackageMetadata: PackageMetadata;
     Action: prismaClient.Action;
@@ -50,18 +40,12 @@ export type PackageHistoryEntry = {
 
 export type PackageName = string; // Description: Name of a package. Names should only use typical "keyboard" characters. The name "*" is reserved. See the `/packages` API for its meaning.
 
-export type AuthenticationToken = string; // Description: "The spec permits you to use any token format you like. You could, for example, look into JSON Web Tokens ("JWT," pronounced "jots"): https://jwt.io."
-
-export type AuthenticationRequest = {
-    User: User;
-    Secret: UserAuthenticationInfo;
-};
-
 export type SemverRange = string;
 
 export type PackageQuery = {
     Version: SemverRange;
     Name: PackageName;
+    Popularity?: boolean;
 };
 
 export type EnumerateOffset = string; // Description: Offset in pagination.
