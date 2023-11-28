@@ -102,3 +102,11 @@ app.listen(port, () => {
     console.log(`server started at http://localhost:${port}`);
     logger.info(`server started at http://localhost:${port}`);
 });
+
+app.use((req, res) => {
+    res.status(501).json({
+      error: {
+        message: 'Not Implemented',
+      },
+    });
+  });

@@ -24,7 +24,7 @@ const s3 = new AWS.S3({
     region: 'us-east-2',
 });
 
-type PackageMetaDataPopularity = apiSchema.PackageMetadata & {DownloadCount: number};
+type PackageMetaDataPopularity = apiSchema.PackageMetadata & {DownloadCount?: number};
 
 function getMaxVersion(versionRange: string) {
     versionRange = versionRange.replace(/-0/g, '');
@@ -62,43 +62,51 @@ export function parseVersion(version: string) {
     };
 }
 
-export async function getPackages(req: Request, res: Response) {
+export async function getPackages(req: Request, res: Response){
     try {
         const offset = req.query?.offset === undefined ? 1 : parseInt(req.query.offset as string);
-        if (req.body?.Name === undefined) {
-            return res.status(400).send(`Error in getPackageMetaData: Name is undefined`);
-        }
-        if (req.body?.Version === undefined) {
-            return res.status(400).send(`Error in getPackageMetaData: Version is undefined`);
-        }
-
-        const queryName = req.body.name as string;
-        //use parseVersion function to get min and max version, and whether they are inclusive
-        const { min: minVersion, max: maxVersion, minInclusive: minInclusive, maxInclusive: maxInclusive } = parseVersion(req.body.Version as string);
-
-        const dbPackageMetaData = await prismaCalls.getMetaDataByQuery(queryName, minVersion, maxVersion, minInclusive, maxInclusive, offset);
-        if (dbPackageMetaData === null) {
-            return res.status(500).send(`Error in getPackageMetaData: packageMetaData is null`);
-        }
-        const apiPackageMetaData: PackageMetaDataPopularity[] = await Promise.all(
-            dbPackageMetaData.map(async (dbPackageMetaData: prismaSchema.PackageMetadata) => {
-              const downloadCount = await prismaCalls.getDownloadCount(dbPackageMetaData.id);
-          
-              const metaData: PackageMetaDataPopularity = {
-                Name: dbPackageMetaData.name,
-                Version: dbPackageMetaData.version,
-                ID: dbPackageMetaData.id,
-                DownloadCount: downloadCount,
-              };
-          
-              return metaData;
-            })
-          );
         res.setHeader('offset', offset);
-        return res.status(200).json(apiPackageMetaData);
+        const packageQueries = req.body as apiSchema.PackageQuery[];
+        const packageMetaDataArray: PackageMetaDataPopularity[] = [];
+        console.log(packageQueries);
+        for (const packageQuery of packageQueries) {
+            console.log(packageQuery)
+            if (packageQuery.Name === undefined) {
+                console.log("packaageQuery.Name is undefined");
+                return res.status(400).send(`Error in getPackageMetaData: Name is undefined`);
+            }
+            if (packageQuery.Version === undefined) {
+                console.log("packaageQuery.Version is undefined");
+                return res.status(400).send(`Error in getPackageMetaData: Version is undefined`);
+            }
+            const queryName = packageQuery.Name as string;
+            const { min: minVersion, max: maxVersion, minInclusive: minInclusive, maxInclusive: maxInclusive } = parseVersion(packageQuery.Version as string);
+            const dbPackageMetaData = await prismaCalls.getMetaDataByQuery(queryName, minVersion, maxVersion, minInclusive, maxInclusive, offset);
+            if (dbPackageMetaData === null) {
+                return res.status(500).send(`Error in getPackageMetaData: packageMetaData is null`);
+            }
+            const apiPackageMetaData: PackageMetaDataPopularity[] = await Promise.all(
+                dbPackageMetaData.map(async (dbPackageMetaData: prismaSchema.PackageMetadata) => {
+                    const downloadCount = await prismaCalls.getDownloadCount(dbPackageMetaData.id);
+                
+                    const metaData: PackageMetaDataPopularity = {
+                        Name: dbPackageMetaData.name,
+                        Version: dbPackageMetaData.version,
+                        ID: dbPackageMetaData.id,
+                    };
+                    if ( (packageQuery.Popularity !== undefined) && (packageQuery.Popularity == true) ) {
+                        metaData.DownloadCount = downloadCount;
+                    }
+                    return metaData;
+                })
+              );
+            packageMetaDataArray.push(...apiPackageMetaData);
+        }
+        return res.status(200).json(packageMetaDataArray);
     } catch (error) {
+        console.log(error);
         return res.status(500).send(`Error in getPackageMetaData: ${error}`);
-    }
+    } 
 }
 
 export async function getPackagesByName(req: Request, res: Response) {
@@ -132,14 +140,17 @@ export async function getPackagesByRegEx(req: Request, res: Response) {
         }
         const apiPackageMetaData: PackageMetaDataPopularity[] = await Promise.all(
             dbPackageMetaData.map(async (dbPackageMetaData: prismaSchema.PackageMetadata) => {
-              const downloadCount = await prismaCalls.getDownloadCount(dbPackageMetaData.id);
+                const downloadCount = await prismaCalls.getDownloadCount(dbPackageMetaData.id);
           
-              const metaData: PackageMetaDataPopularity = {
-                Name: dbPackageMetaData.name,
-                Version: dbPackageMetaData.version,
-                ID: dbPackageMetaData.id,
-                DownloadCount: downloadCount,
-              };
+                const metaData: PackageMetaDataPopularity = {
+                    Name: dbPackageMetaData.name,
+                    Version: dbPackageMetaData.version,
+                    ID: dbPackageMetaData.id,
+                };
+
+                if ( (req.body?.Popularity !== undefined) && (req.body?.Popularity == true) ) {
+                    metaData.DownloadCount = downloadCount;
+                }
           
               return metaData;
             })

@@ -45,6 +45,7 @@ export type SemverRange = string;
 export type PackageQuery = {
     Version: SemverRange;
     Name: PackageName;
+    Popularity?: boolean;
 };
 
 export type EnumerateOffset = string; // Description: Offset in pagination.
