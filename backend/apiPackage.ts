@@ -103,31 +103,18 @@ export async function getPackagesByName(req: Request, res: Response) {
             return res.status(400).send(`Error in getPackagesByName: Name is undefined`);
         }
         const queryName = req.params.name;
-        const dbPackageHistories = await prismaCalls.getPackageHistories(queryName);
-        if (dbPackageHistories === null) {
+        const apiPackageHistories = await prismaCalls.getPackageHistories(queryName);
+        
+        if (apiPackageHistories === null) {
             return res.status(500).send(`Error in getPackagesByName: dbPackageHistories is null`);
         }
-        const apiPackageHistories: apiSchema.PackageHistoryEntry[] | null = dbPackageHistories.map((dbPackageHistory) => {
-            const historyEntry: apiSchema.PackageHistoryEntry = {
-                User: {
-                    name: dbPackageHistory.user.name,
-                    isAdmin: dbPackageHistory.user.isAdmin,
-                },
-                Date: dbPackageHistory.date.toISOString(),
-                PackageMetadata: {
-                    Name: dbPackageHistory.metadata.name,
-                    Version: dbPackageHistory.metadata.version,
-                    ID: dbPackageHistory.metadata.id,
-                },
-                Action: dbPackageHistory.action,
-            };
-            return historyEntry;
-        });
+        
         return res.status(200).json(apiPackageHistories);
     } catch (error) {
         return res.status(500).send(`Error in getPackagesByName: ${error}`);
     }
 }
+
 
 export async function getPackagesByRegEx(req: Request, res: Response) {
     try {
@@ -516,7 +503,7 @@ export async function uploadPackage(req: Request, res: Response) {
         };
 
         const action = Action.CREATE;
-        await prismaCalls.createPackageHistoryEntry(metadata.ID, 1, action); // User id is 1 for now
+        await prismaCalls.createPackageHistoryEntry(metadata.ID, action); // User id is 1 for now
 
       await storeGithubMetrics(metadata.ID, metrics);
 
