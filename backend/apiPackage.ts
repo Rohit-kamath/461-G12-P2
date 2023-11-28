@@ -248,7 +248,7 @@ export async function extractMetadataFromZip(filebuffer: Buffer): Promise<apiSch
 
 export async function uploadToS3(fileName: string, fileBuffer: Buffer): Promise<ManagedUpload.SendData> {
     return new Promise((resolve, reject) => {
-        const bucketName = process.env.AWS_S3_BUCKET_NAME;
+        const bucketName = process.env.S3_BUCKET_NAME;
 
         if (!bucketName) {
             throw new Error('S3 bucket name not configured.');
