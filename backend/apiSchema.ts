@@ -18,10 +18,6 @@ export type PackageData = {
     JSProgram?: string; // Description: A JavaScript program
 };
 
-export type UserAuthenticationInfo = {
-    password: string; // Description: Password for a user. Per the spec, this should be a "strong" password.
-};
-
 export type PackageID = string;
 
 export type PackageRating = {
@@ -43,8 +39,6 @@ export type PackageHistoryEntry = {
 };
 
 export type PackageName = string; // Description: Name of a package. Names should only use typical "keyboard" characters. The name "*" is reserved. See the `/packages` API for its meaning.
-
-export type AuthenticationToken = string; // Description: "The spec permits you to use any token format you like. You could, for example, look into JSON Web Tokens ("JWT," pronounced "jots"): https://jwt.io."
 
 export type SemverRange = string;
 
