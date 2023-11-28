@@ -19,8 +19,8 @@ import path from 'path';
 const logger = createModuleLogger('API Package Calls');
 
 const s3 = new AWS.S3({
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    accessKeyId: process.env.ACCESS_KEY_ID_AWS,
+    secretAccessKey: process.env.SECRET_ACCESS_KEY_AWS,
     region: 'us-east-2',
 });
 
@@ -708,7 +708,7 @@ export async function updatePackage(req: Request, res: Response, shouldDebloat: 
 
 export async function callResetDatabase(req: Request, res: Response) {
   try {
-    const bucketName = process.env.AWS_S3_BUCKET_NAME;
+    const bucketName = process.env.S3_BUCKET_NAME;
     if (!bucketName) {
       throw new Error("AWS S3 bucket name is not defined in environment variables.");
     }
