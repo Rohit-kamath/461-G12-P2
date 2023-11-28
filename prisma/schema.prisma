@@ -7,16 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id                  Int                     @id @default(autoincrement())
-  name                String                  @db.VarChar(255)
-  isAdmin             Boolean
-  password            String                  @db.VarChar(255)
-  API_Tokens          APIToken[]
-  AuthRequests        AuthenticationRequest[]
-  PackageHistoryEntry PackageHistoryEntry[]
-}
-
 model Package {
   id         String          @id @db.VarChar(255)
   metadataId String          @unique
@@ -65,28 +55,8 @@ enum Action {
 
 model PackageHistoryEntry {
   id         Int             @id @default(autoincrement())
-  userId     Int
-  user       User            @relation(fields: [userId], references: [id])
   metadataId String          @unique
   metadata   PackageMetadata @relation(fields: [metadataId], references: [id])
   date       DateTime
   action     Action
-}
-
-model APIToken {
-  id                 String   @id @db.VarChar(255)
-  userId             Int
-  user               User     @relation(fields: [userId], references: [id])
-  numUsage           Int
-  createdAt          DateTime
-  uploadPermission   Boolean
-  searchPermission   Boolean
-  downloadPermission Boolean
-}
-
-model AuthenticationRequest {
-  id     Int    @id @default(autoincrement())
-  userId Int
-  user   User   @relation(fields: [userId], references: [id])
-  secret String @db.VarChar(255)
 }
