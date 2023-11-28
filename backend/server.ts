@@ -29,6 +29,7 @@ app.get('/upload-page', (req, res) => {
     res.sendFile(path.join(__dirname, '../Frontend/testwebsite.html'));
 });
 */
+logger.info('Current working directory:', process.cwd());
 
 app.post('/package', upload.single('packageContent'), async (req, res) => {
     try {
