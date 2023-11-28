@@ -4,6 +4,9 @@ import { config } from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
+import createModuleLogger from '../logger';
+
+const logger = createModuleLogger('Correctness');
 
 config(); 
 
@@ -32,14 +35,19 @@ export class Correctness {
 
     public async check(owner: string, repo: string): Promise<number> {
         repo = repo.trim().replace('\r', '');
+        logger.info('Fetching repo data');
+
         const repoData = await this.fetchRepoData(owner, repo);
 
         if (repoData === null) return 0;
 
+        logger.info('Calculating GitHub score');
         const githubScore = this.calculateGitHubScore(repoData.stars_count, repoData.forks_count);
 
+        logger.info('Calculating ESLint score');
         const eslintScore = await this.linterAndTestChecker(owner, repo);
 
+        logger.info('Successfully calculated GitHub & ESLint score, calculating final score');
         return this.calculateFinalScore(githubScore, eslintScore);
     }
 
@@ -69,20 +77,25 @@ export class Correctness {
 
     private async lintFiles(dir: string, depth = 0): Promise<void> {
         if (depth > this.maxDepth) {
+            logger.info(`Max depth of ${this.maxDepth} reached, skipping directory ${dir}`);
             return; // Avoid going too deep into directory structures
         }
 
         const files = fs.readdirSync(dir);
 
+        logger.info(`Linting ${files.length} files in ${dir}`);
         for (const file of files) {
             const filePath = path.join(dir, file);
             const stat = fs.lstatSync(filePath); // Use lstat to get symlink info
 
             if (stat.isSymbolicLink()) {
+                logger.info(`Skipping symbolic link ${filePath}`);
                 continue; // skipping symbolic links to prevent infinite loops
             } else if (stat.isDirectory()) {
+                logger.info(`Recursively linting directory ${filePath}`);
                 await this.lintFiles(filePath, depth + 1);
             } else if (/\.ts$|\.js$/.test(file)) { // Simplified file check
+                logger.info(`Linting file ${filePath}`);
                 const results = await new ESLint().lintFiles([filePath]);
                 results.forEach(result => {
                     result.messages.forEach(message => {
@@ -93,11 +106,13 @@ export class Correctness {
                         }
                     });
                 });
+                logger.info(`Linting complete for file ${filePath}`);
             }
         }
     }
 
     public hasTestInName(dirPath: string): boolean {
+        logger.info(`Checking if ${dirPath} has test in name`);
         const stats = fs.statSync(dirPath);
         if (stats.isDirectory()) {
             if (dirPath.includes('test')) {

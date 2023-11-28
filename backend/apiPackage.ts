@@ -11,7 +11,7 @@ import { NetScore } from '../src/controllers/netScore';
 import semver from 'semver';
 import { Action } from '@prisma/client';
 import axios from 'axios'
-import webpack, { Configuration } from 'webpack';
+import webpack, { Configuration, Stats } from 'webpack';
 import tmp from 'tmp-promise';
 import fs from 'fs-extra';
 import path from 'path';
@@ -577,7 +577,7 @@ async function treeShake(directoryPath: string): Promise<void> {
     };
 
     return new Promise((resolve, reject) => {
-        webpack(config, (err, stats) => {
+        webpack(config, (err: Error, stats: Stats) => {
             if (err) {
                 reject(new Error(`Webpack error: ${err.message}`));
                 return;
