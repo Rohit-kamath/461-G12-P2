@@ -38,6 +38,7 @@ app.post('/package', upload.single('packageContent'), async (req, res) => {
 
         await apiPackage.uploadPackage(req, res, shouldDebloat);
     } catch (error) {
+        logger.info(`Error in post(/package) server.ts: ${error}`);
         res.status(500).send('Internal Server Error');
     }
 });
@@ -46,6 +47,7 @@ app.post('/packages', async (req, res) => {
     try {
         await apiPackage.getPackages(req, res);
     } catch (error) {
+        logger.info(`Error in post(/packages) in server.ts: ${error}`);
         res.status(500).send('Internal Server Error');
     }
 });
@@ -54,6 +56,7 @@ app.delete('/reset', async (req, res) => {
     try {
         await apiPackage.callResetDatabase(req, res);
     } catch (error) {
+        logger.info(`Error in delete(/reset) in server.ts: ${error}`);
         res.status(500).send('Internal Server Error');
     }
 });
@@ -62,6 +65,7 @@ app.get('/packages/byName/:name', async (req, res) => {
     try {
         await apiPackage.getPackagesByName(req, res);
     } catch (error) {
+        logger.info(`Error in get(/packages/byName/:name) in server.ts: ${error}`);
         res.status(500).send('Internal Server Error');
     }
 });
@@ -70,6 +74,7 @@ app.post('/package/byRegEx', async (req, res) => {
     try {
         await apiPackage.getPackagesByRegEx(req, res);
     } catch (error) {
+        logger.info(`Error in post(/package/byRegEx) in server.ts: ${error}`);
         res.status(500).send('Internal Server Error');
     }
 });
@@ -79,6 +84,7 @@ app.get('/package/:id', async (req, res) => {
     try {
         await apiPackage.getPackageDownload(req, res);
     } catch (error) {
+        logger.info(`Error in get(/package/:id) in server.ts: ${error}`);
         res.status(500).send('Internal Server Error');
     }
 });
@@ -90,6 +96,7 @@ app.put('/packages/:id', async (req, res) => {
 
         await apiPackage.updatePackage(req, res, shouldDebloat);
     } catch (error) {
+        logger.info(`Error in put(/packages/:id) in server.ts: ${error}`);
         res.status(500).send('Internal Server Error');
     }
 });

@@ -37,7 +37,6 @@ export async function getMetaDataByQuery(queryName: apiSchema.PackageName, minVe
         return packages;
     } catch (error) {
         logger.info(`Error in getMetaDataArray: ${error}`);
-        logger.info(`Error in getMetaDataArray: ${error}`);
         return null;
     }
 }
@@ -81,7 +80,6 @@ export async function uploadMetadataToDatabase(metadata: apiSchema.PackageMetada
             },
         });
     } catch (error) {
-        logger.info(`Error in uploadMetadataToDatabase: ${error}`);
         logger.info(`Error in uploadMetadataToDatabase: ${error}`);
         throw new Error('Failed to upload metadata to the database.');
     }
@@ -141,6 +139,7 @@ export async function getMetaDataByRegEx(regEx: string): Promise<prismaSchema.Pa
 
         return result;
     } catch (error) {
+        logger.info(`getMetaDataByRegEx error: ${error}`);
         console.error(`Error in getMetaDataArray: ${error}`);
         return null;
     }
@@ -184,6 +183,7 @@ export async function getPackage(queryID: apiSchema.PackageID): Promise<FullPack
         });
         return packageEntry;
     } catch (error) {
+        logger.info(`getPackage error: ${error}`);
         console.error(`Error in getPackage: ${error}`);
         return null;
     }
@@ -208,6 +208,7 @@ export async function updatePackageDetails(packageId: apiSchema.PackageID, packa
             JSProgram: updatedData.JSProgram,
         };
     } catch (error) {
+        logger.info(`updatePackageDetails error: ${error}`);
         console.error(`Error in updatePackageDetails: ${error}`);
         return null;
     }
