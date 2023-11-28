@@ -101,6 +101,47 @@ export async function getPackages(req: Request, res: Response) {
     }
 }
 
+export async function getPackagesFull(req: Request, res: Response){
+    try {
+        const offset = req.query?.offset === undefined ? 1 : parseInt(req.query.offset as string);
+        res.setHeader('offset', offset);
+        const packageQueries = req.body as apiSchema.PackageQuery[];
+        const packageMetaDataArray: PackageMetaDataPopularity[] = [];
+        for (const packageQuery of packageQueries) {
+            if (packageQuery.Name === undefined) {
+                return res.status(400).send(`Error in getPackageMetaData: Name is undefined`);
+            }
+            if (packageQuery.Version === undefined) {
+                return res.status(400).send(`Error in getPackageMetaData: Version is undefined`);
+            }
+            const queryName = packageQuery.Name as string;
+            const { min: minVersion, max: maxVersion, minInclusive: minInclusive, maxInclusive: maxInclusive } = parseVersion(packageQuery.Version as string);
+            const dbPackageMetaData = await prismaCalls.getMetaDataByQuery(queryName, minVersion, maxVersion, minInclusive, maxInclusive, offset);
+            if (dbPackageMetaData === null) {
+                return res.status(500).send(`Error in getPackageMetaData: packageMetaData is null`);
+            }
+            const apiPackageMetaData: PackageMetaDataPopularity[] = await Promise.all(
+                dbPackageMetaData.map(async (dbPackageMetaData: prismaSchema.PackageMetadata) => {
+                  const downloadCount = await prismaCalls.getDownloadCount(dbPackageMetaData.id);
+              
+                  const metaData: PackageMetaDataPopularity = {
+                    Name: dbPackageMetaData.name,
+                    Version: dbPackageMetaData.version,
+                    ID: dbPackageMetaData.id,
+                    DownloadCount: downloadCount,
+                  };
+              
+                  return metaData;
+                })
+              );
+            packageMetaDataArray.push(...apiPackageMetaData);
+        }
+        return res.status(200).json(packageMetaDataArray);
+    } catch (error) {
+        return res.status(500).send(`Error in getPackageMetaData: ${error}`);
+    } 
+}
+
 export async function getPackagesByName(req: Request, res: Response) {
     try {
         if (req.params?.name === undefined) {
