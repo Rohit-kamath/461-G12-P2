@@ -71,6 +71,7 @@ export async function getPackageHistories(queryName: apiSchema.PackageName): Pro
 
 
 export async function uploadMetadataToDatabase(metadata: apiSchema.PackageMetadata): Promise<void> {
+    logger.info(`uploadMetadataToDatabase: Uploading metadata to database: ${metadata.Name}@${metadata.Version}`);
     try {
         await prisma.packageMetadata.create({
             data: {
@@ -86,6 +87,7 @@ export async function uploadMetadataToDatabase(metadata: apiSchema.PackageMetada
 }
 
 export async function createPackageHistoryEntry(metadataId: string, action: Action): Promise<void> {
+    logger.info(`createPackageHistoryEntry: Creating package history entry for metadata ID: ${metadataId}`)
     try {
         // Check if metadataId exists
         const metadataExists = await prisma.packageMetadata.findUnique({
@@ -110,6 +112,7 @@ export async function createPackageHistoryEntry(metadataId: string, action: Acti
 }
 
 export async function checkPackageExists(packageName: string, packageVersion: string): Promise<boolean> {
+    logger.info(`checkPackageExists: Checking if package exists: ${packageName}@${packageVersion}`)
     const count = await prisma.packageMetadata.count({
         where: {
             name: packageName,

@@ -34,9 +34,12 @@ logger.info('Current working directory:', process.cwd());
 //package upload
 app.post('/package', upload.single('packageContent'), async (req, res) => {
     try {
+        logger.info(`POST /package called with req: ${req}`);
         const shouldDebloat = req.body.debloat === 'true'
-
+        logger.info(`shouldDebloat: ${shouldDebloat}`)
+        logger.info('Calling apiPackage uploadPackage');
         await apiPackage.uploadPackage(req, res, shouldDebloat);
+        logger.info('uploadPackage completed');
     } catch (error) {
         logger.info(`Error in post(/package) server.ts: ${error}`);
         res.status(500).send('Internal Server Error');
