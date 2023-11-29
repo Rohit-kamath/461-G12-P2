@@ -34,7 +34,7 @@ logger.info('Current working directory:', process.cwd());
 //package upload
 app.post('/package', upload.single('packageContent'), async (req, res) => {
     try {
-        const shouldDebloat = req.body.debloat === 'true'
+        const shouldDebloat = req.body.debloat === 'true' || false;
 
         await apiPackage.uploadPackage(req, res, shouldDebloat);
     } catch (error) {
@@ -92,7 +92,7 @@ app.get('/package/:id', async (req, res) => {
 //PUT package update
 app.put('/packages/:id', async (req, res) => {
     try {
-        const shouldDebloat = req.body.debloat === 'true';
+        const shouldDebloat = req.body.debloat === 'true' || false;
 
         await apiPackage.updatePackage(req, res, shouldDebloat);
     } catch (error) {
