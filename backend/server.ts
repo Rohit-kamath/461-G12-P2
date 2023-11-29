@@ -35,7 +35,12 @@ logger.info('Current working directory:', process.cwd());
 app.post('/package', upload.single('packageContent'), async (req, res) => {
     try {
         logger.info(`POST /package called with req: ${req}`);
-        const shouldDebloat = req.body.debloat === 'true'
+        let shouldDebloat;
+        if(req.body?.debloat === undefined) {
+            shouldDebloat = false;
+        }else{
+            shouldDebloat = req.body.debloat === 'true' || false;
+        }
         logger.info(`shouldDebloat: ${shouldDebloat}`)
         logger.info('Calling apiPackage uploadPackage');
         await apiPackage.uploadPackage(req, res, shouldDebloat);
@@ -95,7 +100,12 @@ app.get('/package/:id', async (req, res) => {
 //PUT package update
 app.put('/packages/:id', async (req, res) => {
     try {
-        const shouldDebloat = req.body.debloat === 'true';
+        let shouldDebloat;
+        if(req.body?.debloat === undefined) {
+            shouldDebloat = false;
+        }else{
+            shouldDebloat = req.body.debloat === 'true' || false;
+        }
 
         await apiPackage.updatePackage(req, res, shouldDebloat);
     } catch (error) {
