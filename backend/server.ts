@@ -34,7 +34,12 @@ logger.info('Current working directory:', process.cwd());
 //package upload
 app.post('/package', upload.single('packageContent'), async (req, res) => {
     try {
-        const shouldDebloat = req.body.debloat === 'true' || false;
+        let shouldDebloat;
+        if(req.body?.debloat === undefined) {
+            shouldDebloat = false;
+        }else{
+            shouldDebloat = req.body.debloat === 'true' || false;
+        }
 
         await apiPackage.uploadPackage(req, res, shouldDebloat);
     } catch (error) {
@@ -98,6 +103,7 @@ app.put('/packages/:id', async (req, res) => {
         }else{
             shouldDebloat = req.body.debloat === 'true' || false;
         }
+
         await apiPackage.updatePackage(req, res, shouldDebloat);
     } catch (error) {
         logger.info(`Error in put(/packages/:id) in server.ts: ${error}`);
