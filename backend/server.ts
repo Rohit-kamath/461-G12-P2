@@ -16,6 +16,7 @@ const logger = createModuleLogger('Server');
 logger.info('Starting server...');
 // Enable CORS for all routes
 app.use(cors());
+app.use(express.json());
 
 // Serve static files from the "Frontend" directory
 app.use(express.static('Frontend/dist'));
@@ -34,7 +35,7 @@ logger.info('Current working directory:', process.cwd());
 //package upload
 app.post('/package', upload.single('packageContent'), async (req, res) => {
     try {
-        logger.info(`POST /package called with req: ${req}`);
+        logger.info(`POST /package called with req: ${req.body}`);
         let shouldDebloat;
         if(req.body?.debloat === undefined) {
             shouldDebloat = false;
@@ -44,7 +45,6 @@ app.post('/package', upload.single('packageContent'), async (req, res) => {
         logger.info(`shouldDebloat: ${shouldDebloat}`)
         logger.info('Calling apiPackage uploadPackage');
         await apiPackage.uploadPackage(req, res, shouldDebloat);
-        logger.info('uploadPackage completed');
     } catch (error) {
         logger.info(`Error in post(/package) server.ts: ${error}`);
         res.status(500).send('Internal Server Error');
