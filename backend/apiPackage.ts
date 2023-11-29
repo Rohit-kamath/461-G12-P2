@@ -511,7 +511,7 @@ export async function uploadPackage(req: Request, res: Response, shouldDebloat: 
             const url = await getGithubUrlFromZip(fileBuffer);
             githubInfo = parseGitHubUrl(url);
             encodedContent = fileBuffer.toString('base64');
-            logger.info(`Converted zip file to Base64 string, encoded content: ${encodedContent}`);
+            logger.info(`Converted zip file to Base64 string, encoded content: ${encodedContent.substring(0, 100)}...`);
             fileName = req.file.originalname;
             logger.info(`Uploadeding package with file name: ${fileName}`);
         }
@@ -529,7 +529,7 @@ export async function uploadPackage(req: Request, res: Response, shouldDebloat: 
             metadata = await extractMetadataFromZip(debloatedBuffer);
             githubInfo = parseGitHubUrl(url);
             encodedContent = debloatedBuffer.toString('base64');
-            logger.info(`Converted zip file to Base64 string, encoded content: ${encodedContent}`);
+            logger.info(`Converted zip file to Base64 string, encoded content:  ${encodedContent.substring(0, 100)}...`);
             fileName = `${metadata.Name}.zip`;
             logger.info(`Uploading package with file name: ${fileName}`);
         }
@@ -566,7 +566,13 @@ export async function uploadPackage(req: Request, res: Response, shouldDebloat: 
             Content: encodedContent,
             JSProgram: jsProgram
         };
-        logger.info(`PackageData: ${JSON.stringify(PackageData)}`);
+        
+        const truncatedContent = encodedContent.substring(0, 100);
+        const logPackageData = {
+            ...PackageData,
+            Content: truncatedContent + '...'
+        }
+        logger.info(`PackageData: ${JSON.stringify(logPackageData)}`);
 
         const packageExists = await prismaCalls.checkPackageExists(metadata.Name, metadata.Version);
         if (packageExists) {
@@ -587,7 +593,15 @@ export async function uploadPackage(req: Request, res: Response, shouldDebloat: 
             metadata: metadata,
             data: PackageData,
         };
-        logger.info(`Package: ${JSON.stringify(Package)}`);
+
+        const logPackage = {
+            metadata: metadata,
+            data: {
+            ...PackageData,
+            Content: truncatedContent + '...'
+            }
+        };
+        logger.info(`Package: ${JSON.stringify(logPackage)}`);
 
         const action = Action.CREATE;
         await prismaCalls.createPackageHistoryEntry(metadata.ID, action);
