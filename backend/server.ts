@@ -16,6 +16,8 @@ const logger = createModuleLogger('Server');
 logger.info('Starting server...');
 // Enable CORS for all routes
 app.use(cors());
+
+// Parse JSON bodies
 app.use(express.json());
 
 // Serve static files from the "Frontend" directory
@@ -35,7 +37,7 @@ logger.info('Current working directory:', process.cwd());
 //package upload
 app.post('/package', upload.single('packageContent'), async (req, res) => {
     try {
-        logger.info(`POST /package called with req: ${req.body}`);
+        logger.info('POST /package called');
         let shouldDebloat;
         if(req.body?.debloat === undefined) {
             shouldDebloat = false;
