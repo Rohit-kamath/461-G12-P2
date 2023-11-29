@@ -92,8 +92,12 @@ app.get('/package/:id', async (req, res) => {
 //PUT package update
 app.put('/packages/:id', async (req, res) => {
     try {
-        const shouldDebloat = req.body.debloat === 'true' || false;
-
+        let shouldDebloat;
+        if(req.body?.debloat === undefined) {
+            shouldDebloat = false;
+        }else{
+            shouldDebloat = req.body.debloat === 'true' || false;
+        }
         await apiPackage.updatePackage(req, res, shouldDebloat);
     } catch (error) {
         logger.info(`Error in put(/packages/:id) in server.ts: ${error}`);
