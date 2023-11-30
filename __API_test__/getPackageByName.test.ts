@@ -45,7 +45,7 @@ describe('get /package/byName/{name} endpoint', () => {
 
     it('get /package/byName/{name} endpoint (package history). should return 404 status code for an invalid package name', async () => {
         try {
-            const response = await axios.get(`${APIURL}/package/byName/invalidPackageName`);
+            await axios.get(`${APIURL}/package/byName/invalidPackageName`);
             throw new Error('not returning 404 status code for invalid package name');
         } catch (error: any) {
             if(error.message === 'not returning 404 status code for invalid package name') {
