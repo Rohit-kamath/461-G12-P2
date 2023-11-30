@@ -259,3 +259,32 @@ export async function resetDatabase() {
         logger.info('Error resetting database:', error);
     }
 }
+
+export async function getPackageRatingById(metadataId: string): Promise<apiSchema.PackageRating | null> {
+    try {
+        const packageRating = await prisma.packageRating.findUnique({
+            where: {
+                metadataId: metadataId,
+            },
+        });
+
+        if (!packageRating) {
+            logger.info(`No ratings found for package with ID: ${metadataId}`);
+            return null;
+        }
+
+        return {
+            BusFactor: packageRating.busFactor,
+            Correctness: packageRating.correctness,
+            RampUp: packageRating.rampUp,
+            ResponsiveMaintainer: packageRating.responsiveMaintainer,
+            LicenseScore: packageRating.licenseScore,
+            GoodPinningPractice: packageRating.goodPinningPractice,
+            PullRequest: packageRating.pullRequest,
+            NetScore: packageRating.netScore,
+        };
+    } catch (error) {
+        logger.error(`Error in getPackageRatingById: ${error}`);
+        throw error;
+    }
+}

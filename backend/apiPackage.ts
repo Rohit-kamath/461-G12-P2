@@ -821,12 +821,12 @@ export async function updatePackage(req: Request, res: Response, shouldDebloat: 
 }
 
 export async function callResetDatabase(req: Request, res: Response) {
-  try {
-    const bucketName = process.env.S3_BUCKET_NAME;
-    if (!bucketName) {
-        logger.info(`callResetDatabase: AWS S3 bucket name is not defined in environment variables.`)
-        throw new Error("AWS S3 bucket name is not defined in environment variables.");
-    }
+    try {
+        const bucketName = process.env.S3_BUCKET_NAME;
+        if (!bucketName) {
+            logger.info(`callResetDatabase: AWS S3 bucket name is not defined in environment variables.`)
+            throw new Error("AWS S3 bucket name is not defined in environment variables.");
+        }
 
         await emptyS3Bucket(bucketName);
         logger.info('S3 Bucket content deleted.');
@@ -834,11 +834,11 @@ export async function callResetDatabase(req: Request, res: Response) {
         logger.info('Registry is reset.');
         res.status(200).send('Registry is reset.');
     
-  } catch (error) {
+    } catch (error) {
         const errorMessage = (error instanceof Error) ? error.message : 'Unknown error occurred';
         logger.error(`Error resetting database or S3 bucket: ${errorMessage}`);
         res.status(500).send(`Internal Server Error: ${errorMessage}`);
-  }
+    }
 }
 
 
@@ -860,5 +860,28 @@ async function emptyS3Bucket(bucketName: string) {
         const errorMessage = (error instanceof Error) ? error.message : 'Unknown error occurred';
         logger.error(`Error emptying S3 bucket: ${errorMessage}`);
         throw new Error(`Failed to empty S3 bucket: ${errorMessage}`);
+    }
+}
+
+export async function getPackageRatings(req: Request, res: Response) {
+    const packageId = req.params.id;
+
+    logger.info(`getPackageRatings: Getting package ratings for package ID: ${packageId}`);
+    if (!packageId) {
+        logger.info(`Error in getPackageRatings: Package ID is required`);
+        return res.status(400).send('Package ID is required');
+    }
+
+    try {
+        const packageRating = await prismaCalls.getPackageRatingById(packageId);
+
+        if (!packageRating) {
+            return res.status(404).send('Package not found or no ratings available');
+        }
+
+        return res.status(200).json(packageRating);
+    } catch (error) {
+        logger.info(`Error in getPackageRatings: ${error}`);
+        return res.status(500).send(`Internal Server Error: ${error}`);
     }
 }
