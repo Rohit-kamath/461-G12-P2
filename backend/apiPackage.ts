@@ -388,7 +388,7 @@ export async function getGitHubUrlFromNpmUrl(npmUrl: string): Promise<string | n
         // Fetch the package data from npm
         const response = await axios.get(`https://registry.npmjs.org/${packageName}`);
         const packageData = response.data;
-        logger.info(`Fetched package data from npm: ${JSON.stringify(packageData)}`);
+        logger.info(`Fetched package data from npm`);
 
         // Get the repository URL from package data
         let repoUrl = packageData.repository?.url;
