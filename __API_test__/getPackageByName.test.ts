@@ -31,15 +31,27 @@ describe('get /package/byName/{name} endpoint', () => {
         }
     });
 
-    it('get /package/byName/{name} endpoint (package history). should return 200 status code and something for a valid package id', async () => {
+    it('get /package/byName/{name} endpoint (package history). should return 200 status code and something for a valid package name', async () => {
         try {
             const response = await axios.get(`${APIURL}/package/byName/${packageName}`);
-            console.log(response.data);
+            //console.log(response.data);
             expect(response.status).toBe(200);
         } catch (error: any) {
             console.log(error.response.status);
             console.log(error.response.data);
             throw error;
+        }
+    });
+
+    it('get /package/byName/{name} endpoint (package history). should return 404 status code for an invalid package name', async () => {
+        try {
+            const response = await axios.get(`${APIURL}/package/byName/invalidPackageName`);
+            throw new Error('not returning 404 status code for invalid package name');
+        } catch (error: any) {
+            if(error.message === 'not returning 404 status code for invalid package name') {
+                throw error;
+            }
+            expect(error.response.status).toBe(404);
         }
     });
 });
