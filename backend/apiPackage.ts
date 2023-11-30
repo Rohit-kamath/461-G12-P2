@@ -745,7 +745,7 @@ async function addDirectoryToZip(zip: JSZip, directoryPath: string, rootPath: st
 // For: get package download
 export async function getPackageDownload(req: Request, res: Response) {
     try {
-        const packageID = req.query.name;
+        const packageID = req.params.id;
 
         if (packageID === undefined) {
             logger.info(`Error in getPackageDownload: Package name is undefined`);
