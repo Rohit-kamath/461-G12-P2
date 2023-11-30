@@ -17,6 +17,9 @@ logger.info('Starting server...');
 // Enable CORS for all routes
 app.use(cors());
 
+// Parse JSON bodies
+app.use(express.json());
+
 // Serve static files from the "Frontend" directory
 app.use(express.static('Frontend/dist'));
 
@@ -34,13 +37,15 @@ logger.info('Current working directory:', process.cwd());
 //package upload
 app.post('/package', upload.single('packageContent'), async (req, res) => {
     try {
+        logger.info('POST /package called');
         let shouldDebloat;
         if(req.body?.debloat === undefined) {
             shouldDebloat = false;
         }else{
             shouldDebloat = req.body.debloat === 'true' || false;
         }
-
+        logger.info(`shouldDebloat: ${shouldDebloat}`)
+        logger.info('Calling apiPackage uploadPackage');
         await apiPackage.uploadPackage(req, res, shouldDebloat);
     } catch (error) {
         logger.info(`Error in post(/package) server.ts: ${error}`);

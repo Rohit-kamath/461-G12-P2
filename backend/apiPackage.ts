@@ -170,38 +170,40 @@ export async function getPackagesByRegEx(req: Request, res: Response) {
 }
 
 export async function extractFileFromZip(zipBuffer: Buffer, filename: string): Promise<string> {
-  const zip = await JSZip.loadAsync(zipBuffer);
+    logger.info(`extractFileFromZip: Extracting ${filename} from zip`);
+    const zip = await JSZip.loadAsync(zipBuffer);
 
-  // Determine if there's a single root directory
-  const rootDir = Object.keys(zip.files).find(path => path.endsWith("/") && path.split('/').length === 2);
+    // Determine if there's a single root directory
+    const rootDir = Object.keys(zip.files).find(path => path.endsWith("/") && path.split('/').length === 2);
 
-  let file;
+    let file;
 
-  if (rootDir) {
-      // If a root directory exists, prepend it to the filename
-      file = zip.file(`${rootDir}${filename}`);
-  } else {
-      // Otherwise, search for the file at the root of the zip
-      file = zip.file(new RegExp(`^${filename}$`));
-  }
+    if (rootDir) {
+        // If a root directory exists, prepend it to the filename
+        file = zip.file(`${rootDir}${filename}`);
+    } else {
+        // Otherwise, search for the file at the root of the zip
+        file = zip.file(new RegExp(`^${filename}$`));
+    }
 
-  // Handle the case where file is an array
-  if (Array.isArray(file)) {
-      file = file.length > 0 ? file[0] : null;
-  }
+    // Handle the case where file is an array
+    if (Array.isArray(file)) {
+        file = file.length > 0 ? file[0] : null;
+    }
 
-  if (!file) {
-      logger.info(`${filename} not found inside the zip.`);
-      throw new Error(`${filename} not found inside the zip.`);
-  }
+    if (!file) {
+        logger.info(`${filename} not found inside the zip.`);
+        throw new Error(`${filename} not found inside the zip.`);
+    }
 
-  // Extract and return the file content as a string
-  return file.async('string');
+    // Extract and return the file content as a string
+    return file.async('string');
 }
 
 
 
 export async function getGithubUrlFromZip(zipBuffer: Buffer): Promise<string> {
+    logger.info('getGithubUrlFromZip: Extracting GitHub URL from zip')
     try {
         if (!zipBuffer || zipBuffer.length === 0) {
             logger.info('getGithubUrlFromZip: Empty or invalid zip buffer provided');
@@ -222,7 +224,7 @@ export async function getGithubUrlFromZip(zipBuffer: Buffer): Promise<string> {
         } catch (error) {
             if (error instanceof Error) {
                 logger.info(`getGithubUrlFromZip: Failed to parse package.json: ${error.message}`)
-                throw new Error('Failed to parse package.json: ' + error.message);
+                throw new Error(`Failed to parse package.json: ${error.message}`);
             } else {
                 logger.info(`getGithubUrlFromZip: Failed to parse package.json: Unknown error occurred`)
                 throw new Error('Failed to parse package.json: Unknown error occurred');
@@ -237,11 +239,11 @@ export async function getGithubUrlFromZip(zipBuffer: Buffer): Promise<string> {
         }
 
     if (url.startsWith('github:')) {
-      url = `https://github.com/${url.substring(7)}`;
+        url = `https://github.com/${url.substring(7)}`;
     }
 
     if (url.startsWith('git@github.com:')) {
-      url = `https://github.com/${url.substring(15)}`;
+        url = `https://github.com/${url.substring(15)}`;
     }
 
         url = url.replace(/\.git$/, '');
@@ -256,6 +258,7 @@ export async function getGithubUrlFromZip(zipBuffer: Buffer): Promise<string> {
 }
 
 export async function extractMetadataFromZip(filebuffer: Buffer): Promise<apiSchema.PackageMetadata> {
+    logger.info('extractMetadataFromZip: Extracting metadata from zip');
     try {
         const packageContent = await extractFileFromZip(filebuffer, 'package.json');
         const packageJson = JSON.parse(packageContent);
@@ -267,12 +270,12 @@ export async function extractMetadataFromZip(filebuffer: Buffer): Promise<apiSch
         };
     } catch (error) {
         logger.info(`extractMetadataFromZip: An error occurred while extracting metadata from zip: ${error}`);
-        logger.info('An error occurred while extracting metadata from zip:', error);
         throw error;
     }
 }
 
 export async function uploadToS3(fileName: string, fileBuffer: Buffer): Promise<ManagedUpload.SendData> {
+    logger.info('UploadToS3: Uploading to S3')
     return new Promise((resolve, reject) => {
         const bucketName = process.env.S3_BUCKET_NAME;
 
@@ -300,8 +303,8 @@ export async function uploadToS3(fileName: string, fileBuffer: Buffer): Promise<
 }
 
 export async function calculateGithubMetrics(owner: string, repo: string): Promise<apiSchema.PackageRating> {
+    logger.info(`CalculateGithubMetrics: Calculating metrics for ${owner}/${repo}`);
     try {
-        logger.info(`Calculating metrics for ${owner}/${repo}`)
         const netScoreCalculator = new NetScore(owner, repo);
         const metrics = await netScoreCalculator.calculate();
         logger.info(`Metrics calculated: ${JSON.stringify(metrics)}`);
@@ -325,228 +328,295 @@ export async function calculateGithubMetrics(owner: string, repo: string): Promi
 
 
 export async function storeGithubMetrics(metadataId: string, packageRating: apiSchema.PackageRating): Promise<void> {
-  try {
-      await prismaCalls.storeMetricsInDatabase(metadataId, packageRating);
-      logger.info('Package rating metrics stored in the database successfully.');
-  } catch (error) {
-      logger.info(`Error in storeGithubMetrics: ${error}`);
-      throw error;
-  }
+    logger.info('storeGithubMetrics: Storing package rating metrics in the database')
+    try {
+        await prismaCalls.storeMetricsInDatabase(metadataId, packageRating);
+        logger.info('Package rating metrics stored in the database successfully.');
+    } catch (error) {
+        logger.info(`Error in storeGithubMetrics: ${error}`);
+        throw error;
+    }
 }
 
 
 export function parseGitHubUrl(url: string): { owner: string, repo: string } | null {
   // Regular expression to extract the owner and repo name from various GitHub URL formats
-  const regex = /github\.com[/:]([^/]+)\/([^/.]+)(\.git)?/;
-  const match = url.match(regex);
-  
-  if (match && match[1] && match[2]) {
-      return {
-          owner: match[1],
-          repo: match[2].replace('.git', '')
-      };
-  } else {
-      logger.info('Invalid GitHub URL provided:', url);
-      return null;
-  }
+    logger.info(`parseGitHubUrl: Parsing GitHub URL: ${url}`);
+    const regex = /github\.com[/:]([^/]+)\/([^/.]+)(\.git)?/;
+    const match = url.match(regex);
+
+    if (match && match[1] && match[2]) {
+        return {
+            owner: match[1],
+            repo: match[2].replace('.git', '')
+        };
+    } else {
+        logger.info(`Invalid GitHub URL provided: ${url}`);
+        return null;
+    }
 }
 
 
 export function isPackageIngestible(metrics: apiSchema.PackageRating): boolean {
+    logger.info('isPackageIngestible: Checking if package is ingestible');
     return (
-      metrics.BusFactor >= 0.0 &&
-      // metrics.Correctness >= 0.5 && (until correctness is fixed)
-      metrics.RampUp >= 0.0 &&
-      metrics.ResponsiveMaintainer >= 0.0 &&
-      metrics.LicenseScore >= 0.0 &&
-      // metrics.GoodPinningPractice >= 0.5 && spec says to only include phase 1 metrics (I think)
-      // metrics.PullRequest >= 0.5
-      metrics.NetScore >= 0.0
-  );
+        metrics.BusFactor >= 0.0 &&
+        // metrics.Correctness >= 0.5 && (until correctness is fixed)
+        metrics.RampUp >= 0.0 &&
+        metrics.ResponsiveMaintainer >= 0.0 &&
+        metrics.LicenseScore >= 0.0 &&
+        // metrics.GoodPinningPractice >= 0.5 && spec says to only include phase 1 metrics (I think)
+        // metrics.PullRequest >= 0.5
+        metrics.NetScore >= 0.0
+    );
 }
 
 
 export async function getGitHubUrlFromNpmUrl(npmUrl: string): Promise<string | null>{
-  try {
-      // Extract the package name from the npm URL
-      const packageNameMatch = npmUrl.match(/npmjs\.com\/package\/([^/]+)/);
-      if (!packageNameMatch) {
-          logger.info("Could not extract package name from npm URL");
-          return null;
-      }
-      const packageName = packageNameMatch[1];
+    try {
+        logger.info(`getGitHubUrlFromNpmUrl: Converting NPM URL to GitHub URL: ${npmUrl}`);
+        // Extract the package name from the npm URL
+        const packageNameMatch = npmUrl.match(/npmjs\.com\/package\/([^/]+)/);
+        logger.info(`packageNameMatch: ${packageNameMatch}`);
+        if (!packageNameMatch) {
+            logger.info("Could not extract package name from npm URL");
+            return null;
+        }
+        const packageName = packageNameMatch[1];
+        logger.info(`Package name extracted from npm URL: ${packageName}`);
 
-      // Fetch the package data from npm
-      const response = await axios.get(`https://registry.npmjs.org/${packageName}`);
-      const packageData = response.data;
+        // Fetch the package data from npm
+        const response = await axios.get(`https://registry.npmjs.org/${packageName}`);
+        const packageData = response.data;
+        logger.info(`Fetched package data from npm: ${JSON.stringify(packageData)}`);
 
-      // Get the repository URL from package data
-      let repoUrl = packageData.repository?.url;
-      if (!repoUrl) {
-          logger.info("Repository URL not found in npm package data");
-          return null;
-      }
+        // Get the repository URL from package data
+        let repoUrl = packageData.repository?.url;
+        if (!repoUrl) {
+            logger.info("Repository URL not found in npm package data.");
+            return null;
+        }
+        logger.info(`Repository URL found in npm package data: ${repoUrl}`);
 
-      // Format the repository URL to get the GitHub URL
-      repoUrl = repoUrl.replace(/^git\+/, '').replace(/\.git$/, '');
-      if (repoUrl.startsWith('https://github.com/')) {
-          // URL is already in the correct format
-          return repoUrl;
-      } else if (repoUrl.startsWith('github:')) {
-          // Convert 'github:' shorthand to a full URL
-          return `https://github.com/${repoUrl.substring(7)}`;
-      } else if (repoUrl.startsWith('git@github.com:')) {
-          // Convert SSH format to HTTPS URL
-          return `https://github.com/${repoUrl.substring(15).replace(/\.git$/, '')}`;
-      }
+        // Format the repository URL to get the GitHub URL
+        repoUrl = repoUrl.replace(/^git\+/, '').replace(/\.git$/, '');
+        if (repoUrl.startsWith('https://github.com/')) {
+            // URL is already in the correct format
+            return repoUrl;
+        } else if (repoUrl.startsWith('github:')) {
+            // Convert 'github:' shorthand to a full URL
+            return `https://github.com/${repoUrl.substring(7)}`;
+        } else if (repoUrl.startsWith('git@github.com:')) {
+            // Convert SSH format to HTTPS URL
+            return `https://github.com/${repoUrl.substring(15).replace(/\.git$/, '')}`;
+        }
 
-      logger.info("Unknown repository URL format:", repoUrl);
-      return null;
-  } catch (error) {
-      logger.info("Error in getGitHubUrlFromNpmUrl:", error);
-      return null;
-  }
+    logger.info(`Invalid repository URL found in npm package data: ${repoUrl}`);
+    return null;
+} catch (error) {
+    logger.info(`Error in getGitHubUrlFromNpmUrl: ${error}`);
+    return null;
+}
 }
 
 
 export async function linkCheck(url: string): Promise<string | null> {
-  try {
+    logger.info(`linkCheck: Checking if the provided URL is a GitHub or NPM URL: ${url}`);
+    try {
       // Check if the URL is a GitHub URL
-      if (url.includes("github.com")) {
-          // It's already a GitHub URL, so return it as is
-          return url;
-      }
+        if (url.includes("github.com")) {
+            // It's already a GitHub URL, so return it as is
+            return url;
+        }
 
-      // Check if the URL is an NPM URL
-      if (url.includes("npmjs.com/package")) {
-          // Convert NPM URL to GitHub URL
-          const githubUrl = await getGitHubUrlFromNpmUrl(url);
-          if (!githubUrl) {
-              throw new Error(`Failed to convert NPM URL to GitHub URL: ${url}`);
-          }
-          return githubUrl;
-      }
+        // Check if the URL is an NPM URL
+        if (url.includes("npmjs.com/package")) {
+            // Convert NPM URL to GitHub URL
+            const githubUrl = await getGitHubUrlFromNpmUrl(url);
+            if (!githubUrl) {
+                throw new Error(`Failed to convert NPM URL to GitHub URL: ${url}`);
+            }
+            return githubUrl;
+        }
 
-      // If the URL is neither GitHub nor NPM, return null or throw an error
-      logger.info("Provided URL is neither a GitHub nor an NPM URL:", url);
-      return null;
-  } catch (error) {
-      logger.error(`Error in linkCheck: ${error}`);
-      return null;
-  }
+        // If the URL is neither GitHub nor NPM, return null or throw an error
+        logger.info(`Invalid or unsupported URL provided: ${url}`);
+        return null;
+    } catch (error) {
+        logger.error(`Error in linkCheck: ${error}`);
+        return null;
+    }
 }
 
 
 export async function downloadGitHubRepoZip(githubUrl: string): Promise<Buffer> {
-  try {
-      // Extract owner and repository name from the GitHub URL
-      const match = githubUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
-      if (!match) {
-          throw new Error(`Invalid GitHub URL: ${githubUrl}`);
-      }
+    logger.info(`downloadGitHubRepoZip: Downloading GitHub repo ZIP: ${githubUrl}`);
+    try {
+        // Extract owner and repository name from the GitHub URL
+        const match = githubUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
+        if (!match) {
+            throw new Error(`Invalid GitHub URL: ${githubUrl}`);
+        }
 
-      const owner = match[1];
-      const repo = match[2];
+        const owner = match[1];
+        const repo = match[2];
 
-      // Construct the ZIP download URL
-      const zipUrl = `https://github.com/${owner}/${repo}/archive/refs/heads/master.zip`;
+        // Construct the ZIP download URL
+        const zipUrl = `https://github.com/${owner}/${repo}/archive/refs/heads/master.zip`;
 
-      // Download the ZIP file
-      const response = await axios.get(zipUrl, { responseType: 'arraybuffer' });
-      if (response.status !== 200) {
-          throw new Error(`Failed to download ZIP from ${zipUrl}`);
-      }
+        // Download the ZIP file
+        const response = await axios.get(zipUrl, { responseType: 'arraybuffer' });
+        if (response.status !== 200) {
+            throw new Error(`Failed to download ZIP from ${zipUrl}`);
+        }
 
-      // Convert the response to a Buffer
-      const zipBuffer = Buffer.from(response.data, 'binary');
-      return zipBuffer;
-  } catch (error) {
-      logger.error(`Error in downloadGitHubRepoZip: ${error}`);
-      throw error;
-  }
+        // Convert the response to a Buffer
+        const zipBuffer = Buffer.from(response.data, 'binary');
+        return zipBuffer;
+    } catch (error) {
+        logger.error(`Error in downloadGitHubRepoZip: ${error}`);
+        throw error;
+    }
 }
 
 
 export async function uploadPackage(req: Request, res: Response, shouldDebloat: boolean) {
-  try {
-      let metadata: apiSchema.PackageMetadata;
-      let githubInfo: { owner: string, repo: string } | null;
-      let encodedContent: string;
-      let fileName: string;
+    try {
+        let metadata: apiSchema.PackageMetadata;
+        let githubInfo: { owner: string, repo: string } | null;
+        let encodedContent: string;
+        let fileName: string;
+        let jsProgram: string | null = null;
 
-      if (!req.file && !req.body.URL) {
-          logger.info("No file or URL provided in the upload.");
-          return res.status(400).send('No file or URL uploaded');
-      }
-      else if (req.file && req.body.URL) {
-          logger.info("Must upload either file or URL, not both.");
-          return res.status(400).send('No file uploaded');
-      }
-      else if (req.file) {
-        const fileBuffer = shouldDebloat ? await debloatPackage(req.file.buffer) : req.file.buffer;
-        metadata = await extractMetadataFromZip(fileBuffer);
-        const url = await getGithubUrlFromZip(fileBuffer);
-        githubInfo = parseGitHubUrl(url);
-        encodedContent = fileBuffer.toString('base64');
-        fileName = req.file.originalname;
-      }
-      else if (req.body.URL) {
-        const url = await linkCheck(req.body.URL);
-        if (!url) {
-          logger.info("Invalid or unsupported URL provided.");
-          return res.status(400).send('Invalid or unsupported URL provided.');
-      }
-        const zipBuffer = await downloadGitHubRepoZip(url);
-        const debloatedBuffer = shouldDebloat ? await debloatPackage(zipBuffer) : zipBuffer;
-        metadata = await extractMetadataFromZip(debloatedBuffer);
-        githubInfo = parseGitHubUrl(url);
-        encodedContent = debloatedBuffer.toString('base64');
-        fileName = `${metadata.Name}.zip`;
-      }
-      else {
-        logger.info("Must upload a proper zip or provide a URL");
-        return res.status(400).send('Invalid upload type');
-      }
+        if (!req.file && !req.body.URL && !req.body.Content) {
+            logger.info("No file or URL provided in the upload.");
+            logger.info("400 No file uploaded")
+            return res.status(400).send('No file or URL uploaded');
+        }
+        else if (req.file && req.body.URL) {
+            logger.info("Must upload either file or URL, not both.");
+            logger.info("400 No file uploaded")
+            return res.status(400).send('No file uploaded');
+        }
+        else if (req.file && req.body.Content) {
+            logger.info("Must upload either Base64 ZIP or ZIP, not both.");
+            logger.info("400 No file uploaded")
+            return res.status(400).send('No file uploaded');
+        }
+        else if (req.body.Content && req.body.URL) {
+            logger.info("Must upload either Base64 ZIP or URL, not both.");
+            logger.info("400 No file uploaded")
+            return res.status(400).send('No file uploaded');
+        }
+        else if (req.file) {
+            logger.info("Zip File upload detected.");
+            logger.info("Checking and calling if debloating is required.")
+            const fileBuffer = shouldDebloat ? await debloatPackage(req.file.buffer) : req.file.buffer;
+            metadata = await extractMetadataFromZip(fileBuffer);
+            const url = await getGithubUrlFromZip(fileBuffer);
+            githubInfo = parseGitHubUrl(url);
+            encodedContent = fileBuffer.toString('base64');
+            logger.info(`Converted zip file to Base64 string, encoded content: ${encodedContent.substring(0, 100)}...`);
+            fileName = req.file.originalname;
+            logger.info(`Uploadeding package with file name: ${fileName}`);
+        }
+        else if (req.body.URL) {
+            logger.info("URL upload detected.");
+            jsProgram = req.body.JSProgram || null;
+            const url = await linkCheck(req.body.URL);
+            if (!url) {
+                logger.info("400 Invalid or unsupported URL provided.");
+                return res.status(400).send('Invalid or unsupported URL provided.');
+            }
+            logger.info(`GitHub URL extracted: ${url}`)
+            const zipBuffer = await downloadGitHubRepoZip(url);
+            logger.info("Checking and calling if debloating is required.")
+            const debloatedBuffer = shouldDebloat ? await debloatPackage(zipBuffer) : zipBuffer;
+            metadata = await extractMetadataFromZip(debloatedBuffer);
+            githubInfo = parseGitHubUrl(url);
+            encodedContent = debloatedBuffer.toString('base64');
+            logger.info(`Converted zip file to Base64 string, encoded content:  ${encodedContent.substring(0, 100)}...`);
+            fileName = `${metadata.Name}.zip`;
+            logger.info(`Uploading package with file name: ${fileName}`);
+        }
+        else if (req.body.Content) {
+            logger.info("Base64 ZIP upload detected.");
+            jsProgram = req.body.JSProgram || null;
+            logger.info("Decoding Base64 string.")
+            const decodedBuffer = Buffer.from(req.body.Content, 'base64');
+            logger.info("Checking and calling if debloating is required.")
+            const fileBuffer = shouldDebloat ? await debloatPackage(decodedBuffer) : decodedBuffer;
+            metadata = await extractMetadataFromZip(fileBuffer);
+            const url = await getGithubUrlFromZip(fileBuffer);
+            githubInfo = parseGitHubUrl(url);
+            encodedContent = req.body.Content;
+            fileName = `${metadata.Name}.zip`;
+            logger.info(`Uploading package with file name: ${fileName}`);
+        }
+        else {
+            logger.info("Must upload a proper zip or provide a URL");
+            logger.info("400 Invalid upload type")
+            return res.status(400).send('Invalid upload type');
+        }
 
-      if (!githubInfo) {
-          logger.info("Invalid GitHub repository URL.");
-          return res.status(400).send('Invalid GitHub repository URL.');
-      }
+        if (!githubInfo) {
+            logger.info("400 Invalid GitHub repository URL.");
+            return res.status(400).send('Invalid GitHub repository URL.');
+        }
 
-      const jsProgram = "if (process.argv.length === 7) {\nconsole.log('Success')\nprocess.exit(0)\n} else {\nconsole.log('Failed')\nprocess.exit(1)\n}\n";
-      const PackageData: apiSchema.PackageData = {
-          Content: encodedContent,
-          JSProgram: jsProgram
-      };
+        if (jsProgram === null) {
+            jsProgram = "if (process.argv.length === 7) {\nconsole.log('Success')\nprocess.exit(0)\n} else {\nconsole.log('Failed')\nprocess.exit(1)\n}\n";
+        }
 
+        const PackageData: apiSchema.PackageData = {
+            Content: encodedContent,
+            JSProgram: jsProgram
+        };
+        
+        const truncatedContent = encodedContent.substring(0, 100);
+        const logPackageData = {
+            ...PackageData,
+            Content: truncatedContent + '...'
+        }
+        logger.info(`PackageData: ${JSON.stringify(logPackageData)}`);
 
-      const packageExists = await prismaCalls.checkPackageExists(metadata.Name, metadata.Version);
-      if (packageExists) {
-          logger.info("Package exists already.");
-          return res.status(409).send('Package Exists Already');
-      }
+        const packageExists = await prismaCalls.checkPackageExists(metadata.Name, metadata.Version);
+        if (packageExists) {
+            logger.info("409 Package exists already.");
+            return res.status(409).send('Package Exists Already');
+        }
 
-      const metrics = await calculateGithubMetrics(githubInfo.owner, githubInfo.repo);
-      if (!isPackageIngestible(metrics)) {
-        logger.info("Package is not uploaded due to the disqualified rating.");
-        return res.status(424).send('Package is not uploaded due to the disqualified rating');
-      }
+        const metrics = await calculateGithubMetrics(githubInfo.owner, githubInfo.repo);
 
-      await prismaCalls.uploadMetadataToDatabase(metadata);
+        if (!isPackageIngestible(metrics)) {
+            logger.info("424 Package is not uploaded due to the disqualified rating.");
+            return res.status(424).send('Package is not uploaded due to the disqualified rating');
+        }
+
+        await prismaCalls.uploadMetadataToDatabase(metadata);
 
         const Package: apiSchema.Package = {
             metadata: metadata,
             data: PackageData,
         };
 
+        const logPackage = {
+            metadata: metadata,
+            data: {
+            ...PackageData,
+            Content: truncatedContent + '...'
+            }
+        };
+        logger.info(`Package: ${JSON.stringify(logPackage)}`);
+
         const action = Action.CREATE;
-        await prismaCalls.createPackageHistoryEntry(metadata.ID, action); // User id is 1 for now
+        await prismaCalls.createPackageHistoryEntry(metadata.ID, action);
 
-      await storeGithubMetrics(metadata.ID, metrics);
-
-      await uploadToS3(fileName, Buffer.from(encodedContent, 'base64'));
+        await storeGithubMetrics(metadata.ID, metrics);
+        await uploadToS3(fileName, Buffer.from(encodedContent, 'base64'));
 
         res.json(Package);
+        logger.info("200 Package uploaded successfully.");
     } catch (error) {
         logger.error('Error in POST /package: ', error);
         res.status(500).send('Internal Server Error');
@@ -556,6 +626,7 @@ export async function uploadPackage(req: Request, res: Response, shouldDebloat: 
 
 // debloat functions
 async function debloatPackage(buffer: Buffer): Promise<Buffer> {
+    logger.info('debloatPackage: Debloating package');
     const { path: tmpDir, cleanup } = await tmp.dir({ unsafeCleanup: true });
 
     try {
@@ -578,6 +649,7 @@ async function debloatPackage(buffer: Buffer): Promise<Buffer> {
 }
 
 export async function unzipToDirectory(zip: JSZip, directoryPath: string): Promise<void> {
+    logger.info(`unzipToDirectory: Unzipping to directory: ${directoryPath}`);
     await fs.ensureDir(directoryPath);
     for (const [filename, fileData] of Object.entries(zip.files)) {
         if (!fileData.dir) {
@@ -589,6 +661,7 @@ export async function unzipToDirectory(zip: JSZip, directoryPath: string): Promi
 }
 
 async function treeShake(directoryPath: string): Promise<void> {
+    logger.info(`treeShake: Performing tree shaking in directory: ${directoryPath}`);
     const entryPoint = await findEntryPoint(directoryPath);
     if (!entryPoint) {
         logger.info(`treeShake: Entry point not found`);
@@ -625,6 +698,7 @@ async function treeShake(directoryPath: string): Promise<void> {
 }
 
 async function findEntryPoint(directoryPath: string): Promise<string | null> {
+    logger.info(`findEntryPoint: Finding entry point in directory: ${directoryPath}`)
     const commonEntryPoints = ['index.js', 'main.js'];
     for (const entry of commonEntryPoints) {
         if (await fs.pathExists(path.join(directoryPath, entry))) {
