@@ -150,6 +150,10 @@ export async function getPackagesByRegEx(req: Request, res: Response) {
             logger.info(`Error in getPackagesByRegEx: dbPackageMetaData is null`);
             return res.status(500).send(`Error in getPackagesByRegEx: dbPackageMetaData is null`);
         }
+        if(dbPackageMetaData.length === 0){
+            logger.info(`Error in getPackagesByRegEx: No package histories returned`);
+            return res.status(404).send(`No package found under this regex.`);
+        }
         const apiPackageMetaData: PackageMetaDataPopularity[] = await Promise.all(
             dbPackageMetaData.map(async (dbPackageMetaData: prismaSchema.PackageMetadata) => {
                 const downloadCount = await prismaCalls.getDownloadCount(dbPackageMetaData.id);
