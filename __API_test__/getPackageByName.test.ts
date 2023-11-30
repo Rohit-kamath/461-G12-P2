@@ -25,7 +25,6 @@ describe('get /package/byName/{name} endpoint', () => {
             expect(response.status).toBe(200);
             const packageResponse : apiSchema.Package = response.data;
             packageName = packageResponse.metadata.Name;
-            console.log(`packageName in upload test: ${packageName}`);
         } catch (error: any) {
             console.log(error.response.status);
             throw error;

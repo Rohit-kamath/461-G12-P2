@@ -59,7 +59,6 @@ describe('upload', () => {
             console.log(response.status);
             throw new Error('Request did not fail as expected');
         } catch (error: any) {
-            console.log(error)
             expect(error.response.status).toBe(409);
         }
     });
@@ -71,9 +70,7 @@ describe('upload', () => {
             });
             throw new Error('Request did not fail as expected');
         } catch (error: any) {
-            const code = error.response.status;
-            console.log(code);
-            expect(code).toBe(409);
+            expect(error.response.status).toBe(409);
         }
     });
     it('should return 400 status code for invalid input type', async () => {

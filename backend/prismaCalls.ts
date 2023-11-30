@@ -55,6 +55,10 @@ export async function getPackageHistories(queryName: apiSchema.PackageName): Pro
         });
 
         return packageHistories.map(history => ({
+            User: {
+                name: "ece30861defaultadminuser",
+                isAdmin: true,
+            },
             Date: history.date.toISOString(),
             PackageMetadata: {
                 Name: history.metadata.name,

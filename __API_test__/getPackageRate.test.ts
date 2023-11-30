@@ -56,7 +56,6 @@ describe('GET /package/{id}/rate endpoint', () => {
         try {
             await axios.get(`${APIURL}/package/0/rate`);
         } catch (error: any) {
-            console.log(error.response.status);
             expect(error.response.status).toBe(404);
         }
     });
