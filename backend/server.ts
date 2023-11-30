@@ -99,6 +99,17 @@ app.get('/package/:id', async (req, res) => {
     }
 });
 
+app.get('/packages/:id/rate', async (req, res) => {
+    logger.info('GET /packages/:id/rate called');
+    try {
+        await apiPackage.getPackageRatings(req, res);
+    } catch (error) {
+        logger.info(`Error in get(/packages/:id/rate) in server.ts: ${error}`);
+        res.status(500).send('Internal Server Error');
+    
+    }
+});
+
 //PUT package update
 app.put('/packages/:id', async (req, res) => {
     try {
