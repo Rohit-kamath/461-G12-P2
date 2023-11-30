@@ -388,7 +388,7 @@ export async function getGitHubUrlFromNpmUrl(npmUrl: string): Promise<string | n
         // Fetch the package data from npm
         const response = await axios.get(`https://registry.npmjs.org/${packageName}`);
         const packageData = response.data;
-        logger.info(`Fetched package data from npm: ${JSON.stringify(packageData)}`);
+        logger.info(`Fetched package data from npm`);
 
         // Get the repository URL from package data
         let repoUrl = packageData.repository?.url;
@@ -745,7 +745,7 @@ async function addDirectoryToZip(zip: JSZip, directoryPath: string, rootPath: st
 // For: get package download
 export async function getPackageDownload(req: Request, res: Response) {
     try {
-        const packageID = req.query.name;
+        const packageID = req.params.id;
 
         if (packageID === undefined) {
             logger.info(`Error in getPackageDownload: Package name is undefined`);
