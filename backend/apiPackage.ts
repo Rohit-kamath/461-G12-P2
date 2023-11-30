@@ -373,45 +373,50 @@ export function isPackageIngestible(metrics: apiSchema.PackageRating): boolean {
 
 
 export async function getGitHubUrlFromNpmUrl(npmUrl: string): Promise<string | null>{
-  try {
-      // Extract the package name from the npm URL
-      const packageNameMatch = npmUrl.match(/npmjs\.com\/package\/([^/]+)/);
-      if (!packageNameMatch) {
-          logger.info("Could not extract package name from npm URL");
-          return null;
-      }
-      const packageName = packageNameMatch[1];
+    try {
+        logger.info("getGitHubUrlFromNpmUrl: Converting NPM URL to GitHub URL:", npmUrl);
+        // Extract the package name from the npm URL
+        const packageNameMatch = npmUrl.match(/npmjs\.com\/package\/([^/]+)/);
+        logger.info("packageNameMatch:", packageNameMatch);
+        if (!packageNameMatch) {
+            logger.info("Could not extract package name from npm URL");
+            return null;
+        }
+        const packageName = packageNameMatch[1];
+        logger.info("packageName:", packageName);
 
-      // Fetch the package data from npm
-      const response = await axios.get(`https://registry.npmjs.org/${packageName}`);
-      const packageData = response.data;
+        // Fetch the package data from npm
+        const response = await axios.get(`https://registry.npmjs.org/${packageName}`);
+        const packageData = response.data;
+        logger.info("Response from npm: packageData:", packageData);
 
-      // Get the repository URL from package data
-      let repoUrl = packageData.repository?.url;
-      if (!repoUrl) {
-          logger.info("Repository URL not found in npm package data");
-          return null;
-      }
+        // Get the repository URL from package data
+        let repoUrl = packageData.repository?.url;
+        if (!repoUrl) {
+            logger.info("Repository URL not found in npm package data");
+            return null;
+        }
+        logger.info("Fetched repoUrl from npm: ", repoUrl);
 
-      // Format the repository URL to get the GitHub URL
-      repoUrl = repoUrl.replace(/^git\+/, '').replace(/\.git$/, '');
-      if (repoUrl.startsWith('https://github.com/')) {
-          // URL is already in the correct format
-          return repoUrl;
-      } else if (repoUrl.startsWith('github:')) {
-          // Convert 'github:' shorthand to a full URL
-          return `https://github.com/${repoUrl.substring(7)}`;
-      } else if (repoUrl.startsWith('git@github.com:')) {
-          // Convert SSH format to HTTPS URL
-          return `https://github.com/${repoUrl.substring(15).replace(/\.git$/, '')}`;
-      }
+        // Format the repository URL to get the GitHub URL
+        repoUrl = repoUrl.replace(/^git\+/, '').replace(/\.git$/, '');
+        if (repoUrl.startsWith('https://github.com/')) {
+            // URL is already in the correct format
+            return repoUrl;
+        } else if (repoUrl.startsWith('github:')) {
+            // Convert 'github:' shorthand to a full URL
+            return `https://github.com/${repoUrl.substring(7)}`;
+        } else if (repoUrl.startsWith('git@github.com:')) {
+            // Convert SSH format to HTTPS URL
+            return `https://github.com/${repoUrl.substring(15).replace(/\.git$/, '')}`;
+        }
 
-      logger.info("Unknown repository URL format:", repoUrl);
-      return null;
-  } catch (error) {
-      logger.info("Error in getGitHubUrlFromNpmUrl:", error);
-      return null;
-  }
+    logger.info("Unknown repository URL format:", repoUrl);
+    return null;
+} catch (error) {
+    logger.info("Error in getGitHubUrlFromNpmUrl:", error);
+    return null;
+}
 }
 
 
@@ -523,6 +528,7 @@ export async function uploadPackage(req: Request, res: Response, shouldDebloat: 
                 logger.info("400 Invalid or unsupported URL provided.");
                 return res.status(400).send('Invalid or unsupported URL provided.');
             }
+            logger.info(`GitHub URL extracted: ${url}`)
             const zipBuffer = await downloadGitHubRepoZip(url);
             logger.info("Checking and calling if debloating is required.")
             const debloatedBuffer = shouldDebloat ? await debloatPackage(zipBuffer) : zipBuffer;
