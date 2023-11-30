@@ -71,7 +71,7 @@ app.delete('/reset', async (req, res) => {
     }
 });
 
-app.get('/packages/byName/:name', async (req, res) => {
+app.get('/package/byName/:name', async (req, res) => {
     try {
         await apiPackage.getPackagesByName(req, res);
     } catch (error) {
@@ -99,12 +99,12 @@ app.get('/package/:id', async (req, res) => {
     }
 });
 
-app.get('/packages/:id/rate', async (req, res) => {
-    logger.info('GET /packages/:id/rate called');
+app.get('/package/:id/rate', async (req, res) => {
+    logger.info('GET /package/:id/rate called');
     try {
         await apiPackage.getPackageRatings(req, res);
     } catch (error) {
-        logger.info(`Error in get(/packages/:id/rate) in server.ts: ${error}`);
+        logger.info(`Error in get(/package/:id/rate) in server.ts: ${error}`);
         res.status(500).send('Internal Server Error');
     
     }
