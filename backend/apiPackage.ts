@@ -119,12 +119,17 @@ export async function getPackagesByName(req: Request, res: Response) {
         }
         const queryName = req.params.name;
         const apiPackageHistories = await prismaCalls.getPackageHistories(queryName);
-        
+
         if (apiPackageHistories === null) {
             logger.info(`Error in getPackagesByName: apiPackageHistories is null`);
             return res.status(500).send(`Error in getPackagesByName: dbPackageHistories is null`);
         }
         
+        if (apiPackageHistories.length === 0) {
+            logger.info(`Error in getPackagesByName: No package histories returned`);
+            return res.status(404).send(`No such package`);
+        }
+
         return res.status(200).json(apiPackageHistories);
     } catch (error) {
         logger.info(`Error in getPackagesByName: ${error}`);
