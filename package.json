@@ -7,7 +7,7 @@
     "start": "node dist/backend/server.js",
     "dev": "npm run prettier-format && nodemon --exec ts-node src/index.ts",
     "prettier-format": "prettier --config .prettierrc 'src/**/*.ts' --write",
-    "test": "jest",
+    "test": "jest --runInBand",
     "lint": "eslint . --ext .ts",
     "format": "prettier --write .",
     "build:frontend": "cd Frontend && vite build && cd ..",
