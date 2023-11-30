@@ -19,6 +19,8 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.1.4",
+    "@testing-library/react": "^14.1.2",
     "@types/cors": "^2.8.15",
     "@types/eslint": "^8.44.3",
     "@types/fs-extra": "^11.0.4",
@@ -33,6 +35,7 @@
     "@typescript-eslint/eslint-plugin": "^6.7.5",
     "@typescript-eslint/parser": "^6.7.5",
     "axios": "^1.6.2",
+    "axios-mock-adapter": "^1.22.0",
     "chromedriver": "^119.0.1",
     "eslint": "^8.51.0",
     "eslint-config-airbnb-base": "^15.0.0",

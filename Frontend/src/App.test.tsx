@@ -1,41 +1,76 @@
-import { Builder, By, until, WebDriver } from 'selenium-webdriver';
-import 'chromedriver'; // Make sure to install the chromedriver package as well
+// app.test.ts
+import '@testing-library/jest-dom/extend-expect';
+import App from './App';
+const { WebDriver, Builder, By, until } = require('selenium-webdriver');
+const { render, screen, fireEvent, waitFor } = require('@testing-library/react');
+const axios = require('axios');
+const MockAdapter = require('axios-mock-adapter');
+const path = require('path');
 
-describe('App Selenium Test', () => {
-  let driver: WebDriver;
+const mockAxios = new MockAdapter(axios);
+
+beforeEach(() => {
+  mockAxios.reset();
+});
+
+describe('App', () => {
+  let driver: typeof WebDriver;
 
   beforeAll(async () => {
-    // Set up the WebDriver (make sure to have ChromeDriver or another appropriate driver installed)
+    // Set up the Selenium WebDriver
     driver = await new Builder().forBrowser('chrome').build();
   });
 
   afterAll(async () => {
-    // Close the browser after the test
-    if (driver) {
-      await driver.quit();
-    }
+    // Quit the WebDriver after all tests
+    await driver.quit();
   });
 
-  test('uploads zip files successfully', async () => {
-    // Open the application in the browser
-    await driver.get('http://localhost:5000'); // Update the URL if needed
+  it('should upload a file and display upload status', async () => {
+    // Mocking the file upload endpoint
+    mockAxios.onPost('/package').reply(200, 'Upload successful');
 
-    // Find the file input element and upload a file
+    // Render the React component
+    render(<App />);
+
+    // Selecting a file for upload
     const fileInput = await driver.findElement(By.css('input[type="file"]'));
-    await fileInput.sendKeys('path/to/test.zip'); // Provide the path to a test zip file
+    await fileInput.sendKeys(path.resolve(__dirname, 'dummy.zip'));
 
-    // Click the "Upload Zip Files" button
-    const uploadButton = await driver.findElement(By.css('button'));
+    // Clicking the upload button
+    const uploadButton = await driver.findElement(By.xpath('//button[text()="Upload Zip Files"]'));
     await uploadButton.click();
 
-    // Wait for the upload status to appear
-    const uploadStatus = await driver.findElement(By.css('p'));
-    // You may want to use WebDriverWait to wait for the element to be visible or contain certain text
+    // Asserting that the upload status message is displayed
+    await waitFor(() => {
+      expect(screen.getByText('Uploading dummy.zip...')).toBeInTheDocument();
+    });
 
-    // Perform assertions on the upload status
-    // For example:
-    expect(await uploadStatus.getText()).toContain('Upload successful');
+    // Asserting that the upload was successful
+    await waitFor(() => {
+      expect(screen.getByText('Upload successful for dummy.zip: Upload successful')).toBeInTheDocument();
+    });
+  });
 
-    // Add more assertions as needed
+  it('should perform package search and display search results', async () => {
+    // Mocking the package search endpoint
+    mockAxios.onGet('http://localhost:5000/search').reply(200, ['package1', 'package2']);
+
+    // Render the React component
+    render(<App />);
+
+    // Entering a search term
+    const searchTermInput = await driver.findElement(By.css('input[type="text"]'));
+    await searchTermInput.sendKeys('test');
+
+    // Clicking the search button
+    const searchButton = await driver.findElement(By.xpath('//button[text()="Search"]'));
+    await searchButton.click();
+
+    // Asserting that search results are displayed
+    await waitFor(() => {
+      expect(screen.getByText('package1')).toBeInTheDocument();
+      expect(screen.getByText('package2')).toBeInTheDocument();
+    });
   });
 });
