@@ -170,33 +170,34 @@ export async function getPackagesByRegEx(req: Request, res: Response) {
 }
 
 export async function extractFileFromZip(zipBuffer: Buffer, filename: string): Promise<string> {
-  const zip = await JSZip.loadAsync(zipBuffer);
+    logger.info(`extractFileFromZip: Extracting ${filename} from zip`);
+    const zip = await JSZip.loadAsync(zipBuffer);
 
-  // Determine if there's a single root directory
-  const rootDir = Object.keys(zip.files).find(path => path.endsWith("/") && path.split('/').length === 2);
+    // Determine if there's a single root directory
+    const rootDir = Object.keys(zip.files).find(path => path.endsWith("/") && path.split('/').length === 2);
 
-  let file;
+    let file;
 
-  if (rootDir) {
-      // If a root directory exists, prepend it to the filename
-      file = zip.file(`${rootDir}${filename}`);
-  } else {
-      // Otherwise, search for the file at the root of the zip
-      file = zip.file(new RegExp(`^${filename}$`));
-  }
+    if (rootDir) {
+        // If a root directory exists, prepend it to the filename
+        file = zip.file(`${rootDir}${filename}`);
+    } else {
+        // Otherwise, search for the file at the root of the zip
+        file = zip.file(new RegExp(`^${filename}$`));
+    }
 
-  // Handle the case where file is an array
-  if (Array.isArray(file)) {
-      file = file.length > 0 ? file[0] : null;
-  }
+    // Handle the case where file is an array
+    if (Array.isArray(file)) {
+        file = file.length > 0 ? file[0] : null;
+    }
 
-  if (!file) {
-      logger.info(`${filename} not found inside the zip.`);
-      throw new Error(`${filename} not found inside the zip.`);
-  }
+    if (!file) {
+        logger.info(`${filename} not found inside the zip.`);
+        throw new Error(`${filename} not found inside the zip.`);
+    }
 
-  // Extract and return the file content as a string
-  return file.async('string');
+    // Extract and return the file content as a string
+    return file.async('string');
 }
 
 
@@ -223,7 +224,7 @@ export async function getGithubUrlFromZip(zipBuffer: Buffer): Promise<string> {
         } catch (error) {
             if (error instanceof Error) {
                 logger.info(`getGithubUrlFromZip: Failed to parse package.json: ${error.message}`)
-                throw new Error('Failed to parse package.json: ' + error.message);
+                throw new Error(`Failed to parse package.json: ${error.message}`);
             } else {
                 logger.info(`getGithubUrlFromZip: Failed to parse package.json: Unknown error occurred`)
                 throw new Error('Failed to parse package.json: Unknown error occurred');
@@ -238,11 +239,11 @@ export async function getGithubUrlFromZip(zipBuffer: Buffer): Promise<string> {
         }
 
     if (url.startsWith('github:')) {
-      url = `https://github.com/${url.substring(7)}`;
+        url = `https://github.com/${url.substring(7)}`;
     }
 
     if (url.startsWith('git@github.com:')) {
-      url = `https://github.com/${url.substring(15)}`;
+        url = `https://github.com/${url.substring(15)}`;
     }
 
         url = url.replace(/\.git$/, '');
@@ -269,7 +270,6 @@ export async function extractMetadataFromZip(filebuffer: Buffer): Promise<apiSch
         };
     } catch (error) {
         logger.info(`extractMetadataFromZip: An error occurred while extracting metadata from zip: ${error}`);
-        logger.info('An error occurred while extracting metadata from zip:', error);
         throw error;
     }
 }
@@ -341,7 +341,7 @@ export async function storeGithubMetrics(metadataId: string, packageRating: apiS
 
 export function parseGitHubUrl(url: string): { owner: string, repo: string } | null {
   // Regular expression to extract the owner and repo name from various GitHub URL formats
-    logger.info('Parsing GitHub URL:', url);
+    logger.info(`parseGitHubUrl: Parsing GitHub URL: ${url}`);
     const regex = /github\.com[/:]([^/]+)\/([^/.]+)(\.git)?/;
     const match = url.match(regex);
 
@@ -351,7 +351,7 @@ export function parseGitHubUrl(url: string): { owner: string, repo: string } | n
             repo: match[2].replace('.git', '')
         };
     } else {
-        logger.info('Invalid GitHub URL provided:', url);
+        logger.info(`Invalid GitHub URL provided: ${url}`);
         return null;
     }
 }
@@ -374,29 +374,29 @@ export function isPackageIngestible(metrics: apiSchema.PackageRating): boolean {
 
 export async function getGitHubUrlFromNpmUrl(npmUrl: string): Promise<string | null>{
     try {
-        logger.info("getGitHubUrlFromNpmUrl: Converting NPM URL to GitHub URL:", npmUrl);
+        logger.info(`getGitHubUrlFromNpmUrl: Converting NPM URL to GitHub URL: ${npmUrl}`);
         // Extract the package name from the npm URL
         const packageNameMatch = npmUrl.match(/npmjs\.com\/package\/([^/]+)/);
-        logger.info("packageNameMatch:", packageNameMatch);
+        logger.info(`packageNameMatch: ${packageNameMatch}`);
         if (!packageNameMatch) {
             logger.info("Could not extract package name from npm URL");
             return null;
         }
         const packageName = packageNameMatch[1];
-        logger.info("packageName:", packageName);
+        logger.info(`Package name extracted from npm URL: ${packageName}`);
 
         // Fetch the package data from npm
         const response = await axios.get(`https://registry.npmjs.org/${packageName}`);
         const packageData = response.data;
-        logger.info("Response from npm: packageData:", packageData);
+        logger.info(`Fetched package data from npm: ${JSON.stringify(packageData)}`);
 
         // Get the repository URL from package data
         let repoUrl = packageData.repository?.url;
         if (!repoUrl) {
-            logger.info("Repository URL not found in npm package data");
+            logger.info("Repository URL not found in npm package data.");
             return null;
         }
-        logger.info("Fetched repoUrl from npm: ", repoUrl);
+        logger.info(`Repository URL found in npm package data: ${repoUrl}`);
 
         // Format the repository URL to get the GitHub URL
         repoUrl = repoUrl.replace(/^git\+/, '').replace(/\.git$/, '');
@@ -411,17 +411,17 @@ export async function getGitHubUrlFromNpmUrl(npmUrl: string): Promise<string | n
             return `https://github.com/${repoUrl.substring(15).replace(/\.git$/, '')}`;
         }
 
-    logger.info("Unknown repository URL format:", repoUrl);
+    logger.info(`Invalid repository URL found in npm package data: ${repoUrl}`);
     return null;
 } catch (error) {
-    logger.info("Error in getGitHubUrlFromNpmUrl:", error);
+    logger.info(`Error in getGitHubUrlFromNpmUrl: ${error}`);
     return null;
 }
 }
 
 
 export async function linkCheck(url: string): Promise<string | null> {
-    logger.info("linkCheck: Checking if the provided URL is a GitHub or NPM URL:", url)
+    logger.info(`linkCheck: Checking if the provided URL is a GitHub or NPM URL: ${url}`);
     try {
       // Check if the URL is a GitHub URL
         if (url.includes("github.com")) {
@@ -440,7 +440,7 @@ export async function linkCheck(url: string): Promise<string | null> {
         }
 
         // If the URL is neither GitHub nor NPM, return null or throw an error
-        logger.info("Provided URL is neither a GitHub nor an NPM URL:", url);
+        logger.info(`Invalid or unsupported URL provided: ${url}`);
         return null;
     } catch (error) {
         logger.error(`Error in linkCheck: ${error}`);
@@ -450,7 +450,7 @@ export async function linkCheck(url: string): Promise<string | null> {
 
 
 export async function downloadGitHubRepoZip(githubUrl: string): Promise<Buffer> {
-    logger.info("downloadGitHubRepoZip: Downloading GitHub repo ZIP:", githubUrl);
+    logger.info(`downloadGitHubRepoZip: Downloading GitHub repo ZIP: ${githubUrl}`);
     try {
         // Extract owner and repository name from the GitHub URL
         const match = githubUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
