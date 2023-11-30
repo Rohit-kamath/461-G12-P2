@@ -203,14 +203,12 @@ export async function updatePackageDetails(packageId: apiSchema.PackageID, packa
         const updatedData = await prisma.packageData.update({
             where: { id: packageId },
             data: {
-                content: packageData.Content ?? '', // nullish  to handle optional fields
                 URL: packageData.URL ?? '',
                 JSProgram: packageData.JSProgram ?? '',
             },
         });
 
         return {
-            Content: updatedData.content,
             URL: updatedData.URL,
             JSProgram: updatedData.JSProgram,
         };

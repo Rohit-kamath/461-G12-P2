@@ -773,7 +773,7 @@ export async function getPackageDownload(req: Request, res: Response) {
                 ID: dbPackage.metadata.id,
             },
             data: {
-                Content: dbPackage.data.content,
+                Content: "PLACEHOLDER FOR LATER WHEN S3 DOWNLOAD IS IMPLEMENTED",
                 URL: dbPackage.data.URL,
                 JSProgram: dbPackage.data.JSProgram,
             },
@@ -815,11 +815,8 @@ export async function updatePackage(req: Request, res: Response, shouldDebloat: 
             packageContent = await debloatPackage(packageContent);
         }
 
-        // Update the package data
-        const updatedData = await prismaCalls.updatePackageDetails(packageId, {
-            ...data,
-            Content: packageContent.toString('base64') // Re-encode the package content 
-        });
+        const updatedData = await prismaCalls.updatePackageDetails(packageId, {...data});
+        await uploadToS3(`${metadata.ID}.zip`, packageContent);
 
         return res.status(200).json({ Data: updatedData });
     } catch (error) {
