@@ -106,7 +106,7 @@ app.get('/package/:id/rate', async (req, res) => {
 });
 
 //PUT package update
-app.put('/packages/:id', async (req, res) => {
+app.put('/package/:id', async (req, res) => {
     try {
         const shouldDebloat = req.body?.debloat === 'true';
         const calculateSizeCost = req.body?.sizeCost === 'true';
