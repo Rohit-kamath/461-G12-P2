@@ -73,18 +73,19 @@ export async function getPackages(req: Request, res: Response){
             if (packageQuery.Name === undefined) {
                 console.log("packaageQuery.Name is undefined");
                 logger.info("getPackages: packaageQuery.Name is undefined");
-                return res.status(400).send(`Error in getPackageMetaData: Name is undefined`);
+                return res.sendStatus(400);
             }
             if (packageQuery.Version === undefined) {
                 console.log("packaageQuery.Version is undefined");
                 logger.info("getPackages: packaageQuery.Version is undefined");
-                return res.status(400).send(`Error in getPackageMetaData: Version is undefined`);
+                return res.sendStatus(400);
             }
             const queryName = packageQuery.Name as string;
             const { min: minVersion, max: maxVersion, minInclusive: minInclusive, maxInclusive: maxInclusive } = parseVersion(packageQuery.Version as string);
             const dbPackageMetaData = await prismaCalls.getMetaDataByQuery(queryName, minVersion, maxVersion, minInclusive, maxInclusive, offset);
             if (dbPackageMetaData === null) {
-                return res.status(500).send(`Error in getPackageMetaData: packageMetaData is null`);
+                logger.info(`Error in getPackageMetaData: packageMetaData is null`);
+                return res.sendStatus(500);
             }
             const apiPackageMetaData: PackageMetaDataPopularity[] = await Promise.all(
                 dbPackageMetaData.map(async (dbPackageMetaData: prismaSchema.PackageMetadata) => {
@@ -107,7 +108,7 @@ export async function getPackages(req: Request, res: Response){
     } catch (error) {
         console.log(error);
         logger.info(`Error in getPackages: ${error}`);
-        return res.status(500).send(`Error in getPackageMetaData: ${error}`);
+        return res.sendStatus(500);
     } 
 }
 
@@ -115,44 +116,44 @@ export async function getPackagesByName(req: Request, res: Response) {
     try {
         if (req.params?.name === undefined) {
             logger.info(`Error in getPackagesByName: Name is undefined`);
-            return res.status(400).send(`Error in getPackagesByName: Name is undefined`);
+            return res.sendStatus(400);
         }
         const queryName = req.params.name;
         const apiPackageHistories = await prismaCalls.getPackageHistories(queryName);
 
         if (apiPackageHistories === null) {
             logger.info(`Error in getPackagesByName: apiPackageHistories is null`);
-            return res.status(500).send(`Error in getPackagesByName: dbPackageHistories is null`);
+            return res.sendStatus(500);
         }
         
         if (apiPackageHistories.length === 0) {
             logger.info(`Error in getPackagesByName: No package histories returned`);
-            return res.status(404).send(`No such package`);
+            return res.sendStatus(404);
         }
 
         return res.status(200).json(apiPackageHistories);
     } catch (error) {
         logger.info(`Error in getPackagesByName: ${error}`);
-        return res.status(500).send(`Error in getPackagesByName: ${error}`);
+        return res.sendStatus(500);
     }
 }
 
-
 export async function getPackagesByRegEx(req: Request, res: Response) {
     try {
+        const popularity = req.body?.debloat === 'true'
         if (req.body?.RegEx === undefined) {
             logger.info(`Error in getPackagesByRegEx: RegEx is undefined`);
-            return res.status(400).send(`Error in getPackagesByRegEx: RegEx is undefined`);
+            return res.sendStatus(400);
         }
         const regEx: string = req.body.RegEx;
         const dbPackageMetaData = await prismaCalls.getMetaDataByRegEx(regEx);
         if (dbPackageMetaData === null) {
             logger.info(`Error in getPackagesByRegEx: dbPackageMetaData is null`);
-            return res.status(500).send(`Error in getPackagesByRegEx: dbPackageMetaData is null`);
+            return res.sendStatus(500);
         }
         if(dbPackageMetaData.length === 0){
             logger.info(`Error in getPackagesByRegEx: No package histories returned`);
-            return res.status(404).send(`No package found under this regex.`);
+            return res.sendStatus(404);
         }
         const apiPackageMetaData: PackageMetaDataPopularity[] = await Promise.all(
             dbPackageMetaData.map(async (dbPackageMetaData: prismaSchema.PackageMetadata) => {
@@ -164,7 +165,7 @@ export async function getPackagesByRegEx(req: Request, res: Response) {
                     ID: dbPackageMetaData.id,
                 };
 
-                if ( (req.body?.Popularity !== undefined) && (req.body?.Popularity == true) ) {
+                if (popularity) {
                     metaData.DownloadCount = downloadCount;
                 }
           
@@ -174,7 +175,7 @@ export async function getPackagesByRegEx(req: Request, res: Response) {
         return res.status(200).json(apiPackageMetaData);
     } catch (error) {
         logger.info(`Error in getPackagesByRegEx: ${error}`);
-        return res.status(500).send(`Error in getPackagesByRegEx: ${error}`);
+        return res.sendStatus(500);
     }
 }
 
@@ -195,7 +196,6 @@ export async function extractFileFromZip(zipBuffer: Buffer, filename: string): P
         file = zip.file(new RegExp(`^${filename}$`));
     }
 
-    // Handle the case where file is an array
     if (Array.isArray(file)) {
         file = file.length > 0 ? file[0] : null;
     }
@@ -208,8 +208,6 @@ export async function extractFileFromZip(zipBuffer: Buffer, filename: string): P
     // Extract and return the file content as a string
     return file.async('string');
 }
-
-
 
 export async function getGithubUrlFromZip(zipBuffer: Buffer): Promise<string> {
     logger.info('getGithubUrlFromZip: Extracting GitHub URL from zip')
@@ -247,13 +245,13 @@ export async function getGithubUrlFromZip(zipBuffer: Buffer): Promise<string> {
             throw new Error('GitHub repository URL not found in package.json');
         }
 
-    if (url.startsWith('github:')) {
-        url = `https://github.com/${url.substring(7)}`;
-    }
+        if (url.startsWith('github:')) {
+            url = `https://github.com/${url.substring(7)}`;
+        }
 
-    if (url.startsWith('git@github.com:')) {
-        url = `https://github.com/${url.substring(15)}`;
-    }
+        if (url.startsWith('git@github.com:')) {
+            url = `https://github.com/${url.substring(15)}`;
+        }
 
         url = url.replace(/\.git$/, '');
 
@@ -360,7 +358,6 @@ export async function calculateGithubMetrics(owner: string, repo: string): Promi
     }
 }
 
-
 export async function storeGithubMetrics(metadataId: string, packageRating: apiSchema.PackageRating): Promise<void> {
     logger.info('storeGithubMetrics: Storing package rating metrics in the database')
     try {
@@ -371,7 +368,6 @@ export async function storeGithubMetrics(metadataId: string, packageRating: apiS
         throw error;
     }
 }
-
 
 export function parseGitHubUrl(url: string): { owner: string, repo: string } | null {
     logger.info(`parseGitHubUrl: Parsing GitHub URL: ${url}`);
@@ -397,9 +393,6 @@ export function parseGitHubUrl(url: string): { owner: string, repo: string } | n
     }
 }
 
-
-
-
 export function isPackageIngestible(metrics: apiSchema.PackageRating): boolean {
     logger.info('isPackageIngestible: Checking if package is ingestible');
     return (
@@ -413,7 +406,6 @@ export function isPackageIngestible(metrics: apiSchema.PackageRating): boolean {
         metrics.NetScore >= 0.0
     );
 }
-
 
 export async function getGitHubUrlFromNpmUrl(npmUrl: string): Promise<string | null>{
     try {
@@ -467,21 +459,13 @@ export async function getGitHubUrlFromNpmUrl(npmUrl: string): Promise<string | n
     }
 }
 
-
-
-
-
-
 export async function linkCheck(url: string): Promise<string | null> {
     logger.info(`linkCheck: Checking if the provided URL is a GitHub or NPM URL: ${url}`);
     try {
-      // Check if the URL is a GitHub URL
         if (url.includes("github.com")) {
-            // It's already a GitHub URL, so return it as is
             return url;
         }
 
-        // Check if the URL is an NPM URL
         if (url.includes("npmjs.com/package")) {
             // Convert NPM URL to GitHub URL
             const githubUrl = await getGitHubUrlFromNpmUrl(url);
@@ -499,7 +483,6 @@ export async function linkCheck(url: string): Promise<string | null> {
         return null;
     }
 }
-
 
 export async function downloadGitHubRepoZip(githubUrl: string): Promise<Buffer> {
     logger.info(`downloadGitHubRepoZip: Downloading GitHub repo ZIP: ${githubUrl}`);
@@ -531,9 +514,12 @@ export async function downloadGitHubRepoZip(githubUrl: string): Promise<Buffer> 
     }
 }
 
-
-export async function uploadPackage(req: Request, res: Response, shouldDebloat: boolean, calculateSizeCost: boolean) {
+export async function uploadPackage(req: Request, res: Response) {
     try {
+        const shouldDebloat = req.body?.debloat === 'true';
+        const calculateSizeCost = req.body?.sizeCost === 'true';
+        logger.info(`shouldDebloat: ${shouldDebloat}`);
+        logger.info(`calculateSizeCost: ${calculateSizeCost}`);
         let metadata: apiSchema.PackageMetadata;
         let githubInfo: { owner: string, repo: string } | null;
         let encodedContent: string;
@@ -543,26 +529,26 @@ export async function uploadPackage(req: Request, res: Response, shouldDebloat: 
 
         if (!req.file && !req.body.URL && !req.body.Content) {
             logger.info("No file or URL provided in the upload. 400 No file uploaded");
-            return res.status(400).send('No file or URL uploaded');
+            return res.sendStatus(400);
         }
         else if (req.file && req.body.URL) {
             logger.info("Must upload either file or URL, not both. 400 No file uploaded");
-            return res.status(400).send('No file uploaded');
+            return res.sendStatus(400);
         }
         else if (req.file && req.body.Content) {
             logger.info("Must upload either Base64 ZIP or ZIP, not both. 400 No file uploaded");
-            return res.status(400).send('No file uploaded');
+            return res.sendStatus(400);
         }
         else if (req.body.Content && req.body.URL) {
             logger.info("Must upload either Base64 ZIP or URL, not both. 400 No file uploaded");
-            return res.status(400).send('No file uploaded');
+            return res.sendStatus(400);
         }
         else if (req.file) {
             logger.info("Zip File upload detected.");
             let fileBuffer = req.file.buffer;
             if (!isValidZip(fileBuffer)) {
                 logger.info('uploadPackage: Invalid ZIP file uploaded');
-                return res.status(400).send('Invalid ZIP file uploaded');
+                return res.sendStatus(400);
             }
             logger.info("Checking and calling if debloating is required.")
             fileBuffer = shouldDebloat ? await debloatPackage(req.file.buffer) : req.file.buffer;
@@ -580,7 +566,7 @@ export async function uploadPackage(req: Request, res: Response, shouldDebloat: 
             url = await linkCheck(req.body.URL);
             if (!url) {
                 logger.info("400 Invalid or unsupported URL provided.");
-                return res.status(400).send('Invalid or unsupported URL provided.');
+                return res.sendStatus(400);
             }
             logger.info(`GitHub URL extracted: ${url}`)
             const zipBuffer = await downloadGitHubRepoZip(url);
@@ -607,12 +593,12 @@ export async function uploadPackage(req: Request, res: Response, shouldDebloat: 
         }
         else {
             logger.info("Must upload a proper zip or provide a URL. 400 Invalid upload type");
-            return res.status(400).send('Invalid upload type');
+            return res.sendStatus(400);
         }
 
         if (!githubInfo) {
             logger.info("400 Invalid GitHub repository URL.");
-            return res.status(400).send('Invalid GitHub repository URL.');
+            return res.sendStatus(400);
         }
 
         if (jsProgram === null) {
@@ -622,12 +608,12 @@ export async function uploadPackage(req: Request, res: Response, shouldDebloat: 
         const awsRegion = process.env.REGION_AWS;
         if (!awsRegion) {
             logger.info("500 AWS region not configured.");
-            return res.status(500).send('AWS region not configured.');
+            return res.sendStatus(500);
         }
         const s3BucketName = process.env.S3_BUCKET_NAME;
         if (!s3BucketName) {
             logger.info("500 S3 bucket name not configured.");
-            return res.status(500).send('S3 bucket name not configured.');
+            return res.sendStatus(500);
         }
 
         const s3link = `https://${s3BucketName}.s3.${awsRegion}.amazonaws.com/${metadata.ID}`
@@ -652,14 +638,14 @@ export async function uploadPackage(req: Request, res: Response, shouldDebloat: 
         const packageExists = await prismaCalls.checkPackageExists(metadata.Name, metadata.Version);
         if (packageExists) {
             logger.info("409 Package exists already.");
-            return res.status(409).send('Package Exists Already');
+            return res.sendStatus(409);
         }
 
         const metrics = await calculateGithubMetrics(githubInfo.owner, githubInfo.repo);
 
         if (!isPackageIngestible(metrics)) {
             logger.info("424 Package is not uploaded due to the disqualified rating.");
-            return res.status(424).send('Package is not uploaded due to the disqualified rating');
+            return res.sendStatus(424);
         }
 
         await prismaCalls.uploadMetadataToDatabase(metadata);
@@ -699,10 +685,9 @@ export async function uploadPackage(req: Request, res: Response, shouldDebloat: 
         logger.info("200 Package uploaded successfully.");
     } catch (error) {
         logger.error('Error in POST /package: ', error);
-        res.status(500).send('Internal Server Error');
+        res.sendStatus(500);
     }
 }
-
 
 // debloat functions
 async function debloatPackage(buffer: Buffer): Promise<Buffer> {
@@ -713,7 +698,6 @@ async function debloatPackage(buffer: Buffer): Promise<Buffer> {
         const zip = await JSZip.loadAsync(buffer);
         await unzipToDirectory(zip, tmpDir);
 
-        // Perform tree shaking using Webpack
         await treeShake(tmpDir);
 
         // Re-zip the contents and return the buffer
@@ -820,7 +804,6 @@ async function addDirectoryToZip(zip: JSZip, directoryPath: string, rootPath: st
         }
     }
 }
-
 // end of debloat functions
 
 // size cost functions
@@ -903,31 +886,30 @@ function calculateDirectorySize(directoryPath: string): number {
 }
 // end of size cost functions
 
-// For: get package download
 export async function getPackageDownload(req: Request, res: Response) {
     try {
         const packageID = req.params.id;
 
         if (packageID === undefined) {
             logger.info(`Error in getPackageDownload: Package name is undefined`);
-            return res.status(400).send('Package name or version is undefined');
+            return res.sendStatus(400);
         }
         const dbPackage = await prismaCalls.getPackage(packageID as string);
         if (dbPackage === null) {
             logger.info(`Error in getPackageDownload: Package not found`)
-            return res.status(404).send('Package not found');
+            return res.sendStatus(404);
         }
 
         const s3Link = dbPackage.data.S3Link;
         if (!s3Link) {
             logger.info(`Error in getPackageDownload: S3 link is missing for the package`);
-            return res.status(404).send('S3 link is missing for the package');
+            return res.sendStatus(404);
         }
 
         const fileBuffer = await downloadFromS3(s3Link);
         if (!isValidZip(fileBuffer)) {
             logger.info('getPackageDownload: Downloaded ZIP file is invalid');
-            return res.status(400).send('Invalid ZIP file uploaded');
+            return res.sendStatus(400);
         }
         const base64Content = fileBuffer.toString('base64');
 
@@ -939,41 +921,42 @@ export async function getPackageDownload(req: Request, res: Response) {
         return res.status(200).json(apiPackage);
     } catch (error) {
         logger.info(`Error in getPackageDownload: ${error}`)
-        return res.status(500).send(`Error in getPackageDownload: ${error}`);
+        return res.sendStatus(500);
     }
 }
 
-// For: put package update
-export async function updatePackage(req: Request, res: Response, shouldDebloat: boolean, calculateSizeCost: boolean) {
+export async function updatePackage(req: Request, res: Response) {
     try {
+        const shouldDebloat = req.body?.debloat === 'true';
+        const calculateSizeCost = req.body?.sizeCost === 'true';
+        logger.info(`shouldDebloat: ${shouldDebloat}`);
+        logger.info(`calculateSizeCost: ${calculateSizeCost}`);
         const { metadata, data } = req.body as apiSchema.Package;
 
-        // Validate required fields
         if (!metadata || !data || !metadata.Name || !metadata.Version || !metadata.ID  || !data.S3Link) {
             logger.info(`Error in updatePackage: All fields are required and must be valid.`);
-            return res.status(400).send('All fields are required and must be valid.');
+            return res.sendStatus(400);
         }
         const exists = await prismaCalls.checkPackageExists(metadata.Name, metadata.Version, metadata.ID);
         if(!exists){
             logger.info(`Error in updatePackage: Package does not exist.`);
-            return res.status(404).send('Package does not exist.');
+            return res.sendStatus(404);
         }
 
         const packageId = req.params.id;
         if (!packageId) {
             logger.info(`Error in updatePackage: Package ID is required.`);
-            return res.status(400).send('Package ID is required.');
+            return res.sendStatus(400);
         }
 
         if (packageId !== metadata.ID) {
             logger.info(`Error in updatePackage: Package ID in the URL does not match the ID in the request body.`);
-            return res.status(400).send('Package ID in the URL does not match the ID in the request body.');
+            return res.sendStatus(400);
         }
 
         // Decode the package content 
         let packageContent = Buffer.from(data.S3Link, 'base64');
 
-        // Apply debloat if required
         if (shouldDebloat) {
             packageContent = await debloatPackage(packageContent);
         }
@@ -982,21 +965,22 @@ export async function updatePackage(req: Request, res: Response, shouldDebloat: 
         if (calculateSizeCost) {
             sizeCost = await calculateTotalSizeCost(Buffer.from(data.S3Link, 'base64'));
         }
-        // Update the package data
         const updatedData = await prismaCalls.updatePackageDetails(packageId, {...data});
+        if(updatedData === null){
+            logger.info(`Error in updatePackageDetails in prismaCalls.ts: updatedData is null`);
+            return res.sendStatus(500);
+        }
         await uploadToS3(`${metadata.ID}.zip`, packageContent);
-
-        return res.status(200).json({ 
-            Data: updatedData,
-            sizeCost: sizeCost
-        });
+        if(calculateSizeCost && sizeCost !== null){
+            return res.status(200).json({sizeCost: sizeCost});
+        }
+        return res.sendStatus(200);
     } catch (error) {
         logger.info(`Error in updatePackage: ${error}`);
         console.error(`Error in updatePackage: ${error}`);
-        return res.status(500).send(`Server error: ${error}`);
+        return res.sendStatus(500);
     }
 }
-
 
 export async function callResetDatabase(req: Request, res: Response) {
     try {
@@ -1010,12 +994,12 @@ export async function callResetDatabase(req: Request, res: Response) {
         logger.info('S3 Bucket content deleted.');
         await prismaCalls.resetDatabase();
         logger.info('Registry is reset.');
-        res.status(200).send('Registry is reset.');
+        res.sendStatus(200);
     
     } catch (error) {
         const errorMessage = (error instanceof Error) ? error.message : 'Unknown error occurred';
         logger.error(`Error resetting database or S3 bucket: ${errorMessage}`);
-        res.status(500).send(`Internal Server Error: ${errorMessage}`);
+        res.sendStatus(500);
     }
 }
 
@@ -1047,20 +1031,21 @@ export async function getPackageRatings(req: Request, res: Response) {
     logger.info(`getPackageRatings: Getting package ratings for package ID: ${packageId}`);
     if (!packageId) {
         logger.info(`Error in getPackageRatings: Package ID is required`);
-        return res.status(400).send('Package ID is required');
+        return res.sendStatus(400);
     }
 
     try {
         const packageRating = await prismaCalls.getPackageRatingById(packageId);
 
         if (!packageRating) {
-            return res.status(404).send('Package not found or no ratings available');
+            logger.info("error in getPackageRatings: Package not found or no ratings available")
+            return res.sendStatus(404);
         }
 
         return res.status(200).json(packageRating);
     } catch (error) {
         logger.info(`Error in getPackageRatings: ${error}`);
-        return res.status(500).send(`Internal Server Error: ${error}`);
+        return res.sendStatus(500);
     }
 }
 

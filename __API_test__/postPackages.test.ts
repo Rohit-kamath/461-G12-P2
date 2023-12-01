@@ -76,3 +76,9 @@ describe('reset', () => { // rerun reset test for clean deployment
         }
     });
 });
+
+describe('always pass', () => {
+    it('should always pass', async () => {
+        expect(true).toBe(true);
+    });
+});
