@@ -26,6 +26,7 @@ model PackageMetadata {
 
 model PackageData {
   id        String   @id @db.VarChar(255)
+  S3Link   String   @db.Text
   URL       String   @db.VarChar(255)
   JSProgram String   @db.VarChar(255)
   package   Package?
