@@ -37,12 +37,8 @@ app.get('/upload-page', (req, res) => {
 app.post('/package', upload.single('packageContent'), async (req, res) => {
     try {
         logger.info('POST /package called');
-        const shouldDebloat = req.body?.debloat === 'true';
-        const calculateSizeCost = req.body?.sizeCost === 'true';
-        logger.info(`shouldDebloat: ${shouldDebloat}`)
-        logger.info(`calculateSizeCost: ${calculateSizeCost}`)
         logger.info('Calling apiPackage uploadPackage');
-        await apiPackage.uploadPackage(req, res, shouldDebloat, calculateSizeCost);
+        await apiPackage.uploadPackage(req, res);
     } catch (error) {
         logger.info(`Error in post(/package) server.ts: ${error}`);
         res.status(500).send('Internal Server Error');
@@ -109,10 +105,7 @@ app.get('/package/:id/rate', async (req, res) => {
 //PUT package update
 app.put('/package/:id', async (req, res) => {
     try {
-        const shouldDebloat = req.body?.debloat === 'true';
-        const calculateSizeCost = req.body?.sizeCost === 'true';
-        
-        await apiPackage.updatePackage(req, res, shouldDebloat, calculateSizeCost);
+        await apiPackage.updatePackage(req, res);
     } catch (error) {
         logger.info(`Error in put(/packages/:id) in server.ts: ${error}`);
         res.status(500).send('Internal Server Error');
