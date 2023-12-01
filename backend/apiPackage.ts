@@ -640,8 +640,6 @@ export async function uploadPackage(req: Request, res: Response, shouldDebloat: 
 
         const apiResponsePackageData: apiSchema.ApiResponsePackageData = {
             Content: encodedContent,
-            URL: url,
-            JSProgram: jsProgram
         }
         
         const truncatedContent = encodedContent.substring(0, 100);
@@ -954,6 +952,11 @@ export async function updatePackage(req: Request, res: Response, shouldDebloat: 
         if (!metadata || !data || !metadata.Name || !metadata.Version || !metadata.ID  || !data.S3Link) {
             logger.info(`Error in updatePackage: All fields are required and must be valid.`);
             return res.status(400).send('All fields are required and must be valid.');
+        }
+        const exists = await prismaCalls.checkPackageExists(metadata.Name, metadata.Version, metadata.ID);
+        if(!exists){
+            logger.info(`Error in updatePackage: Package does not exist.`);
+            return res.status(404).send('Package does not exist.');
         }
 
         const packageId = req.params.id;
