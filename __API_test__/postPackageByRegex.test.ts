@@ -31,7 +31,7 @@ describe('post /package/byRegEx endpoint', () => {
         }
     });
 
-    it('post /package/byRegEx endpoint (package search). should return 200 status code and something for a valid package id', async () => {
+    it('post /package/byRegEx endpoint (package search). should return 200 status code and something for a valid regex', async () => {
         try {
             const response = await axios.post(`${APIURL}/package/byRegEx`, {
                 "RegEx": packageName
@@ -42,6 +42,32 @@ describe('post /package/byRegEx endpoint', () => {
             console.log(error.response.status);
             console.log(error.response.data);
             throw error;
+        }
+    });
+
+    it('post /package/byRegEx endpoint (package search). should return 200 status for a valid regex with popularity flag', async () => {
+        try {
+            const response = await axios.post(`${APIURL}/package/byRegEx`, {
+                "RegEx": packageName,
+                "Popularity": true
+            });
+            console.log(response.data);
+            expect(response.status).toBe(200);
+        } catch (error: any) {
+            console.log(error.response.status);
+            console.log(error.response.data);
+            throw error;
+        }
+    });
+
+    it('post /package/byRegEx endpoint (package search). should return 404 status code (no packages) for a non existent regex', async () => {
+        try {
+            await axios.post(`${APIURL}/package/byRegEx`, {
+                "RegEx": "nothing"
+            });
+            throw new Error("Should not have gotten a response");
+        } catch (error: any) {
+            expect(error.response.status).toBe(404);
         }
     });
 });
