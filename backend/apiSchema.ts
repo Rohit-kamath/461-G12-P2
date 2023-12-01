@@ -33,6 +33,7 @@ export type PackageRating = {
 };
 
 export type PackageHistoryEntry = {
+    User: User;
     Date: string; // Description: Date of activity using ISO-8601 Datetime standard in UTC format.
     PackageMetadata: PackageMetadata;
     Action: prismaClient.Action;
@@ -52,4 +53,9 @@ export type EnumerateOffset = string; // Description: Offset in pagination.
 
 export type PackageRegEx = {
     RegEx: string; // Description: A regular expression over package names and READMEs that is used for searching for a package
+};
+
+export type User = {
+    name: string;
+    isAdmin: boolean;
 };

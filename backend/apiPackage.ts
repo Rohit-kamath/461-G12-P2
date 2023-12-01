@@ -119,12 +119,17 @@ export async function getPackagesByName(req: Request, res: Response) {
         }
         const queryName = req.params.name;
         const apiPackageHistories = await prismaCalls.getPackageHistories(queryName);
-        
+
         if (apiPackageHistories === null) {
             logger.info(`Error in getPackagesByName: apiPackageHistories is null`);
             return res.status(500).send(`Error in getPackagesByName: dbPackageHistories is null`);
         }
         
+        if (apiPackageHistories.length === 0) {
+            logger.info(`Error in getPackagesByName: No package histories returned`);
+            return res.status(404).send(`No such package`);
+        }
+
         return res.status(200).json(apiPackageHistories);
     } catch (error) {
         logger.info(`Error in getPackagesByName: ${error}`);
@@ -144,6 +149,10 @@ export async function getPackagesByRegEx(req: Request, res: Response) {
         if (dbPackageMetaData === null) {
             logger.info(`Error in getPackagesByRegEx: dbPackageMetaData is null`);
             return res.status(500).send(`Error in getPackagesByRegEx: dbPackageMetaData is null`);
+        }
+        if(dbPackageMetaData.length === 0){
+            logger.info(`Error in getPackagesByRegEx: No package histories returned`);
+            return res.status(404).send(`No package found under this regex.`);
         }
         const apiPackageMetaData: PackageMetaDataPopularity[] = await Promise.all(
             dbPackageMetaData.map(async (dbPackageMetaData: prismaSchema.PackageMetadata) => {
@@ -745,7 +754,7 @@ async function addDirectoryToZip(zip: JSZip, directoryPath: string, rootPath: st
 // For: get package download
 export async function getPackageDownload(req: Request, res: Response) {
     try {
-        const packageID = req.query.name;
+        const packageID = req.params.id;
 
         if (packageID === undefined) {
             logger.info(`Error in getPackageDownload: Package name is undefined`);
