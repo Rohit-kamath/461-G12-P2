@@ -38,15 +38,11 @@ logger.info('Current working directory:', process.cwd());
 app.post('/package', upload.single('packageContent'), async (req, res) => {
     try {
         logger.info('POST /package called');
-        let shouldDebloat;
-        if(req.body?.debloat === undefined) {
-            shouldDebloat = false;
-        }else{
-            shouldDebloat = req.body.debloat === 'true' || false;
-        }
+        const shouldDebloat = req.body?.debloat === 'true';
+        const calculateSizeCost = req.body?.sizeCost === 'true';
         logger.info(`shouldDebloat: ${shouldDebloat}`)
         logger.info('Calling apiPackage uploadPackage');
-        await apiPackage.uploadPackage(req, res, shouldDebloat);
+        await apiPackage.uploadPackage(req, res, shouldDebloat, calculateSizeCost);
     } catch (error) {
         logger.info(`Error in post(/package) server.ts: ${error}`);
         res.status(500).send('Internal Server Error');
@@ -113,14 +109,10 @@ app.get('/package/:id/rate', async (req, res) => {
 //PUT package update
 app.put('/packages/:id', async (req, res) => {
     try {
-        let shouldDebloat;
-        if(req.body?.debloat === undefined) {
-            shouldDebloat = false;
-        }else{
-            shouldDebloat = req.body.debloat === 'true' || false;
-        }
-
-        await apiPackage.updatePackage(req, res, shouldDebloat);
+        const shouldDebloat = req.body?.debloat === 'true';
+        const calculateSizeCost = req.body?.sizeCost === 'true';
+        
+        await apiPackage.updatePackage(req, res, shouldDebloat, calculateSizeCost);
     } catch (error) {
         logger.info(`Error in put(/packages/:id) in server.ts: ${error}`);
         res.status(500).send('Internal Server Error');
@@ -138,8 +130,8 @@ app.listen(port, () => {
 
 app.use((req, res) => {
     res.status(501).json({
-      error: {
-        message: 'Not Implemented',
-      },
+        error: {
+            message: 'Not Implemented',
+        },
     });
-  });
+});
