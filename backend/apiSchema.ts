@@ -14,10 +14,14 @@ export type PackageMetadata = {
 };
 
 export type PackageData = {
-    Content?: string; // Description: Package contents (Base64 encoded zip file)
+    S3Link?: string; // Description: Package contents (URL to S3 storing zip file)
     URL?: string; // Description: Package URL for public ingest
     JSProgram?: string; // Description: A JavaScript program
 };
+
+export type ApiResponsePackageData = PackageData & {
+    Content?: string; // Description: Package contents (URL to S3 storing zip file)
+}
 
 export type PackageID = string;
 

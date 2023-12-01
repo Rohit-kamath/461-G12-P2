@@ -21,7 +21,7 @@ const logger = createModuleLogger('API Package Calls');
 const s3 = new AWS.S3({
     accessKeyId: process.env.ACCESS_KEY_ID_AWS,
     secretAccessKey: process.env.SECRET_ACCESS_KEY_AWS,
-    region: 'us-east-2',
+    region: process.env.REGION_AWS,
 });
 
 type PackageMetaDataPopularity = apiSchema.PackageMetadata & {DownloadCount?: number};
@@ -311,6 +311,32 @@ export async function uploadToS3(fileName: string, fileBuffer: Buffer): Promise<
     });
 }
 
+async function downloadFromS3(s3Link: string): Promise<Buffer> {
+    logger.info('downloadFromS3: Downloading from S3')
+    // Extract bucket name and key from the S3 link
+    const bucketName = process.env.S3_BUCKET_NAME;
+
+    // Ensure bucket name is defined
+    if (!bucketName) {
+        throw new Error('S3 bucket name is not configured.');
+    }
+
+    const key = s3Link.split('amazonaws.com/')[1];
+
+    const params = {
+        Bucket: bucketName,
+        Key: key,
+    };
+
+    try {
+        const data = await s3.getObject(params).promise();
+        return data.Body as Buffer;
+    } catch (error) {
+        logger.error(`downloadFromS3: Failed to download from S3: ${error}`);
+        throw new Error('Failed to download from S3');
+    }
+}
+
 export async function calculateGithubMetrics(owner: string, repo: string): Promise<apiSchema.PackageRating> {
     logger.info(`CalculateGithubMetrics: Calculating metrics for ${owner}/${repo}`);
     try {
@@ -384,9 +410,9 @@ export function isPackageIngestible(metrics: apiSchema.PackageRating): boolean {
 export async function getGitHubUrlFromNpmUrl(npmUrl: string): Promise<string | null>{
     try {
         logger.info(`getGitHubUrlFromNpmUrl: Converting NPM URL to GitHub URL: ${npmUrl}`);
+        
         // Extract the package name from the npm URL
         const packageNameMatch = npmUrl.match(/npmjs\.com\/package\/([^/]+)/);
-        logger.info(`packageNameMatch: ${packageNameMatch}`);
         if (!packageNameMatch) {
             logger.info("Could not extract package name from npm URL");
             return null;
@@ -408,25 +434,34 @@ export async function getGitHubUrlFromNpmUrl(npmUrl: string): Promise<string | n
         logger.info(`Repository URL found in npm package data: ${repoUrl}`);
 
         // Format the repository URL to get the GitHub URL
-        repoUrl = repoUrl.replace(/^git\+/, '').replace(/\.git$/, '');
-        if (repoUrl.startsWith('https://github.com/')) {
-            // URL is already in the correct format
-            return repoUrl;
-        } else if (repoUrl.startsWith('github:')) {
-            // Convert 'github:' shorthand to a full URL
-            return `https://github.com/${repoUrl.substring(7)}`;
+        if (repoUrl.startsWith('git://github.com/')) {
+            repoUrl = `https://github.com/${repoUrl.substring(17).replace(/\.git$/, '')}`;
         } else if (repoUrl.startsWith('git@github.com:')) {
-            // Convert SSH format to HTTPS URL
-            return `https://github.com/${repoUrl.substring(15).replace(/\.git$/, '')}`;
+            repoUrl = `https://github.com/${repoUrl.substring(15).replace(/\.git$/, '').replace(':', '/')}`;
+        } else if (repoUrl.startsWith('github:')) {
+            repoUrl = `https://github.com/${repoUrl.substring(7)}`;
+        } else if (repoUrl.startsWith('git+https://github.com/')) {
+            repoUrl = repoUrl.replace(/^git\+/, '');
         }
 
-    logger.info(`Invalid repository URL found in npm package data: ${repoUrl}`);
-    return null;
-} catch (error) {
-    logger.info(`Error in getGitHubUrlFromNpmUrl: ${error}`);
-    return null;
+        repoUrl = repoUrl.replace(/\.git$/, '');
+
+        if (!repoUrl.startsWith('https://github.com/')) {
+            logger.info(`Invalid or unsupported repository URL format: ${repoUrl}`);
+            return null;
+        }
+
+        logger.info(`GitHub URL extracted: ${repoUrl}`);
+        return repoUrl;
+    } catch (error) {
+        logger.info(`Error in getGitHubUrlFromNpmUrl: ${error}`);
+        return null;
+    }
 }
-}
+
+
+
+
 
 
 export async function linkCheck(url: string): Promise<string | null> {
@@ -497,6 +532,7 @@ export async function uploadPackage(req: Request, res: Response, shouldDebloat: 
         let fileName: string;
         let jsProgram: string | null = null;
         let sizeCost = null;
+        let url: string | null = null;
 
         if (!req.file && !req.body.URL && !req.body.Content) {
             logger.info("No file or URL provided in the upload.");
@@ -520,11 +556,17 @@ export async function uploadPackage(req: Request, res: Response, shouldDebloat: 
         }
         else if (req.file) {
             logger.info("Zip File upload detected.");
+            let fileBuffer = req.file.buffer;
+            if (!isValidZip(fileBuffer)) {
+                logger.info('uploadPackage: Invalid ZIP file uploaded');
+                return res.status(400).send('Invalid ZIP file uploaded');
+            }
             logger.info("Checking and calling if debloating is required.")
-            const fileBuffer = shouldDebloat ? await debloatPackage(req.file.buffer) : req.file.buffer;
+            fileBuffer = shouldDebloat ? await debloatPackage(req.file.buffer) : req.file.buffer;
+            logger.info("Checking and calling if size cost is required.")
             sizeCost = calculateSizeCost ? await calculateTotalSizeCost(fileBuffer) : 0;
             metadata = await extractMetadataFromZip(fileBuffer);
-            const url = await getGithubUrlFromZip(fileBuffer);
+            url = await getGithubUrlFromZip(fileBuffer);
             githubInfo = parseGitHubUrl(url);
             encodedContent = fileBuffer.toString('base64');
             logger.info(`Converted zip file to Base64 string, encoded content: ${encodedContent.substring(0, 100)}...`);
@@ -534,7 +576,7 @@ export async function uploadPackage(req: Request, res: Response, shouldDebloat: 
         else if (req.body.URL) {
             logger.info("URL upload detected.");
             jsProgram = req.body.JSProgram || null;
-            const url = await linkCheck(req.body.URL);
+            url = await linkCheck(req.body.URL);
             if (!url) {
                 logger.info("400 Invalid or unsupported URL provided.");
                 return res.status(400).send('Invalid or unsupported URL provided.');
@@ -560,7 +602,7 @@ export async function uploadPackage(req: Request, res: Response, shouldDebloat: 
             const fileBuffer = shouldDebloat ? await debloatPackage(decodedBuffer) : decodedBuffer;
             sizeCost = calculateSizeCost ? await calculateTotalSizeCost(fileBuffer) : 0;
             metadata = await extractMetadataFromZip(fileBuffer);
-            const url = await getGithubUrlFromZip(fileBuffer);
+            url = await getGithubUrlFromZip(fileBuffer);
             githubInfo = parseGitHubUrl(url);
             encodedContent = req.body.Content;
             fileName = `${metadata.Name}.zip`;
@@ -581,10 +623,30 @@ export async function uploadPackage(req: Request, res: Response, shouldDebloat: 
             jsProgram = "if (process.argv.length === 7) {\nconsole.log('Success')\nprocess.exit(0)\n} else {\nconsole.log('Failed')\nprocess.exit(1)\n}\n";
         }
 
+        const awsRegion = process.env.REGION_AWS;
+        if (!awsRegion) {
+            logger.info("500 AWS region not configured.");
+            return res.status(500).send('AWS region not configured.');
+        }
+        const s3BucketName = process.env.S3_BUCKET_NAME;
+        if (!s3BucketName) {
+            logger.info("500 S3 bucket name not configured.");
+            return res.status(500).send('S3 bucket name not configured.');
+        }
+
+        const s3link = `https://${s3BucketName}.s3.${awsRegion}.amazonaws.com/${metadata.ID}`
+
         const PackageData: apiSchema.PackageData = {
-            Content: encodedContent,
+            S3Link: s3link,
+            URL: url,
             JSProgram: jsProgram
         };
+
+        const apiResponsePackageData: apiSchema.ApiResponsePackageData = {
+            Content: encodedContent,
+            URL: url,
+            JSProgram: jsProgram
+        }
         
         const truncatedContent = encodedContent.substring(0, 100);
         const logPackageData = {
@@ -610,10 +672,17 @@ export async function uploadPackage(req: Request, res: Response, shouldDebloat: 
 
         const Package: apiSchema.Package = {
             metadata: metadata,
-            data: PackageData,
+            data: apiResponsePackageData,
             sizeCost: sizeCost
         };
 
+        const logAPIPackage = {
+            metadata: metadata,
+            data: {
+            ...apiResponsePackageData,
+            Content: truncatedContent + '...'
+            }
+        };
         const logPackage = {
             metadata: metadata,
             data: {
@@ -621,13 +690,15 @@ export async function uploadPackage(req: Request, res: Response, shouldDebloat: 
             Content: truncatedContent + '...'
             }
         };
-        logger.info(`Package: ${JSON.stringify(logPackage)}`);
+        logger.info(`API Response Package: ${JSON.stringify(logAPIPackage)}`);
+        logger.info(`Database Package: ${JSON.stringify(logPackage)}`);
 
         const action = Action.CREATE;
         await prismaCalls.createPackageHistoryEntry(metadata.ID, action);
-
+        await prismaCalls.storePackageDataInDatabase(metadata.ID, PackageData);
+        await prismaCalls.storePackageInDatabase(Package);
         await storeGithubMetrics(metadata.ID, metrics);
-        await uploadToS3(fileName, Buffer.from(encodedContent, 'base64'));
+        await uploadToS3(metadata.ID, Buffer.from(encodedContent, 'base64'));
 
         res.json(Package);
         logger.info("200 Package uploaded successfully.");
@@ -713,9 +784,10 @@ async function treeShake(directoryPath: string): Promise<void> {
 
 async function findEntryPoint(directoryPath: string): Promise<string | null> {
     logger.info(`findEntryPoint: Finding entry point in directory: ${directoryPath}`)
-    const commonEntryPoints = ['index.js', 'main.js'];
+    const commonEntryPoints = ['index.js', 'main.js', 'app.js', 'server.js'];
     for (const entry of commonEntryPoints) {
         if (await fs.pathExists(path.join(directoryPath, entry))) {
+            logger.info(`findEntryPoint: Entry point found: ${entry}`)
             return path.join(directoryPath, entry);
         }
     }
@@ -724,12 +796,13 @@ async function findEntryPoint(directoryPath: string): Promise<string | null> {
     if (await fs.pathExists(packageJsonPath)) {
         const packageJson = await fs.readJson(packageJsonPath);
         if (packageJson.main) {
+            logger.info(`findEntryPoint: Found entry point in package.json: ${packageJson.main}`);
             return path.join(directoryPath, packageJson.main);
         }
     }
+    logger.info(`findEntryPoint: Entry point not found`);
     return null;
 }
-
 
 export async function rezipDirectory(directoryPath: string): Promise<Buffer> {
     const zip = new JSZip();
@@ -757,7 +830,9 @@ async function addDirectoryToZip(zip: JSZip, directoryPath: string, rootPath: st
 
 // size cost functions
 export async function calculateTotalSizeCost(mainPackageBuffer: Buffer, additionalPackageNames = []): Promise<number> {
+    logger.info('calculateTotalSizeCost: Calculating total size cost');
     let totalSize = mainPackageBuffer.length; // Size from the buffer
+    logger.info(`Size from the buffer: ${totalSize}`)
     const processedPackages = new Set<string>();
 
     additionalPackageNames.forEach(packageName => {
@@ -770,6 +845,7 @@ export async function calculateTotalSizeCost(mainPackageBuffer: Buffer, addition
         });
     });
 
+    logger.info(`Total size cost: ${totalSize}`);
     return totalSize;
 }
 
@@ -847,17 +923,23 @@ export async function getPackageDownload(req: Request, res: Response) {
             return res.status(404).send('Package not found');
         }
 
-        const apiPackage: apiSchema.Package = {
-            metadata: {
-                Name: dbPackage.metadata.name,
-                Version: dbPackage.metadata.version,
-                ID: dbPackage.metadata.id,
-            },
-            data: {
-                Content: "PLACEHOLDER FOR LATER WHEN S3 DOWNLOAD IS IMPLEMENTED",
-                URL: dbPackage.data.URL,
-                JSProgram: dbPackage.data.JSProgram,
-            },
+        const s3Link = dbPackage.data.S3Link;
+        if (!s3Link) {
+            logger.info(`Error in getPackageDownload: S3 link is missing for the package`);
+            return res.status(404).send('S3 link is missing for the package');
+        }
+
+        const fileBuffer = await downloadFromS3(s3Link);
+        if (!isValidZip(fileBuffer)) {
+            logger.info('getPackageDownload: Downloaded ZIP file is invalid');
+            return res.status(400).send('Invalid ZIP file uploaded');
+        }
+        const base64Content = fileBuffer.toString('base64');
+
+        const apiPackage: apiSchema.ApiResponsePackageData = {
+            Content: base64Content,
+            URL: dbPackage.data.URL,
+            JSProgram: dbPackage.data.JSProgram,
         };
         return res.status(200).json(apiPackage);
     } catch (error) {
@@ -872,7 +954,7 @@ export async function updatePackage(req: Request, res: Response, shouldDebloat: 
         const { metadata, data } = req.body as apiSchema.Package;
 
         // Validate required fields
-        if (!metadata || !data || !metadata.Name || !metadata.Version || !metadata.ID  || !data.Content) {
+        if (!metadata || !data || !metadata.Name || !metadata.Version || !metadata.ID  || !data.S3Link) {
             logger.info(`Error in updatePackage: All fields are required and must be valid.`);
             return res.status(400).send('All fields are required and must be valid.');
         }
@@ -889,7 +971,7 @@ export async function updatePackage(req: Request, res: Response, shouldDebloat: 
         }
 
         // Decode the package content 
-        let packageContent = Buffer.from(data.Content, 'base64');
+        let packageContent = Buffer.from(data.S3Link, 'base64');
 
         // Apply debloat if required
         if (shouldDebloat) {
@@ -898,7 +980,7 @@ export async function updatePackage(req: Request, res: Response, shouldDebloat: 
 
         let sizeCost = null;
         if (calculateSizeCost) {
-            sizeCost = await calculateTotalSizeCost(Buffer.from(data.Content, 'base64'));
+            sizeCost = await calculateTotalSizeCost(Buffer.from(data.S3Link, 'base64'));
         }
         // Update the package data
         const updatedData = await prismaCalls.updatePackageDetails(packageId, {...data});
@@ -980,4 +1062,11 @@ export async function getPackageRatings(req: Request, res: Response) {
         logger.info(`Error in getPackageRatings: ${error}`);
         return res.status(500).send(`Internal Server Error: ${error}`);
     }
+}
+
+function isValidZip(buffer: Buffer): boolean {
+    logger.info('isValidZip: Checking if the provided buffer is a valid ZIP file');
+    // ZIP files usually start with 'PK' (0x50, 0x4B)
+    if (buffer.length < 4) return false; // Too small to be a ZIP
+    return buffer[0] === 0x50 && buffer[1] === 0x4B;
 }
