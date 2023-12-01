@@ -25,19 +25,7 @@ switch (LOG_LEVEL) {
 const createModuleLogger = (moduleName: string) => {
     // Determine the appropriate transport based on the environment.
     const selectedTransports = [];
-
-    if (NODE_ENV === 'test') {
-        selectedTransports.push(
-            new transports.Console({
-                format: format.combine(
-                    format.colorize(),
-                    format.printf(({ timestamp, level, message }) => `${timestamp} ${level} [${moduleName}]: ${message}`),
-                ),
-            }),
-        );
-    } else {
-        selectedTransports.push(new transports.File({ filename: LOG_FILE }));
-    }
+    selectedTransports.push(new transports.File({ filename: LOG_FILE }));
 
     return createLogger({
         level: winstonLogLevel,
