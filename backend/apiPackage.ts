@@ -1034,6 +1034,7 @@ export async function getPackageRatings(req: Request, res: Response) {
         const packageRating = await prismaCalls.getPackageRatingById(packageId);
 
         if (!packageRating) {
+            logger.info("error in getPackageRatings: Package not found or no ratings available")
             return res.status(404);
         }
 
