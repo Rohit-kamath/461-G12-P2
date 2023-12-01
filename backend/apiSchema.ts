@@ -3,6 +3,7 @@ import * as prismaClient from '@prisma/client';
 export type Package = {
     metadata: PackageMetadata;
     data: PackageData;
+    sizeCost?: number;
 };
 
 export type PackageMetadata = {
