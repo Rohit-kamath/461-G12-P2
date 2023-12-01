@@ -11,6 +11,7 @@ model Package {
   id         String          @id @db.VarChar(255)
   metadataId String          @unique
   dataId     String          @unique
+  sizeCost   Int?          
   metadata   PackageMetadata @relation(fields: [metadataId], references: [id])
   data       PackageData     @relation(fields: [dataId], references: [id])
 }
@@ -26,7 +27,7 @@ model PackageMetadata {
 
 model PackageData {
   id        String   @id @db.VarChar(255)
-  S3Link   String   @db.Text
+  S3Link    String   @db.VarChar(255)
   URL       String   @db.VarChar(255)
   JSProgram String   @db.VarChar(255)
   package   Package?

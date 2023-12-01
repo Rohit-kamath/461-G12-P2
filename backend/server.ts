@@ -40,6 +40,7 @@ app.post('/package', upload.single('packageContent'), async (req, res) => {
         const shouldDebloat = req.body?.debloat === 'true';
         const calculateSizeCost = req.body?.sizeCost === 'true';
         logger.info(`shouldDebloat: ${shouldDebloat}`)
+        logger.info(`calculateSizeCost: ${calculateSizeCost}`)
         logger.info('Calling apiPackage uploadPackage');
         await apiPackage.uploadPackage(req, res, shouldDebloat, calculateSizeCost);
     } catch (error) {

@@ -27,6 +27,19 @@ describe('getGitHubUrlFromNpmUrl', () => {
         mockAxiosGet.mockResolvedValue({
             data: {
                 repository: {
+                    url: 'git://github.com/isaacs/node-glob.git'
+                }
+            }
+        });
+
+        const url = await getGitHubUrlFromNpmUrl('https://www.npmjs.com/package/glob');
+        expect(url).toBe('https://github.com/isaacs/node-glob');
+    });
+
+    it('should return GitHub URL for a valid npm package', async () => {
+        mockAxiosGet.mockResolvedValue({
+            data: {
+                repository: {
                     url: 'https://github.com/indutny/hash.js'
                 }
             }

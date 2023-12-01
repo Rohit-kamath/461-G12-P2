@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Declare your parameters
-declare -a params=("ACCESS_KEY_ID_AWS" "SECRET_ACCESS_KEY_AWS" "GITHUB_TOKEN" "LOG_LEVEL" "LOG_FILE" "S3_BUCKET_NAME" "DATABASE_URL")
+declare -a params=("ACCESS_KEY_ID_AWS" "SECRET_ACCESS_KEY_AWS" "GITHUB_TOKEN" "LOG_LEVEL" "LOG_FILE" "S3_BUCKET_NAME" "DATABASE_URL" "REGION_AWS")
 
 # Specify the staging directory
 staging_dir="/var/app/staging"

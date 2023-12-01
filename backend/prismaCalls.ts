@@ -2,6 +2,7 @@ import * as prismaSchema from '@prisma/client';
 import { Action } from '@prisma/client';
 import * as apiSchema from './apiSchema';
 import createModuleLogger from '../src/logger';
+import { v4 as uuidv4 } from 'uuid';
 
 const logger = createModuleLogger('Prisma Calls');
 const prisma = new prismaSchema.PrismaClient();
@@ -290,3 +291,48 @@ export async function getPackageRatingById(metadataId: string): Promise<apiSchem
         throw error;
     }
 }
+
+export async function storePackageDataInDatabase(metadataId: string, data: apiSchema.PackageData): Promise<prismaSchema.PackageData> {
+    logger.info(`storePackageDataInDatabase: Storing package data in database`);
+
+    if (data.S3Link === undefined || data.URL === undefined || data.JSProgram === undefined) {
+        logger.info(`Error in storePackageDataInDatabase: One or more required fields are undefined`);
+        throw new Error('Content, URL, and JSProgram are required fields and cannot be undefined.');
+    }
+
+    try {
+        const storedData = await prisma.packageData.create({
+            data: {
+                id: metadataId,
+                S3Link: data.S3Link,
+                URL: data.URL,
+                JSProgram: data.JSProgram
+            },
+        });
+        return storedData;
+    } catch (error) {
+        logger.info(`Error in storePackageDataInDatabase: ${error}`);
+        throw new Error('Failed to store package data in the database.');
+    }
+}
+
+export async function storePackageInDatabase(packageData: apiSchema.Package): Promise<void> {
+    try {
+        await prisma.package.create({
+            data: {
+                id: uuidv4(), // Unique ID for the package
+                metadataId: packageData.metadata.ID,
+                dataId: packageData.metadata.ID, // Assuming PackageData ID matches Metadata ID
+                sizeCost: packageData.sizeCost
+            },
+        });
+
+        logger.info(`Package stored in database with metadataId: ${packageData.metadata.ID}`);
+    } catch (error) {
+        logger.error(`Error in storePackageInDatabase: ${error}`);
+        throw new Error('Failed to store package in the database.');
+    }
+}
+
+
+
