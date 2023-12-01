@@ -375,9 +375,16 @@ export async function storeGithubMetrics(metadataId: string, packageRating: apiS
 
 
 export function parseGitHubUrl(url: string): { owner: string, repo: string } | null {
-  // Regular expression to extract the owner and repo name from various GitHub URL formats
     logger.info(`parseGitHubUrl: Parsing GitHub URL: ${url}`);
-    const regex = /github\.com[/:]([^/]+)\/([^/.]+)(\.git)?/;
+    
+    // Handling non-repository URLs like Gist
+    if (url.includes("gist.github.com")) {
+        logger.info(`Non-repository GitHub URL provided: ${url}`);
+        return null;
+    }
+
+    // Regular expression to extract the owner and repo name from various GitHub URL formats
+    const regex = /(?:github\.com\/|git@github\.com:)([^/]+)\/([^/#?]+)(\.git)?/;
     const match = url.match(regex);
 
     if (match && match[1] && match[2]) {
@@ -390,6 +397,8 @@ export function parseGitHubUrl(url: string): { owner: string, repo: string } | n
         return null;
     }
 }
+
+
 
 
 export function isPackageIngestible(metrics: apiSchema.PackageRating): boolean {
@@ -591,7 +600,7 @@ export async function uploadPackage(req: Request, res: Response, shouldDebloat: 
             encodedContent = debloatedBuffer.toString('base64');
             logger.info(`Converted zip file to Base64 string, encoded content:  ${encodedContent.substring(0, 100)}...`);
             fileName = `${metadata.Name}.zip`;
-            logger.info(`Uploading package with file name: ${fileName}`);
+            logger.info(`Uploading package with file name: ${fileName} as ID: ${metadata.ID}`);
         }
         else if (req.body.Content) {
             logger.info("Base64 ZIP upload detected.");
