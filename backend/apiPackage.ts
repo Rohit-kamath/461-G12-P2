@@ -966,11 +966,15 @@ export async function updatePackage(req: Request, res: Response) {
             sizeCost = await calculateTotalSizeCost(Buffer.from(data.S3Link, 'base64'));
         }
         const updatedData = await prismaCalls.updatePackageDetails(packageId, {...data});
+        if(updatedData === null){
+            logger.info(`Error in updatePackageDetails in prismaCalls.ts: updatedData is null`);
+            return res.status(500);
+        }
         await uploadToS3(`${metadata.ID}.zip`, packageContent);
         if(calculateSizeCost && sizeCost !== null){
             return res.status(200).json({sizeCost: sizeCost});
         }
-        return res.status(200)
+        return res.status(200);
     } catch (error) {
         logger.info(`Error in updatePackage: ${error}`);
         console.error(`Error in updatePackage: ${error}`);
