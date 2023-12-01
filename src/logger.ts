@@ -5,7 +5,6 @@ dotenv.config();
 
 const LOG_LEVEL = process.env.LOG_LEVEL || '1';
 const LOG_FILE = process.env.LOG_FILE || 'combined.log';
-const NODE_ENV = process.env.NODE_ENV || 'development';
 
 let winstonLogLevel: 'silent' | 'info' | 'debug';
 switch (LOG_LEVEL) {
@@ -25,19 +24,7 @@ switch (LOG_LEVEL) {
 const createModuleLogger = (moduleName: string) => {
     // Determine the appropriate transport based on the environment.
     const selectedTransports = [];
-
-    if (NODE_ENV === 'test') {
-        selectedTransports.push(
-            new transports.Console({
-                format: format.combine(
-                    format.colorize(),
-                    format.printf(({ timestamp, level, message }) => `${timestamp} ${level} [${moduleName}]: ${message}`),
-                ),
-            }),
-        );
-    } else {
-        selectedTransports.push(new transports.File({ filename: LOG_FILE }));
-    }
+    selectedTransports.push(new transports.File({ filename: LOG_FILE }));
 
     return createLogger({
         level: winstonLogLevel,
