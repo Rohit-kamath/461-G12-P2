@@ -32,7 +32,6 @@ app.get('/upload-page', (req, res) => {
     res.sendFile(path.join(__dirname, '../Frontend/testwebsite.html'));
 });
 */
-logger.info('Current working directory:', process.cwd());
 
 //package upload
 app.post('/package', upload.single('packageContent'), async (req, res) => {
@@ -127,6 +126,26 @@ app.put('/packages/:id', async (req, res) => {
     }
 });
 
+app.put('/authenticate', (req, res) => {
+    res.status(501).json({
+        error: {
+            message: 'This system does not support authentication.',
+        },
+    });
+});
+
+app.use((req, res, next) => {
+    if (req.method !== 'GET') {
+        res.status(501).json({
+            error: {
+                message: 'Not Implemented',
+            },
+        });
+    } else {
+        next();
+    }
+});
+
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '../../Frontend/dist', 'index.html'));
 });
@@ -135,11 +154,3 @@ app.listen(port, () => {
     console.log(`server started at http://localhost:${port}`);
     logger.info(`server started at http://localhost:${port}`);
 });
-
-app.use((req, res) => {
-    res.status(501).json({
-      error: {
-        message: 'Not Implemented',
-      },
-    });
-  });
