@@ -20,6 +20,7 @@ describe('upload', () => {
                 "URL": "https://github.com/feross/safe-buffer",
                 "JSProgram": "if (process.argv.length === 7) {\nconsole.log('Success')\nprocess.exit(0)\n} else {\nconsole.log('Failed')\nprocess.exit(1)\n}\n"
             });
+            console.log(response.data)
             expect(response.status).toBe(200);
         } catch (error: any) {
             console.log(error.response.status);

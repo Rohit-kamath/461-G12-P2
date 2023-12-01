@@ -47,6 +47,22 @@ describe('POST /packages endpoint', () => {
             throw error;
         }
     });
+
+    it('POST /packages endpoint. should return 200 status code and something for a valid package id and when popularity flag is passed in request', async () => {
+        try {
+            const response = await axios.post(`${APIURL}/packages`, [{
+                "Version": packageVersion,
+                "Name": packageName,
+                "Popularity": true
+            }]);
+            console.log(response.data);
+            expect(response.status).toBe(200);
+        } catch (error: any) {
+            console.log(error.response.status);
+            console.log(error.response.data);
+            throw error;
+        }
+    });
 });
 
 describe('reset', () => { // rerun reset test for clean deployment
