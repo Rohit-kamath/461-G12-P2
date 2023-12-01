@@ -489,13 +489,14 @@ export async function downloadGitHubRepoZip(githubUrl: string): Promise<Buffer> 
 }
 
 
-export async function uploadPackage(req: Request, res: Response, shouldDebloat: boolean) {
+export async function uploadPackage(req: Request, res: Response, shouldDebloat: boolean, calculateSizeCost: boolean) {
     try {
         let metadata: apiSchema.PackageMetadata;
         let githubInfo: { owner: string, repo: string } | null;
         let encodedContent: string;
         let fileName: string;
         let jsProgram: string | null = null;
+        let sizeCost = null;
 
         if (!req.file && !req.body.URL && !req.body.Content) {
             logger.info("No file or URL provided in the upload.");
@@ -521,6 +522,7 @@ export async function uploadPackage(req: Request, res: Response, shouldDebloat: 
             logger.info("Zip File upload detected.");
             logger.info("Checking and calling if debloating is required.")
             const fileBuffer = shouldDebloat ? await debloatPackage(req.file.buffer) : req.file.buffer;
+            sizeCost = calculateSizeCost ? await calculateTotalSizeCost(fileBuffer) : 0;
             metadata = await extractMetadataFromZip(fileBuffer);
             const url = await getGithubUrlFromZip(fileBuffer);
             githubInfo = parseGitHubUrl(url);
@@ -541,6 +543,7 @@ export async function uploadPackage(req: Request, res: Response, shouldDebloat: 
             const zipBuffer = await downloadGitHubRepoZip(url);
             logger.info("Checking and calling if debloating is required.")
             const debloatedBuffer = shouldDebloat ? await debloatPackage(zipBuffer) : zipBuffer;
+            sizeCost = calculateSizeCost ? await calculateTotalSizeCost(debloatedBuffer) : 0;
             metadata = await extractMetadataFromZip(debloatedBuffer);
             githubInfo = parseGitHubUrl(url);
             encodedContent = debloatedBuffer.toString('base64');
@@ -555,6 +558,7 @@ export async function uploadPackage(req: Request, res: Response, shouldDebloat: 
             const decodedBuffer = Buffer.from(req.body.Content, 'base64');
             logger.info("Checking and calling if debloating is required.")
             const fileBuffer = shouldDebloat ? await debloatPackage(decodedBuffer) : decodedBuffer;
+            sizeCost = calculateSizeCost ? await calculateTotalSizeCost(fileBuffer) : 0;
             metadata = await extractMetadataFromZip(fileBuffer);
             const url = await getGithubUrlFromZip(fileBuffer);
             githubInfo = parseGitHubUrl(url);
@@ -607,6 +611,7 @@ export async function uploadPackage(req: Request, res: Response, shouldDebloat: 
         const Package: apiSchema.Package = {
             metadata: metadata,
             data: PackageData,
+            sizeCost: sizeCost
         };
 
         const logPackage = {
@@ -748,8 +753,84 @@ async function addDirectoryToZip(zip: JSZip, directoryPath: string, rootPath: st
     }
 }
 
-
 // end of debloat functions
+
+// size cost functions
+export async function calculateTotalSizeCost(mainPackageBuffer: Buffer, additionalPackageNames = []): Promise<number> {
+    let totalSize = mainPackageBuffer.length; // Size from the buffer
+    const processedPackages = new Set<string>();
+
+    additionalPackageNames.forEach(packageName => {
+        const dependencies = getAllDependencies(packageName);
+        dependencies.forEach(dep => {
+            if (!processedPackages.has(dep)) {
+                totalSize += getPackageSize(dep);
+                processedPackages.add(dep);
+            }
+        });
+    });
+
+    return totalSize;
+}
+
+function getAllDependencies(packageName: string): string[] {
+    const dependencies = new Set<string>();
+    const queue = [packageName];
+
+    while (queue.length > 0) {
+        const currentPackage = queue.shift();
+        if (currentPackage && !dependencies.has(currentPackage)) {
+            dependencies.add(currentPackage);
+            const currentPackageDependencies = getDependencies(currentPackage);
+            currentPackageDependencies.forEach(dep => {
+                if (!dependencies.has(dep)) {
+                    queue.push(dep);
+                }
+            });
+        }
+    }
+
+    return Array.from(dependencies);
+}
+
+function getDependencies(packageName: string): string[] {
+    try {
+        const packageJsonPath = path.join('node_modules', packageName, 'package.json');
+        const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+        return Object.keys(packageJson.dependencies || {});
+    } catch (error) {
+        console.error(`Error reading dependencies for package ${packageName}:`, error);
+        return [];
+    }
+}
+
+function getPackageSize(packageName: string): number {
+    try {
+        const packagePath = path.join('node_modules', packageName);
+        return calculateDirectorySize(packagePath);
+    } catch (error) {
+        console.error(`Error calculating size for package ${packageName}:`, error);
+        return 0;
+    }
+}
+
+function calculateDirectorySize(directoryPath: string): number {
+    let totalSize = 0;
+
+    try {
+        const files = fs.readdirSync(directoryPath);
+        for (const file of files) {
+            const filePath = path.join(directoryPath, file);
+            const stats = fs.statSync(filePath);
+            totalSize += stats.isDirectory() ? calculateDirectorySize(filePath) : stats.size;
+        }
+    } catch (error) {
+        console.error(`Error calculating size for directory ${directoryPath}:`, error);
+    }
+
+    return totalSize;
+}
+// end of size cost functions
 
 // For: get package download
 export async function getPackageDownload(req: Request, res: Response) {
@@ -786,7 +867,7 @@ export async function getPackageDownload(req: Request, res: Response) {
 }
 
 // For: put package update
-export async function updatePackage(req: Request, res: Response, shouldDebloat: boolean) {
+export async function updatePackage(req: Request, res: Response, shouldDebloat: boolean, calculateSizeCost: boolean) {
     try {
         const { metadata, data } = req.body as apiSchema.Package;
 
@@ -815,19 +896,27 @@ export async function updatePackage(req: Request, res: Response, shouldDebloat: 
             packageContent = await debloatPackage(packageContent);
         }
 
+        let sizeCost = null;
+        if (calculateSizeCost) {
+            sizeCost = await calculateTotalSizeCost(Buffer.from(data.Content, 'base64'));
+        }
         // Update the package data
         const updatedData = await prismaCalls.updatePackageDetails(packageId, {
             ...data,
             Content: packageContent.toString('base64') // Re-encode the package content 
         });
 
-        return res.status(200).json({ Data: updatedData });
+        return res.status(200).json({ 
+            Data: updatedData,
+            sizeCost: sizeCost
+        });
     } catch (error) {
         logger.info(`Error in updatePackage: ${error}`);
         console.error(`Error in updatePackage: ${error}`);
         return res.status(500).send(`Server error: ${error}`);
     }
 }
+
 
 export async function callResetDatabase(req: Request, res: Response) {
     try {
