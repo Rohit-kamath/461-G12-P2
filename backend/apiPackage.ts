@@ -356,7 +356,6 @@ export async function calculateGithubMetrics(owner: string, repo: string): Promi
         };
     } catch (error) {
         logger.info(`CalculateGithubMetrics: Failed to calculate metrics: ${error}`);
-        logger.info(`Failed to calculate metrics: ${error}`);
         throw error;
     }
 }
@@ -538,29 +537,24 @@ export async function uploadPackage(req: Request, res: Response, shouldDebloat: 
         let metadata: apiSchema.PackageMetadata;
         let githubInfo: { owner: string, repo: string } | null;
         let encodedContent: string;
-        let fileName: string;
         let jsProgram: string | null = null;
         let sizeCost = null;
         let url: string | null = null;
 
         if (!req.file && !req.body.URL && !req.body.Content) {
-            logger.info("No file or URL provided in the upload.");
-            logger.info("400 No file uploaded")
+            logger.info("No file or URL provided in the upload. 400 No file uploaded");
             return res.status(400).send('No file or URL uploaded');
         }
         else if (req.file && req.body.URL) {
-            logger.info("Must upload either file or URL, not both.");
-            logger.info("400 No file uploaded")
+            logger.info("Must upload either file or URL, not both. 400 No file uploaded");
             return res.status(400).send('No file uploaded');
         }
         else if (req.file && req.body.Content) {
-            logger.info("Must upload either Base64 ZIP or ZIP, not both.");
-            logger.info("400 No file uploaded")
+            logger.info("Must upload either Base64 ZIP or ZIP, not both. 400 No file uploaded");
             return res.status(400).send('No file uploaded');
         }
         else if (req.body.Content && req.body.URL) {
-            logger.info("Must upload either Base64 ZIP or URL, not both.");
-            logger.info("400 No file uploaded")
+            logger.info("Must upload either Base64 ZIP or URL, not both. 400 No file uploaded");
             return res.status(400).send('No file uploaded');
         }
         else if (req.file) {
@@ -579,8 +573,6 @@ export async function uploadPackage(req: Request, res: Response, shouldDebloat: 
             githubInfo = parseGitHubUrl(url);
             encodedContent = fileBuffer.toString('base64');
             logger.info(`Converted zip file to Base64 string, encoded content: ${encodedContent.substring(0, 100)}...`);
-            fileName = req.file.originalname;
-            logger.info(`Uploadeding package with file name: ${fileName}`);
         }
         else if (req.body.URL) {
             logger.info("URL upload detected.");
@@ -599,8 +591,6 @@ export async function uploadPackage(req: Request, res: Response, shouldDebloat: 
             githubInfo = parseGitHubUrl(url);
             encodedContent = debloatedBuffer.toString('base64');
             logger.info(`Converted zip file to Base64 string, encoded content:  ${encodedContent.substring(0, 100)}...`);
-            fileName = `${metadata.Name}.zip`;
-            logger.info(`Uploading package with file name: ${fileName} as ID: ${metadata.ID}`);
         }
         else if (req.body.Content) {
             logger.info("Base64 ZIP upload detected.");
@@ -614,12 +604,9 @@ export async function uploadPackage(req: Request, res: Response, shouldDebloat: 
             url = await getGithubUrlFromZip(fileBuffer);
             githubInfo = parseGitHubUrl(url);
             encodedContent = req.body.Content;
-            fileName = `${metadata.Name}.zip`;
-            logger.info(`Uploading package with file name: ${fileName}`);
         }
         else {
-            logger.info("Must upload a proper zip or provide a URL");
-            logger.info("400 Invalid upload type")
+            logger.info("Must upload a proper zip or provide a URL. 400 Invalid upload type");
             return res.status(400).send('Invalid upload type');
         }
 
@@ -688,15 +675,15 @@ export async function uploadPackage(req: Request, res: Response, shouldDebloat: 
         const logAPIPackage = {
             metadata: metadata,
             data: {
-            ...apiResponsePackageData,
-            Content: truncatedContent + '...'
+                ...apiResponsePackageData,
+                Content: truncatedContent + '...'
             }
         };
         const logPackage = {
             metadata: metadata,
             data: {
-            ...PackageData,
-            Content: truncatedContent + '...'
+                ...PackageData,
+                Content: truncatedContent + '...'
             }
         };
         logger.info(`API Response Package: ${JSON.stringify(logAPIPackage)}`);
@@ -707,6 +694,7 @@ export async function uploadPackage(req: Request, res: Response, shouldDebloat: 
         await prismaCalls.storePackageDataInDatabase(metadata.ID, PackageData);
         await prismaCalls.storePackageInDatabase(Package);
         await storeGithubMetrics(metadata.ID, metrics);
+        logger.info(`Uploadeding package with file name: ${metadata.ID}`);
         await uploadToS3(metadata.ID, Buffer.from(encodedContent, 'base64'));
 
         res.json(Package);
