@@ -37,15 +37,11 @@ app.get('/upload-page', (req, res) => {
 app.post('/package', upload.single('packageContent'), async (req, res) => {
     try {
         logger.info('POST /package called');
-        const shouldDebloat = req.body?.debloat === 'true';
-        const calculateSizeCost = req.body?.sizeCost === 'true';
-        logger.info(`shouldDebloat: ${shouldDebloat}`)
-        logger.info(`calculateSizeCost: ${calculateSizeCost}`)
         logger.info('Calling apiPackage uploadPackage');
-        await apiPackage.uploadPackage(req, res, shouldDebloat, calculateSizeCost);
+        await apiPackage.uploadPackage(req, res);
     } catch (error) {
         logger.info(`Error in post(/package) server.ts: ${error}`);
-        res.status(500).send('Internal Server Error');
+        res.status(500);
     }
 });
 
@@ -54,7 +50,7 @@ app.post('/packages', async (req, res) => {
         await apiPackage.getPackages(req, res);
     } catch (error) {
         logger.info(`Error in post(/packages) in server.ts: ${error}`);
-        res.status(500).send('Internal Server Error');
+        res.status(500);
     }
 });
 
@@ -63,7 +59,7 @@ app.delete('/reset', async (req, res) => {
         await apiPackage.callResetDatabase(req, res);
     } catch (error) {
         logger.info(`Error in delete(/reset) in server.ts: ${error}`);
-        res.status(500).send('Internal Server Error');
+        res.status(500);
     }
 });
 
@@ -72,7 +68,7 @@ app.get('/package/byName/:name', async (req, res) => {
         await apiPackage.getPackagesByName(req, res);
     } catch (error) {
         logger.info(`Error in get(/packages/byName/:name) in server.ts: ${error}`);
-        res.status(500).send('Internal Server Error');
+        res.status(500);
     }
 });
 
@@ -81,7 +77,7 @@ app.post('/package/byRegEx', async (req, res) => {
         await apiPackage.getPackagesByRegEx(req, res);
     } catch (error) {
         logger.info(`Error in post(/package/byRegEx) in server.ts: ${error}`);
-        res.status(500).send('Internal Server Error');
+        res.status(500);
     }
 });
 
@@ -91,7 +87,7 @@ app.get('/package/:id', async (req, res) => {
         await apiPackage.getPackageDownload(req, res);
     } catch (error) {
         logger.info(`Error in get(/package/:id) in server.ts: ${error}`);
-        res.status(500).send('Internal Server Error');
+        res.status(500);
     }
 });
 
@@ -101,7 +97,7 @@ app.get('/package/:id/rate', async (req, res) => {
         await apiPackage.getPackageRatings(req, res);
     } catch (error) {
         logger.info(`Error in get(/package/:id/rate) in server.ts: ${error}`);
-        res.status(500).send('Internal Server Error');
+        res.status(500);
     
     }
 });
@@ -109,31 +105,20 @@ app.get('/package/:id/rate', async (req, res) => {
 //PUT package update
 app.put('/package/:id', async (req, res) => {
     try {
-        const shouldDebloat = req.body?.debloat === 'true';
-        const calculateSizeCost = req.body?.sizeCost === 'true';
-        
-        await apiPackage.updatePackage(req, res, shouldDebloat, calculateSizeCost);
+        await apiPackage.updatePackage(req, res);
     } catch (error) {
         logger.info(`Error in put(/packages/:id) in server.ts: ${error}`);
-        res.status(500).send('Internal Server Error');
+        res.status(500);
     }
 });
 
 app.put('/authenticate', (req, res) => {
-    res.status(501).json({
-        error: {
-            message: 'This system does not support authentication.',
-        },
-    });
+    res.status(501)
 });
 
 app.use((req, res, next) => {
     if (req.method !== 'GET') {
-        res.status(501).json({
-            error: {
-                message: 'Not Implemented',
-            },
-        });
+        res.status(501);
     } else {
         next();
     }
