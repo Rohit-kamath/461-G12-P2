@@ -912,7 +912,23 @@ export async function getPackageDownload(req: Request, res: Response) {
             return res.sendStatus(400);
         }
         const base64Content = fileBuffer.toString('base64');
-        return res.status(200).json(base64Content);
+
+        const packageMetadata: apiSchema.PackageMetadata = {
+            Name: dbPackage.metadata.name,
+            Version: dbPackage.metadata.version,
+            ID: dbPackage.metadata.id,
+        };
+        
+        const apiResponsePackageData: apiSchema.ApiResponsePackageData = {
+            Content: base64Content,
+        };
+        
+        const packageResponse: apiSchema.Package = {
+            metadata: packageMetadata,
+            data: apiResponsePackageData,
+        };
+
+        return res.status(200).json(packageResponse);
     } catch (error) {
         logger.info(`Error in getPackageDownload: ${error}`)
         return res.sendStatus(500);
