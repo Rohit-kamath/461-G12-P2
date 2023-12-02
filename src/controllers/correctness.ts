@@ -20,7 +20,7 @@ export class Correctness {
     private errors = 0;
     private warnings = 0;
     private securityIssues = 0;
-    private maxDepth = 10;
+    private maxDepth = 3;
 
     constructor(
         private owner: string,
@@ -75,66 +75,56 @@ export class Correctness {
         return Math.min(1, 0.2 * githubScore + 0.8 * eslintScore);
     }
 
-    private async lintFiles(dir: string, depth = 0): Promise<void> {
-        if (depth > this.maxDepth) {
-            logger.info(`Max depth of ${this.maxDepth} reached, skipping directory ${dir}`);
-            return;
-        }
-
-        let files;
-        try {
-            files = fs.readdirSync(dir);
-        } catch (error) {
-            logger.error(`Error reading directory ${dir}: ${error}`);
-            return;
-        }
-
-        logger.info(`Linting ${files.length} files in ${dir}`);
-        for (const file of files) {
-            const filePath = path.join(dir, file);
-            let stat;
-            try {
-                stat = fs.lstatSync(filePath);
-            } catch (error) {
-                logger.error(`Error accessing file ${filePath}: ${error}`);
-                continue;
-            }
-
-            if (stat.isSymbolicLink()) {
-                try {
-                    const resolvedLink = fs.realpathSync(filePath);
-                    logger.info(`Resolved symbolic link ${filePath} to ${resolvedLink}`);
-                    await this.lintFiles(resolvedLink, depth + 1);
-                } catch (error) {
-                    logger.error(`Error resolving symbolic link ${filePath}: ${error}`);
-                }
-                continue;
-            } else if (stat.isDirectory()) {
-                await this.lintFiles(filePath, depth + 1);
-            } else if (/\.(ts|js)$/.test(file)) {
-                await this.lintFile(filePath);
-            }
-        }
-    }
-
     private async lintFile(filePath: string): Promise<void> {
-        logger.info(`Linting file ${filePath}`);
-        const results = await new ESLint().lintFiles([filePath]);
-        results.forEach(result => {
-            result.messages.forEach(message => {
-                if (message.severity === 2) this.errors++;
-                else if (message.severity === 1) this.warnings++;
-                if (message.ruleId && ['no-eval', 'no-implied-eval'].includes(message.ruleId)) {
-                    this.securityIssues++;
-                }
+    
+        let eslintInstance;
+        try {
+            // Try using the existing ESLint configuration
+            eslintInstance = new ESLint();
+        } catch (configError) {
+            logger.info(`Failed to load ESLint config, using default ESLint config for ${filePath}`);
+    
+            // Using a default ESLint configuration as a fallback
+            eslintInstance = new ESLint({
+                baseConfig: {
+                    env: {
+                        browser: true,
+                        es2021: true,
+                        node: true,
+                    },
+                    extends: [
+                        'eslint:recommended',
+                    ],
+                    parserOptions: {
+                        ecmaVersion: 12,
+                        sourceType: 'module',
+                    },
+                    rules: {
+                        // Define some default rules or leave it empty
+                    },
+                },
             });
-        });
+        }
+        try {
+            // Perform linting using the selected ESLint instance
+            const results = await eslintInstance.lintFiles([filePath]);
+            results.forEach(result => {
+                result.messages.forEach(message => {
+                    if (message.severity === 2) this.errors++;
+                    else if (message.severity === 1) this.warnings++;
+                    if (message.ruleId && ['no-eval', 'no-implied-eval'].includes(message.ruleId)) {
+                        this.securityIssues++;
+                    }
+                });
+            });
+        } catch (lintError) {
+            logger.error(`Error linting file ${filePath}`);
+        }
         logger.info(`Linting complete for file ${filePath}`);
     }
+    
 
     public hasTestInName(dirPath: string, visited = new Set()): boolean {
-        logger.info(`Checking if ${dirPath} has test in name`);
-    
         // Check if we have already visited this directory to prevent infinite recursion
         if (visited.has(dirPath)) {
             return false;
@@ -146,6 +136,11 @@ export class Correctness {
             stats = fs.statSync(dirPath);
         } catch (error) {
             logger.error(`Error accessing directory ${dirPath}: ${error}`);
+            return false;
+        }
+    
+        // Skip irrelevant directories (like .git)
+        if (this.isIrrelevantDirectory(dirPath)) {
             return false;
         }
     
@@ -171,6 +166,13 @@ export class Correctness {
     
         return false;
     }
+    
+    private isIrrelevantDirectory(dirPath: string): boolean {
+        // Add more directory names here if needed
+        const irrelevantDirs = ['.git', 'node_modules', 'dist', 'build'];
+        return irrelevantDirs.some(dir => dirPath.includes(dir));
+    }
+    
     
 
     public async linterAndTestChecker(owner: string, repo: string): Promise<number> {
@@ -201,10 +203,12 @@ export class Correctness {
         // }
 
         // Check if the repo has any tests
+        logger.info(`Checking if ${tempdir} has any tests`);
         const hasTest = this.hasTestInName(tempdir);
         const testSuiteScore = hasTest ? 1 : 0;
 
-        await this.lintFiles(tempdir);
+        logger.info(`Beggining to lint ${tempdir}`);
+        await this.lintFile(tempdir);
 
         execSync(`rm -rf ${tempdir}`, { stdio: 'ignore' });
 
