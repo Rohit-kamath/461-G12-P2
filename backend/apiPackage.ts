@@ -941,10 +941,23 @@ export async function updatePackage(req: Request, res: Response) {
         const calculateSizeCost = req.body?.sizeCost === 'true';
         logger.info(`shouldDebloat: ${shouldDebloat}`);
         logger.info(`calculateSizeCost: ${calculateSizeCost}`);
-        const { metadata, data } = req.body as apiSchema.Package;
-
-        if (!metadata || !data || !metadata.Name || !metadata.Version || !metadata.ID  || !data.S3Link) {
-            logger.info(`Error in updatePackage: All fields are required and must be valid.`);
+        const metadata = req.body?.metadata;
+        if(metadata === undefined){
+            logger.info(`Error in updatePackage: metaData is undefined`);
+            return res.sendStatus(400);
+        }
+        const dataFields = req.body?.data;
+        if(dataFields === undefined){
+            logger.info(`Error in updatePackage: dataFields is undefined`);
+            return res.sendStatus(400);
+        }
+        const filteredDataFields = Object.keys(dataFields).filter((key) => dataFields[key] !== undefined);
+        if (filteredDataFields.length > 1) {
+            logger.info(`Error in updatePackage: Only one field can be set at a time`);
+            return res.sendStatus(400);
+        }
+        if (!metadata.Name || !metadata.Version || !metadata.ID) {
+            logger.info(`Error in updatePackage: All metadata fields are required`);
             return res.sendStatus(400);
         }
         const exists = await prismaCalls.checkPackageExists(metadata.Name, metadata.Version, metadata.ID);
@@ -965,7 +978,7 @@ export async function updatePackage(req: Request, res: Response) {
         }
 
         // Decode the package content 
-        let packageContent = Buffer.from(data.S3Link, 'base64');
+        let packageContent = Buffer.from(dataFields.S3Link, 'base64');
 
         if (shouldDebloat) {
             packageContent = await debloatPackage(packageContent);
@@ -973,9 +986,9 @@ export async function updatePackage(req: Request, res: Response) {
 
         let sizeCost = null;
         if (calculateSizeCost) {
-            sizeCost = await calculateTotalSizeCost(Buffer.from(data.S3Link, 'base64'));
+            sizeCost = await calculateTotalSizeCost(Buffer.from(dataFields.S3Link, 'base64'));
         }
-        const updatedData = await prismaCalls.updatePackageDetails(packageId, {...data});
+        const updatedData = await prismaCalls.updatePackageDetails(packageId, {...dataFields});
         if(updatedData === null){
             logger.info(`Error in updatePackageDetails in prismaCalls.ts: updatedData is null`);
             return res.sendStatus(500);
@@ -987,7 +1000,6 @@ export async function updatePackage(req: Request, res: Response) {
         return res.sendStatus(200);
     } catch (error) {
         logger.info(`Error in updatePackage: ${error}`);
-        console.error(`Error in updatePackage: ${error}`);
         return res.sendStatus(500);
     }
 }
@@ -1005,14 +1017,12 @@ export async function callResetDatabase(req: Request, res: Response) {
         await prismaCalls.resetDatabase();
         logger.info('Registry is reset.');
         res.sendStatus(200);
-    
     } catch (error) {
         const errorMessage = (error instanceof Error) ? error.message : 'Unknown error occurred';
         logger.error(`Error resetting database or S3 bucket: ${errorMessage}`);
         res.sendStatus(500);
     }
 }
-
 
 async function emptyS3Bucket(bucketName: string) {
     try {
