@@ -976,9 +976,13 @@ export async function updatePackage(req: Request, res: Response) {
             logger.info(`Error in updatePackage: Package ID in the URL does not match the ID in the request body.`);
             return res.sendStatus(400);
         }
-
+        const S3Link = await prismaCalls.getS3Link(packageId);
+        if(S3Link === null){
+            logger.info(`Error in updatePackage: S3Link is null`);
+            return res.sendStatus(500);
+        }
         // Decode the package content 
-        let packageContent = Buffer.from(dataFields.S3Link, 'base64');
+        let packageContent = Buffer.from(S3Link, 'base64');
 
         if (shouldDebloat) {
             packageContent = await debloatPackage(packageContent);
@@ -986,7 +990,7 @@ export async function updatePackage(req: Request, res: Response) {
 
         let sizeCost = null;
         if (calculateSizeCost) {
-            sizeCost = await calculateTotalSizeCost(Buffer.from(dataFields.S3Link, 'base64'));
+            sizeCost = await calculateTotalSizeCost(Buffer.from(S3Link, 'base64'));
         }
         const updatedData = await prismaCalls.updatePackageDetails(packageId, {...dataFields});
         if(updatedData === null){

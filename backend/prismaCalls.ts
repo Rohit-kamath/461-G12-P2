@@ -335,5 +335,20 @@ export async function storePackageInDatabase(packageData: apiSchema.Package): Pr
     }
 }
 
+export async function getS3Link(metadataId: string): Promise<string | null> {
+    try {
+        const packageData = await prisma.packageData.findUnique({
+            where: { id: metadataId },
+        });
 
+        if (!packageData) {
+            logger.info(`No package data found for metadata ID: ${metadataId}`);
+            return null;
+        }
 
+        return packageData.S3Link;
+    } catch (error) {
+        logger.error(`Error in getS3Link: ${error}`);
+        throw error;
+    }
+}
