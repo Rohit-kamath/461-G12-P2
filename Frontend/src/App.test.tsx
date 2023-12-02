@@ -1,5 +1,7 @@
 // app.test.ts
 import '@testing-library/jest-dom/extend-expect';
+import '@testing-library/jest-dom/jest-globals';
+import '@testing-library/jest-dom';
 import App from './App';
 const { WebDriver, Builder, By, until } = require('selenium-webdriver');
 const { render, screen, fireEvent, waitFor } = require('@testing-library/react');
