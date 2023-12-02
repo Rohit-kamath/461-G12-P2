@@ -76,7 +76,6 @@ export class Correctness {
     }
 
     private async lintFile(filePath: string): Promise<void> {
-        logger.info(`Linting file ${filePath}`);
     
         let eslintInstance;
         try {
@@ -126,8 +125,6 @@ export class Correctness {
     
 
     public hasTestInName(dirPath: string, visited = new Set()): boolean {
-        logger.info(`Checking if ${dirPath} has test in name`);
-    
         // Check if we have already visited this directory to prevent infinite recursion
         if (visited.has(dirPath)) {
             return false;
@@ -206,9 +203,11 @@ export class Correctness {
         // }
 
         // Check if the repo has any tests
+        logger.info(`Checking if ${tempdir} has any tests`);
         const hasTest = this.hasTestInName(tempdir);
         const testSuiteScore = hasTest ? 1 : 0;
 
+        logger.info(`Beggining to lint ${tempdir}`);
         await this.lintFile(tempdir);
 
         execSync(`rm -rf ${tempdir}`, { stdio: 'ignore' });
