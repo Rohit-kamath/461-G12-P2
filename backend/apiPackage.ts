@@ -912,13 +912,7 @@ export async function getPackageDownload(req: Request, res: Response) {
             return res.sendStatus(400);
         }
         const base64Content = fileBuffer.toString('base64');
-
-        const apiPackage: apiSchema.ApiResponsePackageData = {
-            Content: base64Content,
-            URL: dbPackage.data.URL,
-            JSProgram: dbPackage.data.JSProgram,
-        };
-        return res.status(200).json(apiPackage);
+        return res.status(200).json(base64Content);
     } catch (error) {
         logger.info(`Error in getPackageDownload: ${error}`)
         return res.sendStatus(500);
