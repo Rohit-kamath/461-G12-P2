@@ -17,6 +17,9 @@ logger.info('Starting server...');
 // Enable CORS for all routes
 app.use(cors());
 
+// Parse JSON bodies
+app.use(express.json());
+
 // Serve static files from the "Frontend" directory
 app.use(express.static('Frontend/dist'));
 
@@ -29,16 +32,16 @@ app.get('/upload-page', (req, res) => {
     res.sendFile(path.join(__dirname, '../Frontend/testwebsite.html'));
 });
 */
-logger.info('Current working directory:', process.cwd());
 
 //package upload
 app.post('/package', upload.single('packageContent'), async (req, res) => {
     try {
-        const shouldDebloat = req.body.debloat === 'true'
-
-        await apiPackage.uploadPackage(req, res, shouldDebloat);
+        logger.info('POST /package called');
+        logger.info('Calling apiPackage uploadPackage');
+        await apiPackage.uploadPackage(req, res);
     } catch (error) {
-        res.status(500).send('Internal Server Error');
+        logger.info(`Error in post(/package) server.ts: ${error}`);
+        res.sendStatus(500);
     }
 });
 
@@ -46,7 +49,8 @@ app.post('/packages', async (req, res) => {
     try {
         await apiPackage.getPackages(req, res);
     } catch (error) {
-        res.status(500).send('Internal Server Error');
+        logger.info(`Error in post(/packages) in server.ts: ${error}`);
+        res.sendStatus(500);
     }
 });
 
@@ -54,15 +58,17 @@ app.delete('/reset', async (req, res) => {
     try {
         await apiPackage.callResetDatabase(req, res);
     } catch (error) {
-        res.status(500).send('Internal Server Error');
+        logger.info(`Error in delete(/reset) in server.ts: ${error}`);
+        res.sendStatus(500);
     }
 });
 
-app.get('/packages/byName/:name', async (req, res) => {
+app.get('/package/byName/:name', async (req, res) => {
     try {
         await apiPackage.getPackagesByName(req, res);
     } catch (error) {
-        res.status(500).send('Internal Server Error');
+        logger.info(`Error in get(/packages/byName/:name) in server.ts: ${error}`);
+        res.sendStatus(500);
     }
 });
 
@@ -70,7 +76,8 @@ app.post('/package/byRegEx', async (req, res) => {
     try {
         await apiPackage.getPackagesByRegEx(req, res);
     } catch (error) {
-        res.status(500).send('Internal Server Error');
+        logger.info(`Error in post(/package/byRegEx) in server.ts: ${error}`);
+        res.sendStatus(500);
     }
 });
 
@@ -79,18 +86,41 @@ app.get('/package/:id', async (req, res) => {
     try {
         await apiPackage.getPackageDownload(req, res);
     } catch (error) {
-        res.status(500).send('Internal Server Error');
+        logger.info(`Error in get(/package/:id) in server.ts: ${error}`);
+        res.sendStatus(500);
+    }
+});
+
+app.get('/package/:id/rate', async (req, res) => {
+    logger.info('GET /package/:id/rate called');
+    try {
+        await apiPackage.getPackageRatings(req, res);
+    } catch (error) {
+        logger.info(`Error in get(/package/:id/rate) in server.ts: ${error}`);
+        res.sendStatus(500);
+    
     }
 });
 
 //PUT package update
-app.put('/packages/:id', async (req, res) => {
+app.put('/package/:id', async (req, res) => {
     try {
-        const shouldDebloat = req.body.debloat === 'true';
-
-        await apiPackage.updatePackage(req, res, shouldDebloat);
+        await apiPackage.updatePackage(req, res);
     } catch (error) {
-        res.status(500).send('Internal Server Error');
+        logger.info(`Error in put(/packages/:id) in server.ts: ${error}`);
+        res.sendStatus(500);
+    }
+});
+
+app.put('/authenticate', (req, res) => {
+    res.sendStatus(501)
+});
+
+app.use((req, res, next) => {
+    if (req.method !== 'GET') {
+        res.sendStatus(501);
+    } else {
+        next();
     }
 });
 
@@ -102,11 +132,3 @@ app.listen(port, () => {
     console.log(`server started at http://localhost:${port}`);
     logger.info(`server started at http://localhost:${port}`);
 });
-
-app.use((req, res) => {
-    res.status(501).json({
-      error: {
-        message: 'Not Implemented',
-      },
-    });
-  });

@@ -23,6 +23,32 @@ describe('getGitHubUrlFromNpmUrl', () => {
         expect(url).toBe('https://github.com/expressjs/express');
     });
 
+    it('should return GitHub URL for a valid npm package', async () => {
+        mockAxiosGet.mockResolvedValue({
+            data: {
+                repository: {
+                    url: 'git://github.com/isaacs/node-glob.git'
+                }
+            }
+        });
+
+        const url = await getGitHubUrlFromNpmUrl('https://www.npmjs.com/package/glob');
+        expect(url).toBe('https://github.com/isaacs/node-glob');
+    });
+
+    it('should return GitHub URL for a valid npm package', async () => {
+        mockAxiosGet.mockResolvedValue({
+            data: {
+                repository: {
+                    url: 'https://github.com/indutny/hash.js'
+                }
+            }
+        });
+
+        const url = await getGitHubUrlFromNpmUrl('https://www.npmjs.com/package/hash.js');
+        expect(url).toBe('https://github.com/indutny/hash.js');
+    });
+
     it('should handle npm URLs with git+ prefix', async () => {
         mockAxiosGet.mockResolvedValue({
             data: {

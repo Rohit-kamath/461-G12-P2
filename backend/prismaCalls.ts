@@ -2,6 +2,7 @@ import * as prismaSchema from '@prisma/client';
 import { Action } from '@prisma/client';
 import * as apiSchema from './apiSchema';
 import createModuleLogger from '../src/logger';
+import { v4 as uuidv4 } from 'uuid';
 
 const logger = createModuleLogger('Prisma Calls');
 const prisma = new prismaSchema.PrismaClient();
@@ -37,7 +38,6 @@ export async function getMetaDataByQuery(queryName: apiSchema.PackageName, minVe
         return packages;
     } catch (error) {
         logger.info(`Error in getMetaDataArray: ${error}`);
-        logger.info(`Error in getMetaDataArray: ${error}`);
         return null;
     }
 }
@@ -56,6 +56,10 @@ export async function getPackageHistories(queryName: apiSchema.PackageName): Pro
         });
 
         return packageHistories.map(history => ({
+            User: {
+                name: "ece30861defaultadminuser",
+                isAdmin: true,
+            },
             Date: history.date.toISOString(),
             PackageMetadata: {
                 Name: history.metadata.name,
@@ -72,6 +76,7 @@ export async function getPackageHistories(queryName: apiSchema.PackageName): Pro
 
 
 export async function uploadMetadataToDatabase(metadata: apiSchema.PackageMetadata): Promise<void> {
+    logger.info(`uploadMetadataToDatabase: Uploading metadata to database: ${metadata.Name}@${metadata.Version}`);
     try {
         await prisma.packageMetadata.create({
             data: {
@@ -82,12 +87,12 @@ export async function uploadMetadataToDatabase(metadata: apiSchema.PackageMetada
         });
     } catch (error) {
         logger.info(`Error in uploadMetadataToDatabase: ${error}`);
-        logger.info(`Error in uploadMetadataToDatabase: ${error}`);
         throw new Error('Failed to upload metadata to the database.');
     }
 }
 
 export async function createPackageHistoryEntry(metadataId: string, action: Action): Promise<void> {
+    logger.info(`createPackageHistoryEntry: Creating package history entry for metadata ID: ${metadataId}`)
     try {
         // Check if metadataId exists
         const metadataExists = await prisma.packageMetadata.findUnique({
@@ -111,11 +116,13 @@ export async function createPackageHistoryEntry(metadataId: string, action: Acti
     }
 }
 
-export async function checkPackageExists(packageName: string, packageVersion: string): Promise<boolean> {
+export async function checkPackageExists(packageName: string, packageVersion: string, packageID?: string): Promise<boolean> {
+    logger.info(`checkPackageExists: Checking if package exists: ${packageName}@${packageVersion}`)
     const count = await prisma.packageMetadata.count({
         where: {
             name: packageName,
             version: packageVersion,
+            id: packageID
         },
     });
     return count > 0;
@@ -141,6 +148,7 @@ export async function getMetaDataByRegEx(regEx: string): Promise<prismaSchema.Pa
 
         return result;
     } catch (error) {
+        logger.info(`getMetaDataByRegEx error: ${error}`);
         console.error(`Error in getMetaDataArray: ${error}`);
         return null;
     }
@@ -184,6 +192,7 @@ export async function getPackage(queryID: apiSchema.PackageID): Promise<FullPack
         });
         return packageEntry;
     } catch (error) {
+        logger.info(`getPackage error: ${error}`);
         console.error(`Error in getPackage: ${error}`);
         return null;
     }
@@ -196,18 +205,17 @@ export async function updatePackageDetails(packageId: apiSchema.PackageID, packa
         const updatedData = await prisma.packageData.update({
             where: { id: packageId },
             data: {
-                content: packageData.Content ?? '', // nullish  to handle optional fields
                 URL: packageData.URL ?? '',
                 JSProgram: packageData.JSProgram ?? '',
             },
         });
 
         return {
-            Content: updatedData.content,
             URL: updatedData.URL,
             JSProgram: updatedData.JSProgram,
         };
     } catch (error) {
+        logger.info(`updatePackageDetails error: ${error}`);
         console.error(`Error in updatePackageDetails: ${error}`);
         return null;
     }
@@ -255,3 +263,77 @@ export async function resetDatabase() {
         logger.info('Error resetting database:', error);
     }
 }
+
+export async function getPackageRatingById(metadataId: string): Promise<apiSchema.PackageRating | null> {
+    try {
+        const packageRating = await prisma.packageRating.findUnique({
+            where: {
+                metadataId: metadataId,
+            },
+        });
+
+        if (!packageRating) {
+            logger.info(`No ratings found for package with ID: ${metadataId}`);
+            return null;
+        }
+
+        return {
+            BusFactor: packageRating.busFactor,
+            Correctness: packageRating.correctness,
+            RampUp: packageRating.rampUp,
+            ResponsiveMaintainer: packageRating.responsiveMaintainer,
+            LicenseScore: packageRating.licenseScore,
+            GoodPinningPractice: packageRating.goodPinningPractice,
+            PullRequest: packageRating.pullRequest,
+            NetScore: packageRating.netScore,
+        };
+    } catch (error) {
+        logger.error(`Error in getPackageRatingById: ${error}`);
+        throw error;
+    }
+}
+
+export async function storePackageDataInDatabase(metadataId: string, data: apiSchema.PackageData): Promise<prismaSchema.PackageData> {
+    logger.info(`storePackageDataInDatabase: Storing package data in database`);
+
+    if (data.S3Link === undefined || data.URL === undefined || data.JSProgram === undefined) {
+        logger.info(`Error in storePackageDataInDatabase: One or more required fields are undefined`);
+        throw new Error('Content, URL, and JSProgram are required fields and cannot be undefined.');
+    }
+
+    try {
+        const storedData = await prisma.packageData.create({
+            data: {
+                id: metadataId,
+                S3Link: data.S3Link,
+                URL: data.URL,
+                JSProgram: data.JSProgram
+            },
+        });
+        return storedData;
+    } catch (error) {
+        logger.info(`Error in storePackageDataInDatabase: ${error}`);
+        throw new Error('Failed to store package data in the database.');
+    }
+}
+
+export async function storePackageInDatabase(packageData: apiSchema.Package): Promise<void> {
+    try {
+        await prisma.package.create({
+            data: {
+                id: uuidv4(), // Unique ID for the package
+                metadataId: packageData.metadata.ID,
+                dataId: packageData.metadata.ID, // Assuming PackageData ID matches Metadata ID
+                sizeCost: packageData.sizeCost
+            },
+        });
+
+        logger.info(`Package stored in database with metadataId: ${packageData.metadata.ID}`);
+    } catch (error) {
+        logger.error(`Error in storePackageInDatabase: ${error}`);
+        throw new Error('Failed to store package in the database.');
+    }
+}
+
+
+
