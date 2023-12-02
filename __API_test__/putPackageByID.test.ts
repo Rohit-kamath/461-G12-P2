@@ -1,5 +1,5 @@
 import axios from 'axios';
-import * as apiSchema from "../backend/apiSchema";
+// import * as apiSchema from "../backend/apiSchema";
 
 const APIURL = 'http://ece461-packageregistry-depenv.eba-bphpcw3d.us-east-2.elasticbeanstalk.com';
 describe('reset', () => {
@@ -17,7 +17,7 @@ describe('reset', () => {
 describe('putPackageByID', () => {
     it('should return 404 status code to signifiy package not found', async () => {
         try {
-            const response = await axios.put(`${APIURL}/package/1`, {
+            await axios.put(`${APIURL}/package/1`, {
                 "metadata": {
                     "Name": 'test',
                     "Version": '1.0.0',

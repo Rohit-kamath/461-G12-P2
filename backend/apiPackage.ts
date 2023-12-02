@@ -5,7 +5,7 @@ import * as prismaSchema from '@prisma/client';
 import JSZip from 'jszip';
 import { v4 as uuidv4 } from 'uuid';
 import AWS from 'aws-sdk';
-import S3, { ManagedUpload } from 'aws-sdk/clients/s3';
+import { ManagedUpload } from 'aws-sdk/clients/s3';
 import createModuleLogger from '../src/logger';
 import { NetScore } from '../src/controllers/netScore';
 import semver from 'semver';
