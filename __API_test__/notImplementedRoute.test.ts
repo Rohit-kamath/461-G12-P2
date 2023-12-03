@@ -14,9 +14,3 @@ describe('notImplementedRoute', () => {
         }
     });
 });
-
-describe('always pass', () => {
-    it('should always pass', () => {
-        expect(true).toBe(true);
-    });
-});

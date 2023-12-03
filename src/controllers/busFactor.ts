@@ -55,6 +55,7 @@ export const calculateBusFactor = (contributors: Contributor[] | null): number =
 //getBusFactor uses both previous functions and returns the score
 export const getBusFactor = async (owner: string, repo: string): Promise<number> => {
     const contributors = await getContributors(owner, repo);
+    const contributorLengthScore = (Math.min((contributors?.length || 0), 100) / 100);
     const busFactor = calculateBusFactor(contributors);
-    return busFactor;
+    return ( (contributorLengthScore * 0.3) + (busFactor * 0.7));
 };
