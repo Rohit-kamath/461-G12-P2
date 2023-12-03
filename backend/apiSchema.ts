@@ -3,6 +3,7 @@ import * as prismaClient from '@prisma/client';
 export type Package = {
     metadata: PackageMetadata;
     data: PackageData;
+    sizeCost?: number;
 };
 
 export type PackageMetadata = {
@@ -13,10 +14,14 @@ export type PackageMetadata = {
 };
 
 export type PackageData = {
-    Content?: string; // Description: Package contents (Base64 encoded zip file)
+    S3Link?: string; // Description: Package contents (URL to S3 storing zip file)
     URL?: string; // Description: Package URL for public ingest
     JSProgram?: string; // Description: A JavaScript program
 };
+
+export type ApiResponsePackageData = PackageData & {
+    Content?: string; // Description: Package contents (URL to S3 storing zip file)
+}
 
 export type PackageID = string;
 
@@ -33,6 +38,7 @@ export type PackageRating = {
 };
 
 export type PackageHistoryEntry = {
+    User: User;
     Date: string; // Description: Date of activity using ISO-8601 Datetime standard in UTC format.
     PackageMetadata: PackageMetadata;
     Action: prismaClient.Action;
@@ -52,4 +58,9 @@ export type EnumerateOffset = string; // Description: Offset in pagination.
 
 export type PackageRegEx = {
     RegEx: string; // Description: A regular expression over package names and READMEs that is used for searching for a package
+};
+
+export type User = {
+    name: string;
+    isAdmin: boolean;
 };
