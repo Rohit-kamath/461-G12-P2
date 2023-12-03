@@ -33,13 +33,12 @@ describe('POST /packages endpoint', () => {
         }
     });
 
-    it('POST /packages endpoint. should return 200 status code and something for a valid package id. Used to get package download', async () => {
+    it('POST /packages endpoint. should return 200 status code and something for a valid package id', async () => {
         try {
             const response = await axios.post(`${APIURL}/packages`, [{
                 "Version": packageVersion,
                 "Name": packageName
             }]);
-            console.log(response.data);
             expect(response.status).toBe(200);
         } catch (error: any) {
             console.log(error.response.status);
@@ -48,14 +47,43 @@ describe('POST /packages endpoint', () => {
         }
     });
 
-    it('POST /packages endpoint. should return 200 status code and something for a valid package id and when popularity flag is passed in request', async () => {
+    it('POST /packages endpoint. should return 200 status code but nothing in data for a valid package id and a large offset in the query', async () => {
+        try {
+            const response = await axios.post(`${APIURL}/packages?offset=100000`, [{
+                "Version": packageVersion,
+                "Name": packageName
+            }]);
+            expect(response.status).toBe(200);
+            expect(response.data).toStrictEqual([]);
+        } catch (error: any) {
+            console.log(error.response.status);
+            console.log(error.response.data);
+            throw error;
+        }
+    });
+
+    it('POST /packages endpoint. should return 200 status code but nothing in data for a valid package id and a small offset in the query', async () => {
+        try {
+            const response = await axios.post(`${APIURL}/packages?offset=1`, [{
+                "Version": packageVersion,
+                "Name": packageName
+            }]);
+            expect(response.status).toBe(200);
+            expect(response.data).not.toStrictEqual([]);
+        } catch (error: any) {
+            console.log(error.response.status);
+            console.log(error.response.data);
+            throw error;
+        }
+    });
+
+    it('POST /packages endpoint. should return 200 status code and something for a valid package id/set popularity flag', async () => {
         try {
             const response = await axios.post(`${APIURL}/packages`, [{
                 "Version": packageVersion,
                 "Name": packageName,
                 "Popularity": true
             }]);
-            console.log(response.data);
             expect(response.status).toBe(200);
         } catch (error: any) {
             console.log(error.response.status);
@@ -74,11 +102,5 @@ describe('reset', () => { // rerun reset test for clean deployment
             console.log(error.response.status);
             throw error;
         }
-    });
-});
-
-describe('always pass', () => {
-    it('should always pass', async () => {
-        expect(true).toBe(true);
     });
 });
