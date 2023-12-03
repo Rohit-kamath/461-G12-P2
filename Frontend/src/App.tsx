@@ -8,6 +8,36 @@ function App() {
   const [searchResults, setSearchResults] = useState<string[] | null>(null);
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
 
+    // Package Directory
+  const [isPackageDirectoryOpen, setIsPackageDirectoryOpen] = useState<boolean>(false);
+  const [packageName, setPackageName] = useState<string>('');
+  const [packageVersion, setPackageVersion] = useState<string>('');
+  const [packageDirectory, setPackageDirectory] = useState<string | null>(null);
+    // Open package directory
+  const openPackageDirectory = () => {
+    setIsPackageDirectoryOpen(true);
+  };
+    // Close package directory
+  const closePackageDirectory = () => {
+    setIsPackageDirectoryOpen(false);
+    setPackageName('');
+    setPackageVersion('');
+    setPackageDirectory(null);
+  };
+    // Package Info
+  const submitPackageInfo = () => {
+    setPackageDirectory(`/${packageName}/${packageVersion}`);
+  };
+    // Package Reset
+  const resetPackageRegistry = () => {
+    const confirmReset = window.confirm('Are you sure you want to reset the package registry?');
+    if (confirmReset) {
+      // reset logic
+      // maybe this??? await axios.post('/reset-package-registry');
+      console.log('Package registry reset successfully.');
+    }
+  };
+
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     setSelectedFiles(files || null);
@@ -65,14 +95,7 @@ function App() {
   const downloadPackage = async () => {
     if (selectedPackage) {
       try {
-        // Perform the download logic using the selected package name
-        // You may need to adjust the URL or API endpoint based on your backend implementation
         const response = await axios.get(`http://localhost:5000/download?package=${selectedPackage}`);
-        
-        // Add logic to handle the downloaded package, for example, trigger a download in the browser
-        // You can use libraries like FileSaver.js for this purpose.
-        // Example: FileSaver.saveAs(new Blob([response.data]), 'downloaded-package.zip');
-
       } catch (error: any) {
         console.error(`Error downloading package: ${error.message}`);
       }
@@ -88,20 +111,22 @@ function App() {
   }, [searchTerm]);
 
   return (
-    <div>
+    <div className="container">
       <h1>Zip File Uploader</h1>
-      <input type="file" accept=".zip" multiple onChange={handleFileChange} />
-      <button onClick={uploadZipFiles}>Upload Zip Files</button>
 
-      {uploadStatus && <p>{uploadStatus}</p>}
+      <div className="file-upload">
+        <input type="file" accept=".zip" multiple onChange={handleFileChange} />
+        <button onClick={uploadZipFiles}>Upload Zip Files</button>
+        {uploadStatus && <p>{uploadStatus}</p>}
+      </div>
 
-      <div>
+      <div className="search-packages">
         <h2>Search Packages</h2>
         <input type="text" placeholder="Enter package name" value={searchTerm} onChange={handleSearchTermChange} />
         <button onClick={searchPackages}>Search</button>
 
         {searchResults && (
-          <div>
+          <div className="search-results">
             <h3>Search Results</h3>
             <ul>
               {searchResults.map((result, index) => (
@@ -110,8 +135,9 @@ function App() {
                 </li>
               ))}
             </ul>
+
             {selectedPackage && (
-              <div>
+              <div className="selected-package">
                 <h3>Selected Package: {selectedPackage}</h3>
                 <button onClick={downloadPackage}>Download</button>
               </div>
@@ -119,8 +145,38 @@ function App() {
           </div>
         )}
       </div>
+
+      <div className="package-directory">
+        <h2>Package Directory</h2>
+        <button onClick={openPackageDirectory}>Open Package Directory</button>
+
+        {isPackageDirectoryOpen && (
+          <div className="package-info">
+            <h3>Enter Package Information</h3>
+            <label>Name:</label>
+            <input type="text" value={packageName} onChange={(e) => setPackageName(e.target.value)} />
+
+            <label>Version:</label>
+            <input type="text" value={packageVersion} onChange={(e) => setPackageVersion(e.target.value)} />
+
+            <button onClick={submitPackageInfo}>Submit</button>
+            <button onClick={closePackageDirectory}>Cancel</button>
+
+            {packageDirectory && (
+              <div className="directory-view">
+                <h3>Package Directory View</h3>
+                <p>Directory: {packageDirectory}</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="package-reset">
+        <h2>Package Reset</h2>
+        <button onClick={resetPackageRegistry}>Reset Package Registry</button>
+      </div>
     </div>
   );
 }
-
 export default App;
