@@ -65,7 +65,7 @@ export function parseVersion(version: string) {
 
 export async function getPackages(req: Request, res: Response){
     try {
-        const offset = req.query?.offset === undefined ? 1 : parseInt(req.query.offset as string);
+        const offset = req.query?.offset === undefined ? 0 : parseInt(req.query.offset as string);
         res.setHeader('offset', offset);
         const packageQueries = req.body as apiSchema.PackageQuery[];
         const packageMetaDataArray: PackageMetaDataPopularity[] = [];
