@@ -33,11 +33,9 @@ app.get('/upload-page', (req, res) => {
 });
 */
 
-//package upload
 app.post('/package', upload.single('packageContent'), async (req, res) => {
     try {
-        logger.info('POST /package called');
-        logger.info('Calling apiPackage uploadPackage');
+        logger.info(`POST /package request: ${req.body}`);
         await apiPackage.uploadPackage(req, res);
     } catch (error) {
         logger.info(`Error in post(/package) server.ts: ${error}`);
@@ -47,6 +45,7 @@ app.post('/package', upload.single('packageContent'), async (req, res) => {
 
 app.post('/packages', async (req, res) => {
     try {
+        logger.info(`POST /packages request: ${req.body}`);
         await apiPackage.getPackages(req, res);
     } catch (error) {
         logger.info(`Error in post(/packages) in server.ts: ${error}`);
@@ -56,6 +55,7 @@ app.post('/packages', async (req, res) => {
 
 app.delete('/reset', async (req, res) => {
     try {
+        logger.info(`DELETE /reset request: ${req.body}`);
         await apiPackage.callResetDatabase(req, res);
     } catch (error) {
         logger.info(`Error in delete(/reset) in server.ts: ${error}`);
@@ -65,6 +65,7 @@ app.delete('/reset', async (req, res) => {
 
 app.get('/package/byName/:name', async (req, res) => {
     try {
+        logger.info(`GET /package/byName/:name request: ${req.body}`);
         await apiPackage.getPackagesByName(req, res);
     } catch (error) {
         logger.info(`Error in get(/packages/byName/:name) in server.ts: ${error}`);
@@ -74,6 +75,7 @@ app.get('/package/byName/:name', async (req, res) => {
 
 app.post('/package/byRegEx', async (req, res) => {
     try {
+        logger.info(`POST /package/byRegEx request: ${req.body}`);
         await apiPackage.getPackagesByRegEx(req, res);
     } catch (error) {
         logger.info(`Error in post(/package/byRegEx) in server.ts: ${error}`);
@@ -81,9 +83,9 @@ app.post('/package/byRegEx', async (req, res) => {
     }
 });
 
-//GET package download
 app.get('/package/:id', async (req, res) => {
     try {
+        logger.info(`GET /package/:id request: ${req.body}`);
         await apiPackage.getPackageDownload(req, res);
     } catch (error) {
         logger.info(`Error in get(/package/:id) in server.ts: ${error}`);
@@ -92,19 +94,18 @@ app.get('/package/:id', async (req, res) => {
 });
 
 app.get('/package/:id/rate', async (req, res) => {
-    logger.info('GET /package/:id/rate called');
     try {
+        logger.info(`GET /package/:id/rate request: ${req.body}`);
         await apiPackage.getPackageRatings(req, res);
     } catch (error) {
         logger.info(`Error in get(/package/:id/rate) in server.ts: ${error}`);
         res.sendStatus(500);
-    
     }
 });
 
-//PUT package update
 app.put('/package/:id', async (req, res) => {
     try {
+        logger.info(`PUT /package/:id request: ${req.body}`);
         await apiPackage.updatePackage(req, res);
     } catch (error) {
         logger.info(`Error in put(/packages/:id) in server.ts: ${error}`);
