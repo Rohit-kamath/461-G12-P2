@@ -65,7 +65,7 @@ export function parseVersion(version: string) {
 
 export async function getPackages(req: Request, res: Response){
     try {
-        const offset = req.query?.offset === undefined ? 1 : parseInt(req.query.offset as string);
+        const offset = req.query?.offset === undefined ? 0 : parseInt(req.query.offset as string);
         res.setHeader('offset', offset);
         const packageQueries = req.body as apiSchema.PackageQuery[];
         const packageMetaDataArray: PackageMetaDataPopularity[] = [];
@@ -583,9 +583,9 @@ export async function uploadPackage(req: Request, res: Response) {
         else if (req.body.Content) {
             logger.info("Base64 ZIP upload detected.");
             jsProgram = req.body.JSProgram || null;
-            logger.info("Decoding Base64 string.")
+            logger.info("Decoding Base64 string.");
             const decodedBuffer = Buffer.from(req.body.Content, 'base64');
-            logger.info("Checking and calling if debloating is required.")
+            logger.info("Checking and calling if debloating is required.");
             const fileBuffer = shouldDebloat ? await debloatPackage(decodedBuffer) : decodedBuffer;
             sizeCost = calculateSizeCost ? await calculateTotalSizeCost(fileBuffer) : 0;
             metadata = await extractMetadataFromZip(fileBuffer);
@@ -947,17 +947,16 @@ export async function updatePackage(req: Request, res: Response) {
             logger.info(`Error in updatePackage: metaData is undefined`);
             return res.sendStatus(400);
         }
-        const dataFields = req.body?.data;
-        if(dataFields === undefined){
-            logger.info(`Error in updatePackage: dataFields is undefined`);
+        const data = req.body?.data;
+        if(data === undefined){
+            logger.info(`Error in updatePackage: datas is undefined`);
             return res.sendStatus(400);
         }
-        const filteredDataFields = Object.keys(dataFields).filter((key) => dataFields[key] !== undefined);
-        if (filteredDataFields.length > 1) {
-            logger.info(`Error in updatePackage: Only one field can be set at a time`);
+        if(!req.body.URL && !req.body.Content) {
+            logger.info("Error in updatePackage: No Content or URL provided in the upload");
             return res.sendStatus(400);
         }
-        if (!metadata.Name || !metadata.Version || !metadata.ID) {
+        if(!metadata.Name || !metadata.Version || !metadata.ID) {
             logger.info(`Error in updatePackage: All metadata fields are required`);
             return res.sendStatus(400);
         }
@@ -967,13 +966,13 @@ export async function updatePackage(req: Request, res: Response) {
             return res.sendStatus(404);
         }
 
-        const packageId = req.params.id;
-        if (!packageId) {
+        const packageId = req.params?.id;
+        if(!packageId) {
             logger.info(`Error in updatePackage: Package ID is required.`);
             return res.sendStatus(400);
         }
 
-        if (packageId !== metadata.ID) {
+        if(packageId !== metadata.ID) {
             logger.info(`Error in updatePackage: Package ID in the URL does not match the ID in the request body.`);
             return res.sendStatus(400);
         }
@@ -982,20 +981,25 @@ export async function updatePackage(req: Request, res: Response) {
             logger.info(`Error in updatePackage: S3Link is null`);
             return res.sendStatus(500);
         }
-        // Decode the package content 
-        let packageContent = Buffer.from(S3Link, 'base64');
 
-        if (shouldDebloat) {
+        let packageContent;
+        if(data?.Content){
+            packageContent = Buffer.from(data.Content, 'base64');
+        }else{
+            packageContent = await downloadFromS3(S3Link);
+        }
+
+        if(shouldDebloat){
             packageContent = await debloatPackage(packageContent);
         }
 
         let sizeCost = null;
-        if (calculateSizeCost) {
+        if(calculateSizeCost){
             sizeCost = await calculateTotalSizeCost(Buffer.from(S3Link, 'base64'));
         }
-        const updatedData = await prismaCalls.updatePackageDetails(packageId, {...dataFields});
+        const updatedData = await prismaCalls.updatePackageDetails(packageId, {...data});
         if(updatedData === null){
-            logger.info(`Error in updatePackageDetails in prismaCalls.ts: updatedData is null`);
+            logger.info(`Error in updatePackage: updatedData is null`);
             return res.sendStatus(500);
         }
         await uploadToS3(`${metadata.ID}.zip`, packageContent);
