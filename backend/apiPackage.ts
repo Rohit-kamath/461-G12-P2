@@ -952,7 +952,7 @@ export async function updatePackage(req: Request, res: Response) {
             logger.info(`Error in updatePackage: datas is undefined`);
             return res.sendStatus(400);
         }
-        if(!req.body.URL && !req.body.Content) {
+        if(!data?.URL && !data?.Content) {
             logger.info("Error in updatePackage: No Content or URL provided in the upload");
             return res.sendStatus(400);
         }
