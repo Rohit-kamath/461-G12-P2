@@ -64,7 +64,7 @@ describe('POST /packages endpoint', () => {
 
     it('POST /packages endpoint. should return 200 status code but nothing in data for a valid package id and a small offset in the query', async () => {
         try {
-            const response = await axios.post(`${APIURL}/packages?offset=1`, [{
+            const response = await axios.post(`${APIURL}/packages?offset=0`, [{
                 "Version": packageVersion,
                 "Name": packageName
             }]);
