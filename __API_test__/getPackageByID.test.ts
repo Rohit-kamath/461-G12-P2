@@ -15,6 +15,15 @@ describe('reset', () => {
 });
 
 describe('GET /package/{id} endpoint', () => {
+    it('should return 404 status code for an invalid package id', async () => {
+        try {
+            await axios.get(`${APIURL}/package/1234`);
+            throw new Error('should not reach here');
+        } catch (error: any) {
+            expect(error.response.status).toBe(404);
+        }
+    });
+
     let packageID : apiSchema.PackageID;
     it('upload endpoint to put something in registry. should return 200 status code and something for a valid github repo link', async () => {
         try {
@@ -53,12 +62,5 @@ describe('reset', () => { // rerun reset test for clean deployment
             console.log(error.response.status);
             throw error;
         }
-    });
-});
-
-//make a test that always passes
-describe('always pass', () => {
-    it('should always pass', async () => {
-        expect(true).toBe(true);
     });
 });

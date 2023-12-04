@@ -66,9 +66,3 @@ describe('putPackageByID', () => {
         }
     });
 });
-
-describe('always pass', () => {
-    it('should always pass', async () => {
-        expect(true).toBe(true);
-    });
-});

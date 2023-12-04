@@ -96,6 +96,18 @@ describe('upload', () => {
             expect(error.response.status).toBe(400);
         }
     });
+    it('should return 400 status code if both Content and URL are provided', async () => {
+        try {
+            await axios.post(`${APIURL}/package`, {
+                "URL": "notmatter.com",
+                "Content": "something", 
+                "JSProgram": "if (process.argv.length === 7) {\nconsole.log('Success')\nprocess.exit(0)\n} else {\nconsole.log('Failed')\nprocess.exit(1)\n}\n"
+            });
+            throw new Error('Request did not fail as expected');
+        } catch (error: any) {
+            expect(error.response.status).toBe(400);
+        }
+    });
 });
 
 describe('reset', () => { // rerun reset test for clean deployment
@@ -107,11 +119,5 @@ describe('reset', () => { // rerun reset test for clean deployment
             console.log(error.response.status);
             throw error;
         }
-    });
-});
-
-describe('always pass', () => {
-    it('should always pass', async () => {
-        expect(true).toBe(true);
     });
 });
