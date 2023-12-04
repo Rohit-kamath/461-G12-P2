@@ -1,7 +1,7 @@
 {
   "name": "ece461_team11",
   "version": "1.0.0",
-  "description": "Project Members: 1) Dev Thakkar 2) Jonathan Dow 3) Rohan Sagar (rsagar@purdue.edu) 4) Dongwon Kim",
+  "description": "Project Members: 1) Rohit Kamath 2) Robert Rozhanskyy 3) Rachit Bisht 4) Ty Runner",
   "main": "index.js",
   "scripts": {
     "start": "node dist/backend/server.js",
@@ -19,6 +19,8 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.1.4",
+    "@testing-library/react": "^14.1.2",
     "@types/cors": "^2.8.15",
     "@types/eslint": "^8.44.3",
     "@types/fs-extra": "^11.0.4",
@@ -32,6 +34,9 @@
     "@types/webpack": "^5.28.5",
     "@typescript-eslint/eslint-plugin": "^6.7.5",
     "@typescript-eslint/parser": "^6.7.5",
+    "axios": "^1.6.2",
+    "axios-mock-adapter": "^1.22.0",
+    "chromedriver": "^119.0.1",
     "eslint": "^8.51.0",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-config-airbnb-typescript": "^17.1.0",
