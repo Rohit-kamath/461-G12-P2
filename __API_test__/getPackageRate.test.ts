@@ -19,7 +19,7 @@ describe('GET /package/{id}/rate endpoint', () => {
     it('upload endpoint to put something in registry. should return 200 status code and something for a valid github repo link', async () => {
         try {
             const response= await axios.post(`${APIURL}/package`, {
-                "URL": "https://github.com/feross/safe-buffer",
+                "URL": "https://github.com/expressjs/express",
                 "JSProgram": "if (process.argv.length === 7) {\nconsole.log('Success')\nprocess.exit(0)\n} else {\nconsole.log('Failed')\nprocess.exit(1)\n}\n"
             });
             expect(response.status).toBe(200);
@@ -34,6 +34,7 @@ describe('GET /package/{id}/rate endpoint', () => {
     it('GET /package/{id}/rate endpoint should return 200 status code and valid ratings', async () => {
         try {
             const response = await axios.get(`${APIURL}/package/${packageID}/rate`);
+            console.log(response.data);
             expect(response.data).toMatchObject<apiSchema.PackageRating>({
                 BusFactor: expect.any(Number),
                 Correctness: expect.any(Number),
