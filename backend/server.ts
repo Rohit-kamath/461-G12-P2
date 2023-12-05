@@ -5,7 +5,6 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import path from 'path';
 import createModuleLogger from '../src/logger';
-import { filter } from 'jszip';
 
 dotenv.config();
 
