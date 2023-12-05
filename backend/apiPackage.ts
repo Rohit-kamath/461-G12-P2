@@ -66,6 +66,10 @@ export function parseVersion(version: string) {
 export async function getPackages(req: Request, res: Response){
     try {
         const offset = req.query?.offset === undefined ? 0 : parseInt(req.query.offset as string);
+        if(offset > 5){
+            logger.info("getPackages: offset is greater than 5");
+            return res.sendStatus(413);
+        }
         res.setHeader('offset', offset);
         const packageQueries = req.body as apiSchema.PackageQuery[];
         const packageMetaDataArray: PackageMetaDataPopularity[] = [];
@@ -104,7 +108,7 @@ export async function getPackages(req: Request, res: Response){
               );
             packageMetaDataArray.push(...apiPackageMetaData);
         }
-        logger.info(`200 getPackages response: ${packageMetaDataArray}`);
+        logger.info(`200 getPackages response: ${JSON.stringify(packageMetaDataArray)}`);
         return res.status(200).json(packageMetaDataArray);
     } catch (error) {
         console.log(error);
@@ -131,7 +135,7 @@ export async function getPackagesByName(req: Request, res: Response) {
             logger.info(`Error in getPackagesByName: No package histories returned`);
             return res.sendStatus(404);
         }
-        logger.info(`200 getPackagesByName response: ${apiPackageHistories}`);
+        logger.info(`200 getPackagesByName response: ${JSON.stringify(apiPackageHistories)}`);
         return res.status(200).json(apiPackageHistories);
     } catch (error) {
         logger.info(`Error in getPackagesByName: ${error}`);
@@ -173,7 +177,7 @@ export async function getPackagesByRegEx(req: Request, res: Response) {
               return metaData;
             })
           );
-        logger.info(`200 getPackagesByRegEx response: ${apiPackageMetaData}`);
+        logger.info(`200 getPackagesByRegEx response: ${JSON.stringify(apiPackageMetaData)}`);
         return res.status(200).json(apiPackageMetaData);
     } catch (error) {
         logger.info(`Error in getPackagesByRegEx: ${error}`);
@@ -682,7 +686,7 @@ export async function uploadPackage(req: Request, res: Response) {
         await storeGithubMetrics(metadata.ID, metrics);
         logger.info(`Uploadeding package with file name: ${metadata.ID}`);
         await uploadToS3(metadata.ID, Buffer.from(encodedContent, 'base64'));
-        logger.info(`200 uploadPackage response: ${Package}`);
+        logger.info(`200 uploadPackage response: ${JSON.stringify(Package)}`);
         res.json(Package);
     } catch (error) {
         logger.error('Error in POST /package: ', error);
@@ -928,7 +932,7 @@ export async function getPackageDownload(req: Request, res: Response) {
             metadata: packageMetadata,
             data: apiResponsePackageData,
         };
-        logger.info(`200 getPackageDownload response: ${packageResponse}`);
+        logger.info(`200 getPackageDownload response: ${JSON.stringify(packageResponse)}`);
         return res.status(200).json(packageResponse);
     } catch (error) {
         logger.info(`Error in getPackageDownload: ${error}`)
@@ -1004,7 +1008,7 @@ export async function updatePackage(req: Request, res: Response) {
         }
         await uploadToS3(`${metadata.ID}.zip`, packageContent);
         if(calculateSizeCost && sizeCost !== null){
-            logger.info(`200 updatePackage response: ${sizeCost}`);
+            logger.info(`200 updatePackage response: ${JSON.stringify(sizeCost)}`);
             return res.status(200).json({sizeCost: sizeCost});
         }
         return res.sendStatus(200);
@@ -1071,7 +1075,7 @@ export async function getPackageRatings(req: Request, res: Response) {
             logger.info("error in getPackageRatings: Package not found or no ratings available")
             return res.sendStatus(404);
         }
-        logger.info(`200 getPackageRatings response: ${packageRating}`);
+        logger.info(`200 getPackageRatings response: ${JSON.stringify(packageRating)}`);
         return res.status(200).json(packageRating);
     } catch (error) {
         logger.info(`Error in getPackageRatings: ${error}`);
