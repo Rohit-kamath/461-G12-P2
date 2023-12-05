@@ -15,6 +15,18 @@ describe('reset', () => {
 });
 
 describe('POST /packages endpoint', () => {
+    it('POST /packages should return 200 even if no packages are found', async () => {
+        try {
+            const response = await axios.post(`${APIURL}/packages`, [{
+                "Version": "1.0.0",
+                "Name": "test"
+            }]);
+            expect(response.status).toBe(200);
+        } catch (error: any) {
+            console.log(error.response.status);
+            throw error;
+        }
+    });
     let packageName : apiSchema.PackageName;
     let packageVersion : string;
     it('POST /package endpoint to put something in registry. should return 200 status code and something for a valid github repo link', async () => {
@@ -33,7 +45,7 @@ describe('POST /packages endpoint', () => {
         }
     });
 
-    it('POST /packages endpoint. should return 200 status code and something for a valid package id', async () => {
+    it('POST /packages should return 200 status code and something for a valid package id', async () => {
         try {
             const response = await axios.post(`${APIURL}/packages`, [{
                 "Version": packageVersion,
@@ -47,7 +59,7 @@ describe('POST /packages endpoint', () => {
         }
     });
 
-    it('POST /packages endpoint. should return 200 status code but nothing in data for a valid package id and a large offset in the query', async () => {
+    it('POST /packages should return 200 status code but nothing in data for a valid package id and a large offset in the query', async () => {
         try {
             const response = await axios.post(`${APIURL}/packages?offset=100000`, [{
                 "Version": packageVersion,
@@ -62,7 +74,7 @@ describe('POST /packages endpoint', () => {
         }
     });
 
-    it('POST /packages endpoint. should return 200 status code but nothing in data for a valid package id and a small offset in the query', async () => {
+    it('POST /packages should return 200 status code but nothing in data for a valid package id and a small offset in the query', async () => {
         try {
             const response = await axios.post(`${APIURL}/packages?offset=0`, [{
                 "Version": packageVersion,
@@ -77,7 +89,7 @@ describe('POST /packages endpoint', () => {
         }
     });
 
-    it('POST /packages endpoint. should return 200 status code and something for a valid package id/set popularity flag', async () => {
+    it('POST /packages should return 200 status code and something for a valid package id/set popularity flag', async () => {
         try {
             const response = await axios.post(`${APIURL}/packages`, [{
                 "Version": packageVersion,

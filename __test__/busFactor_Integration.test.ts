@@ -1,8 +1,8 @@
-import { getContributors, calculateBusFactor } from '../src//controllers/busFactor';
+import { getContributors, calculateBusFactor, getBusFactor } from '../src//controllers/busFactor';
 
 describe('Bus Factor Calculations Integration Tests', () => {
-    const owner = 'facebook';
-    const repo = 'react';
+    const owner = 'expressjs';
+    const repo = 'express';
 
     test('Fetching contributors for a known repository', async () => {
         const contributors = await getContributors(owner, repo);
@@ -21,7 +21,8 @@ describe('Bus Factor Calculations Integration Tests', () => {
     test('Calculating bus factor for a known repository', async () => {
         const contributors = await getContributors(owner, repo);
         const busFactor = await calculateBusFactor(contributors);
-
+        const score = await getBusFactor(owner, repo);
+        console.log(score)
         expect(busFactor).toBeGreaterThanOrEqual(0);
         expect(busFactor).toBeLessThanOrEqual(1);
     });
