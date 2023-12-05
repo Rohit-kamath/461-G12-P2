@@ -35,7 +35,8 @@ app.get('/upload-page', (req, res) => {
 
 app.post('/package', upload.single('packageContent'), async (req, res) => {
     try {
-        logger.info(`POST /package request: ${JSON.stringify(req.body)}`);
+        const { Content, ...loggableBody } = req.body || {};
+        logger.info(`POST /package request: ${JSON.stringify(loggableBody)}`);
         await apiPackage.uploadPackage(req, res);
     } catch (error) {
         logger.info(`Error in post(/package) server.ts: ${error}`);
@@ -105,7 +106,8 @@ app.get('/package/:id/rate', async (req, res) => {
 
 app.put('/package/:id', async (req, res) => {
     try {
-        logger.info(`PUT /package/:id request: ${JSON.stringify(req.body)}`);
+        const { Content, ...loggableBody } = req.body || {};
+        logger.info(`PUT /package/:id request: ${JSON.stringify(loggableBody)}`);
         await apiPackage.updatePackage(req, res);
     } catch (error) {
         logger.info(`Error in put(/packages/:id) in server.ts: ${error}`);
