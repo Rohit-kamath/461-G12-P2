@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import path from 'path';
 import createModuleLogger from '../src/logger';
+import { filter } from 'jszip';
 
 dotenv.config();
 
@@ -35,8 +36,8 @@ app.get('/upload-page', (req, res) => {
 
 app.post('/package', upload.single('packageContent'), async (req, res) => {
     try {
-        const { Content, ...loggableBody } = req.body || {};
-        logger.info(`POST /package request: ${JSON.stringify(loggableBody)}`);
+        const filteredBody = Object.fromEntries(Object.entries(req.body?.data || {}).filter(([key]) => key !== 'Content'));
+        logger.info(`POST /package request: ${JSON.stringify(filteredBody)}`);
         await apiPackage.uploadPackage(req, res);
     } catch (error) {
         logger.info(`Error in post(/package) server.ts: ${error}`);
@@ -106,8 +107,8 @@ app.get('/package/:id/rate', async (req, res) => {
 
 app.put('/package/:id', async (req, res) => {
     try {
-        const { Content, ...loggableBody } = req.body || {};
-        logger.info(`PUT /package/:id request: ${JSON.stringify(loggableBody)}`);
+        const filteredBody = Object.fromEntries(Object.entries(req.body?.data || {}).filter(([key]) => key !== 'Content'));
+        logger.info(`PUT /package/:id request: ${JSON.stringify(filteredBody)}`);
         await apiPackage.updatePackage(req, res);
     } catch (error) {
         logger.info(`Error in put(/packages/:id) in server.ts: ${error}`);
