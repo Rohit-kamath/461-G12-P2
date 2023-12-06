@@ -931,7 +931,13 @@ export async function getPackageDownload(req: Request, res: Response) {
             metadata: packageMetadata,
             data: apiResponsePackageData,
         };
-        logger.info(`200 getPackageDownload response: ${JSON.stringify(packageResponse)}`);
+        const responsePackage = {
+            metadata: packageMetadata,
+            data: {
+                Content: base64Content.substring(0, 100) + '...'
+            }
+        };
+        logger.info(`200 getPackageDownload response: ${JSON.stringify(responsePackage)}`);
         return res.status(200).json(packageResponse);
     } catch (error) {
         logger.info(`Error in getPackageDownload: ${error}`)
@@ -1005,7 +1011,7 @@ export async function updatePackage(req: Request, res: Response) {
             logger.info(`Error in updatePackage: updatedData is null`);
             return res.sendStatus(500);
         }
-        await uploadToS3(`${metadata.ID}.zip`, packageContent);
+        await uploadToS3(metadata.ID, packageContent);
         if(calculateSizeCost && sizeCost !== null){
             logger.info(`200 updatePackage response: ${JSON.stringify(sizeCost)}`);
             return res.status(200).json({sizeCost: sizeCost});

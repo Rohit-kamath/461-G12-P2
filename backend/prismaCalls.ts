@@ -204,16 +204,9 @@ export async function updatePackageDetails(packageId: apiSchema.PackageID, packa
         // metadata has been validated in updatePackage
         const updatedData = await prisma.packageData.update({
             where: { id: packageId },
-            data: {
-                URL: packageData.URL ?? '',
-                JSProgram: packageData.JSProgram ?? '',
-            },
+            data: {URL: packageData.URL ?? ''}
         });
-
-        return {
-            URL: updatedData.URL,
-            JSProgram: updatedData.JSProgram,
-        };
+        return updatedData;
     } catch (error) {
         logger.info(`updatePackageDetails error: ${error}`);
         console.error(`Error in updatePackageDetails: ${error}`);
