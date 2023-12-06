@@ -59,18 +59,15 @@ describe('POST /packages endpoint', () => {
         }
     });
 
-    it('POST /packages should return 200 status code but nothing in data for a valid package id and a large offset in the query', async () => {
+    it('POST /packages should return 413 status code for a large offset in the query', async () => {
         try {
             const response = await axios.post(`${APIURL}/packages?offset=100000`, [{
                 "Version": packageVersion,
                 "Name": packageName
             }]);
-            expect(response.status).toBe(200);
-            expect(response.data).toStrictEqual([]);
+            throw new Error('Should not have gotten here');
         } catch (error: any) {
-            console.log(error.response.status);
-            console.log(error.response.data);
-            throw error;
+            expect(error.response.status).toBe(413);
         }
     });
 
