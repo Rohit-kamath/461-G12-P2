@@ -14,3 +14,5 @@ temp/
 logfile.log
 dist
 prismaliser/
+Frontend/package.json
+Frontend/package-lock.json
