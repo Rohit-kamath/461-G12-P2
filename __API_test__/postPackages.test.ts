@@ -61,7 +61,7 @@ describe('POST /packages endpoint', () => {
 
     it('POST /packages should return 413 status code for a large offset in the query', async () => {
         try {
-            const response = await axios.post(`${APIURL}/packages?offset=100000`, [{
+            await axios.post(`${APIURL}/packages?offset=100000`, [{
                 "Version": packageVersion,
                 "Name": packageName
             }]);
