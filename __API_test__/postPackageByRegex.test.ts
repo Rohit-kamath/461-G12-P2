@@ -1,7 +1,6 @@
 import axios from 'axios';
 import * as apiSchema from "../backend/apiSchema";
 import createModuleLogger from '../src/logger';
-import { log } from 'console';
 
 const APIURL = 'http://ece461-packageregistry-depenv.eba-bphpcw3d.us-east-2.elasticbeanstalk.com';
 const logger = createModuleLogger('postPackageByRegex.test.ts');
