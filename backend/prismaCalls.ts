@@ -353,6 +353,26 @@ export async function getS3Link(metadataId: string): Promise<string | null> {
     }
 }
 
+export async function checkPackageExistsID(packageID: string): Promise<boolean> {
+    logger.info(`checkPackageExists: Checking if package exists: ${packageID}`)
+    const count = await prisma.packageMetadata.count({
+        where: {
+            id: packageID
+        },
+    });
+    return count > 0;
+}
+
+export async function checkPackageNameExists(packageName: string): Promise<boolean> {
+    logger.info(`checkPackageExists: Checking if package exists: ${packageName}`)
+    const count = await prisma.packageMetadata.count({
+        where: {
+            name: packageName
+        },
+    });
+    return count > 0;
+}
+
 export async function deletePackage(packageId: string): Promise<void> {
     await prisma.$transaction(async (prisma) => {
         // Delete related entries in PackageHistoryEntry
