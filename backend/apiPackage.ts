@@ -676,7 +676,7 @@ export async function uploadPackage(req: Request, res: Response) {
                 Content: truncatedContent + '...'
             }
         };
-        logger.info(`API Response Package: ${JSON.stringify(logAPIPackage)}`);
+        logger.info(`200 API Response Package: ${JSON.stringify(logAPIPackage)}`);
         logger.info(`Database Package: ${JSON.stringify(logPackage)}`);
 
         const action = Action.CREATE;
@@ -686,7 +686,6 @@ export async function uploadPackage(req: Request, res: Response) {
         await storeGithubMetrics(metadata.ID, metrics);
         logger.info(`Uploadeding package with file name: ${metadata.ID}`);
         await uploadToS3(metadata.ID, Buffer.from(encodedContent, 'base64'));
-        logger.info(`200 uploadPackage response: ${JSON.stringify(Package)}`);
         res.json(Package);
     } catch (error) {
         logger.error('Error in POST /package: ', error);
