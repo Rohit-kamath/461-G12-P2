@@ -1089,3 +1089,58 @@ function isValidZip(buffer: Buffer): boolean {
     if (buffer.length < 4) return false; // Too small to be a ZIP
     return buffer[0] === 0x50 && buffer[1] === 0x4B;
 }
+
+export async function deletePackageByID(req: Request, res: Response) { 
+    try {
+        const packageID = req.params.id;
+
+        // Check for required fields
+        if (!packageID) {
+            logger.info(`Error in retrieveAndDeletePackage: Package ID or Authentication Token is undefined`);
+            return res.status(400).send("Package ID is missing or improperly formed.");
+        }
+
+
+        // Check the package
+        const packagecount = await prismaCalls.checkPackageExistsID(packageID)
+        if (!packagecount) {
+            logger.info(`Error in retrieveAndDeletePackage: Package not found`);
+            return res.status(404).send("Package does not exist.");
+        }
+
+        // Delete the package
+        await prismaCalls.deletePackage(packageID);
+        logger.info(`Package with ID ${packageID} has been deleted.`);
+        return res.status(200).send("Package is deleted.");
+    } catch (error) {
+        logger.info(`Error in retrieveAndDeletePackage: ${error}`);
+        return res.status(500).send("Internal Server Error.");
+    }
+}
+
+export async function deletePackageByName(req: Request, res: Response) {
+    try {
+        const packageName = req.params.name;
+
+        if (packageName === undefined) {
+            logger.info('Error in deletePackageByName: Name is undefined');
+            return res.status(400).send('Package name is required');
+        }
+
+        // Check if the package exists
+        const packageExists = await prismaCalls.checkPackageNameExists(packageName);
+        if (!packageExists) {
+            logger.info(`Package not found: ${packageName}`);
+            return res.status(404).send('Package does not exist');
+        }
+
+        // deletion
+        await prismaCalls.deletePackageVersions(packageName);
+        
+        logger.info(`Package deleted successfully: ${packageName}`);
+        return res.status(200).send(`Package '${packageName}' and its versions have been deleted`);
+    } catch (error) {
+        logger.error(`Error in deletePackageByName: ${error}`);
+        return res.status(500).send('Internal server error');
+    }
+}
