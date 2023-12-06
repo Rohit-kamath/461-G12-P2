@@ -1,6 +1,8 @@
 import axios from 'axios';
-
+import createModuleLogger from '../src/logger';
 const APIURL = 'http://ece461-packageregistry-depenv.eba-bphpcw3d.us-east-2.elasticbeanstalk.com';
+const logger = createModuleLogger('postPackage.test.ts');
+logger.info("Starting tests for postPackage.test.ts");
 describe('reset', () => {
     it('should return 200 status code to signifiy successful reset', async () => {
         try {
@@ -121,3 +123,4 @@ describe('reset', () => { // rerun reset test for clean deployment
         }
     });
 });
+logger.info("Finished tests for postPackage.test.ts");
