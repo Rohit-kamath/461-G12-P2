@@ -74,6 +74,26 @@ app.get('/package/byName/:name', async (req, res) => {
     }
 });
 
+app.delete('/package/byID/:id', async (req, res) => {
+    try {
+        logger.info(`DELETE /package/byID/:id request: ${JSON.stringify(req.body)}`);
+        await apiPackage.deletePackageByID(req, res);
+    } catch (error) {
+        logger.info(`Error in delete(/package/byID/:id) in server.ts: ${error}`);
+        res.sendStatus(500);
+    }
+});
+
+app.delete('/package/byName/:name', async (req, res) => {
+    try {
+        logger.info(`DELETE /package/byName/:name request: ${JSON.stringify(req.body)}`);
+        await apiPackage.deletePackageByName(req, res);
+    } catch (error) {
+        logger.info(`Error in delete(/package/byName/:name) in server.ts: ${error}`);
+        res.sendStatus(500);
+    }
+});
+
 app.post('/package/byRegEx', async (req, res) => {
     try {
         logger.info(`POST /package/byRegEx request: ${JSON.stringify(req.body)}`);
