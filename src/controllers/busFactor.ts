@@ -1,4 +1,4 @@
-import { getRequest } from '../utils/api.utils';
+import { getRequest, fullGetRequest } from '../utils/api.utils';
 import { response } from 'express';
 import createModuleLogger from '../logger';
 
@@ -52,10 +52,29 @@ export const calculateBusFactor = (contributors: Contributor[] | null): number =
     return Math.min(busFactor, 1);
 };
 
-//getBusFactor uses both previous functions and returns the score
+export const getNumberOfContrubiters = async (owner: string, repo: string): Promise<number> => {
+    try{
+        const response = await fullGetRequest(`/repos/${owner}/${repo}/contributors?per_page=1&anon=true`);
+        const link = response.headers.link;
+        if(link){
+            const linkArray = link.split(',');
+            const lastLink = linkArray[linkArray.length - 1];
+            const lastLinkArray = lastLink.split(';');
+            const lastLinkPage = lastLinkArray[0].split('&page=')[1].split('>')[0];
+            const numPages = parseInt(lastLinkPage);
+            return numPages;
+        }
+        return 0;
+    }catch(error: any){
+        logger.info(`Error in getNumberOfContributors: repo: ${repo}, owner: ${owner}, response: ${JSON.stringify(response, null, 2)}, error: ${error}`);
+        return 0;
+    }
+}
+
 export const getBusFactor = async (owner: string, repo: string): Promise<number> => {
     const contributors = await getContributors(owner, repo);
-    const contributorLengthScore = (Math.min((contributors?.length || 0), 100) / 100);
+    const numberOfContributors = await getNumberOfContrubiters(owner, repo);
+    const contributorLengthScore = (Math.min(numberOfContributors, 100) / 100);
     const busFactor = calculateBusFactor(contributors);
-    return ( (contributorLengthScore * 0.3) + (busFactor * 0.7));
+    return ( (contributorLengthScore * 0.5) + (busFactor * 0.5));
 };
