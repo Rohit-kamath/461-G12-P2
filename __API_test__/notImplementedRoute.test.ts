@@ -1,5 +1,7 @@
 import axios from 'axios';
-
+import createModuleLogger from '../src/logger';
+const logger = createModuleLogger('notImplementedRoute.test.ts');
+logger.info("Starting tests for notImplementedRoute.test.ts");
 describe('notImplementedRoute', () => {
     it('should return 501 error for unimplemented routes', async () => {
         try{
@@ -14,3 +16,4 @@ describe('notImplementedRoute', () => {
         }
     });
 });
+logger.info("Finished tests for notImplementedRoute.test.ts");
