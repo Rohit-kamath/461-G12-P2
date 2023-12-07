@@ -6,7 +6,7 @@ dotenv.config();
 
 const LOG_LEVEL = process.env.LOG_LEVEL || '1';
 const LOG_FILE = process.env.LOG_FILE || 'combined.log';
-const ENVIRONMENT = process.env.NODE_ENV || 'on_ec2';
+const ENVIRONMENT = process.env.ON_EC2 || 'false';
 const ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID;
 const SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY;
 const REGION = process.env.REGION_AWS || 'us-east-2';
@@ -42,11 +42,10 @@ const cloudWatchTransport = new WinstonCloudWatch({
 
 const createModuleLogger = (moduleName: string) => {
     // Use both local file transport and CloudWatch transport
-    const selectedTransports = [fileTransport, cloudWatchTransport];
-    if(ENVIRONMENT === 'development') {
-        selectedTransports.pop();
+    const selectedTransports : (transports.ConsoleTransportInstance | transports.FileTransportInstance | WinstonCloudWatch)[] = [fileTransport];
+    if (ENVIRONMENT === 'true') {
+        selectedTransports.push(cloudWatchTransport);
     }
-
     return createLogger({
         level: winstonLogLevel,
         format: format.combine(
