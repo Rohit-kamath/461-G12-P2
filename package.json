@@ -13,6 +13,7 @@
     "build:frontend": "cd Frontend && vite build && cd ..",
     "build:backend": "tsc",
     "build": "npm run build:frontend && npm run build:backend",
+    "vite": "cd Frontend && vite",
     "prisma:migrate": "prisma migrate dev --name init"
   },
   "keywords": [],
