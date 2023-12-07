@@ -14,14 +14,14 @@ export const calculateRampUp = async (owner: string, repo: string) => {
         const firstCommitTime = await RampUpAPI.fetchFirstCommitTime(owner, repo);
 
         const weights = {
-            Contributors: 0.3,
+            Contributors: 0.2,
             Stars: 0.2,
             Forks: 0.2,
-            FirstCommit: 0.3,
+            FirstCommit: 0.4,
         };
-        const maxContributors = 100; // hypothetical max value
-        const maxStars = 5000; // hypothetical max value
-        const maxForks = 1000; // hypothetical max value
+        const maxContributors = 15; // hypothetical max value
+        const maxStars = 250; // hypothetical max value
+        const maxForks = 125; // hypothetical max value
 
         const normalizedContributors = contributors.length / maxContributors;
         const normalizedStars = stars.length / maxStars;
@@ -33,6 +33,7 @@ export const calculateRampUp = async (owner: string, repo: string) => {
         const forksContribution = weights.Forks * normalizedForks;
 
         let rampUpScore = contributorsContribution + starsContribution + forksContribution;
+        logger.info(`Ramp up score prior to first commit time calculated: ${rampUpScore}`);
 
         // If there's data for the first commit time, calculate its contribution.
         if (firstCommitTime) {
@@ -42,6 +43,7 @@ export const calculateRampUp = async (owner: string, repo: string) => {
             const maxTimeDifference = 365 * 24 * 60 * 60 * 1000; // 1 year in milliseconds.
             const normalizedTimeDifference = 1 - Math.min(timeDifference / maxTimeDifference, 1); // Closer the commit, higher the score
             rampUpScore += weights.FirstCommit * normalizedTimeDifference;
+            logger.info(`First commit time calculated: ${normalizedTimeDifference}`)
         }
 
         // Clamp the ramp-up score to ensure it's between 0 and 1.

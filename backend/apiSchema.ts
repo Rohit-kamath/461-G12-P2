@@ -16,7 +16,6 @@ export type PackageMetadata = {
 export type PackageData = {
     S3Link?: string; // Description: Package contents (URL to S3 storing zip file)
     URL?: string; // Description: Package URL for public ingest
-    JSProgram?: string; // Description: A JavaScript program
 };
 
 export type ApiResponsePackageData = PackageData & {

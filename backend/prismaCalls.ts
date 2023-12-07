@@ -289,9 +289,9 @@ export async function getPackageRatingById(metadataId: string): Promise<apiSchem
 export async function storePackageDataInDatabase(metadataId: string, data: apiSchema.PackageData): Promise<prismaSchema.PackageData> {
     logger.info(`storePackageDataInDatabase: Storing package data in database`);
 
-    if (data.S3Link === undefined || data.URL === undefined || data.JSProgram === undefined) {
+    if (data.S3Link === undefined || data.URL === undefined) {
         logger.info(`Error in storePackageDataInDatabase: One or more required fields are undefined`);
-        throw new Error('Content, URL, and JSProgram are required fields and cannot be undefined.');
+        throw new Error('Content and URL are required fields and cannot be undefined.');
     }
 
     try {
@@ -300,7 +300,6 @@ export async function storePackageDataInDatabase(metadataId: string, data: apiSc
                 id: metadataId,
                 S3Link: data.S3Link,
                 URL: data.URL,
-                JSProgram: data.JSProgram
             },
         });
         return storedData;
