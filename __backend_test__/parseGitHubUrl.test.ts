@@ -72,5 +72,9 @@ describe('parseGitHubUrl', () => {
         expect(parseGitHubUrl(url)).toEqual({ owner: 'username', repo: '1234' });
     });
     
+    test('parses GitHub URL with same owner and repo name', () => {
+        const url = 'https://github.com/eslint/eslint';
+        expect(parseGitHubUrl(url)).toEqual({ owner: 'eslint', repo: 'eslint' });
+    });
     // Add more test cases if necessary
 });

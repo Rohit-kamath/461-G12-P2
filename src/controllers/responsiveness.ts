@@ -51,14 +51,22 @@ export class Responsiveness extends MetricParent {
     calculateMetric(): Promise<number> {
         return new Promise<number>((resolve, reject) => {
             this.fetchData()
-                .then(() => this.findMedian(this.score_list))
-                .then((median) => {
-                    if (median <= 1) {
-                        resolve(1);
-                    } else if (median > 10) {
+                .then(() => {
+                    if (this.score_list.length === 0) {
                         resolve(0);
                     } else {
-                        resolve(1 - (median - 1) / 9);
+                        return this.findMedian(this.score_list);
+                    }
+                })
+                .then((median) => {
+                    if (median !== undefined) {
+                        if (median <= 1) {
+                            resolve(1);
+                        } else if (median > 10) {
+                            resolve(0);
+                        } else {
+                            resolve(1 - (median - 1) / 9);
+                        }
                     }
                 })
                 .catch((error) => {
