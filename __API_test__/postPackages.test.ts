@@ -35,8 +35,7 @@ describe('POST /packages endpoint', () => {
     it('POST /package endpoint to put something in registry. should return 200 status code and something for a valid github repo link', async () => {
         try {
             const response= await axios.post(`${APIURL}/package`, {
-                "URL": "https://github.com/feross/safe-buffer",
-                "JSProgram": "if (process.argv.length === 7) {\nconsole.log('Success')\nprocess.exit(0)\n} else {\nconsole.log('Failed')\nprocess.exit(1)\n}\n"
+                "URL": "https://github.com/feross/safe-buffer"
             });
             expect(response.status).toBe(200);
             const packageResponse : apiSchema.Package = response.data;

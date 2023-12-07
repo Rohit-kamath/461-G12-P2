@@ -216,7 +216,7 @@ export async function extractFileFromZip(zipBuffer: Buffer, filename: string): P
 }
 
 export async function getGithubUrlFromZip(zipBuffer: Buffer): Promise<string> {
-    logger.info('getGithubUrlFromZip: Extracting GitHub URL from zip')
+    logger.info('getGithubUrlFromZip: Extracting GitHub URL from zip');
     try {
         if (!zipBuffer || zipBuffer.length === 0) {
             logger.info('getGithubUrlFromZip: Empty or invalid zip buffer provided');
@@ -225,7 +225,7 @@ export async function getGithubUrlFromZip(zipBuffer: Buffer): Promise<string> {
 
         const packageJsonString = await extractFileFromZip(zipBuffer, 'package.json');
         if (!packageJsonString) {
-            logger.info('getGithubUrlFromZip: package.json not found or empty in the zip file')
+            logger.info('getGithubUrlFromZip: package.json not found or empty in the zip file');
             throw new Error('package.json not found or empty in the zip file');
         }
 
@@ -236,18 +236,19 @@ export async function getGithubUrlFromZip(zipBuffer: Buffer): Promise<string> {
             packageJson = JSON.parse(packageJsonString);
         } catch (error) {
             if (error instanceof Error) {
-                logger.info(`getGithubUrlFromZip: Failed to parse package.json: ${error.message}`)
+                logger.info(`getGitHubUrlFromZip: Failed to parse package.json: ${error.message}`);
                 throw new Error(`Failed to parse package.json: ${error.message}`);
             } else {
-                logger.info(`getGithubUrlFromZip: Failed to parse package.json: Unknown error occurred`)
-                throw new Error('Failed to parse package.json: Unknown error occurred');
+                logger.info(`getGitHubUrlFromZip: Unknown error occurred while parsing package.json`);
+                throw new Error('Unknown error occurred while parsing package.json');
             }
         }
 
-        let url = packageJson.repository?.url || packageJson.repository;
+        let url = packageJson.repository?.url || packageJson.repository || packageJson.homepage;
+        logger.info(`getGitHubUrlFromZip: GitHub URL extracted from package.json: ${url}`)
 
         if (!url || typeof url !== 'string') {
-            logger.info(`getGithubUrlFromZip: GitHub repository URL not found in package.json`)
+            logger.info(`getGithubUrlFromZip: GitHub repository URL not found in package.json`);
             throw new Error('GitHub repository URL not found in package.json');
         }
 
@@ -259,16 +260,26 @@ export async function getGithubUrlFromZip(zipBuffer: Buffer): Promise<string> {
             url = `https://github.com/${url.substring(15)}`;
         }
 
+        if (url.startsWith('git://github.com/')) {
+            url = `https://github.com/${url.substring(17)}`;
+        }
+
         url = url.replace(/\.git$/, '');
 
-        logger.info(`GitHub URL extracted: ${url}`);
+        logger.info(`GitHub URL extracted from zip: ${url}`);
         return url;
     } catch (error) {
-        logger.info(`getGitHubUrlFromZip: An error occurred while extracting the GitHub URL: ${error}`);
-        logger.info(`An error occurred while extracting the GitHub URL: ${error}`);
-        throw error;
+        if (error instanceof Error) {
+            logger.info(`getGitHubUrlFromZip: Error extracting GitHub URL: ${error.message}`);
+            throw new Error(`Error extracting GitHub URL: ${error.message}`);
+        } else {
+            logger.info(`getGitHubUrlFromZip: Unknown error occurred while extracting GitHub URL`);
+            throw new Error('Unknown error occurred while extracting GitHub URL');
+        }
     }
 }
+
+
 
 export async function extractMetadataFromZip(filebuffer: Buffer): Promise<apiSchema.PackageMetadata> {
     logger.info('extractMetadataFromZip: Extracting metadata from zip');
@@ -403,12 +414,10 @@ export function isPackageIngestible(metrics: apiSchema.PackageRating): boolean {
     logger.info('isPackageIngestible: Checking if package is ingestible');
     return (
         metrics.BusFactor >= 0.0 &&
-        // metrics.Correctness >= 0.5 && (until correctness is fixed)
+        metrics.Correctness >= 0.0 &&
         metrics.RampUp >= 0.0 &&
         metrics.ResponsiveMaintainer >= 0.0 &&
         metrics.LicenseScore >= 0.0 &&
-        // metrics.GoodPinningPractice >= 0.5 && spec says to only include phase 1 metrics (I think)
-        // metrics.PullRequest >= 0.5
         metrics.NetScore >= 0.0
     );
 }
@@ -457,7 +466,7 @@ export async function getGitHubUrlFromNpmUrl(npmUrl: string): Promise<string | n
             return null;
         }
 
-        logger.info(`GitHub URL extracted: ${repoUrl}`);
+        logger.info(`GitHub URL extracted from NPM: ${repoUrl}`);
         return repoUrl;
     } catch (error) {
         logger.info(`Error in getGitHubUrlFromNpmUrl: ${error}`);
@@ -529,7 +538,6 @@ export async function uploadPackage(req: Request, res: Response) {
         let metadata: apiSchema.PackageMetadata;
         let githubInfo: { owner: string, repo: string } | null;
         let encodedContent: string;
-        let jsProgram: string | null = null;
         let sizeCost = null;
         let url: string | null = null;
 
@@ -568,13 +576,12 @@ export async function uploadPackage(req: Request, res: Response) {
         }
         else if (req.body.URL) {
             logger.info("URL upload detected.");
-            jsProgram = req.body.JSProgram || null;
             url = await linkCheck(req.body.URL);
             if (!url) {
                 logger.info("400 Invalid or unsupported URL provided.");
                 return res.sendStatus(400);
             }
-            logger.info(`GitHub URL extracted: ${url}`)
+            logger.info(`GitHub URL extracted after linkCheck: ${url}`)
             const zipBuffer = await downloadGitHubRepoZip(url);
             logger.info("Checking and calling if debloating is required.")
             const debloatedBuffer = shouldDebloat ? await debloatPackage(zipBuffer) : zipBuffer;
@@ -586,7 +593,6 @@ export async function uploadPackage(req: Request, res: Response) {
         }
         else if (req.body.Content) {
             logger.info("Base64 ZIP upload detected.");
-            jsProgram = req.body.JSProgram || null;
             logger.info("Decoding Base64 string.");
             const decodedBuffer = Buffer.from(req.body.Content, 'base64');
             logger.info("Checking and calling if debloating is required.");
@@ -607,10 +613,6 @@ export async function uploadPackage(req: Request, res: Response) {
             return res.sendStatus(400);
         }
 
-        if (jsProgram === null) {
-            jsProgram = "if (process.argv.length === 7) {\nconsole.log('Success')\nprocess.exit(0)\n} else {\nconsole.log('Failed')\nprocess.exit(1)\n}\n";
-        }
-
         const awsRegion = process.env.REGION_AWS;
         if (!awsRegion) {
             logger.info("500 AWS region not configured.");
@@ -626,8 +628,7 @@ export async function uploadPackage(req: Request, res: Response) {
 
         const PackageData: apiSchema.PackageData = {
             S3Link: s3link,
-            URL: url,
-            JSProgram: jsProgram
+            URL: url
         };
 
         const apiResponsePackageData: apiSchema.ApiResponsePackageData = {
