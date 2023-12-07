@@ -116,7 +116,7 @@ export async function createPackageHistoryEntry(metadataId: string, action: Acti
     }
 }
 
-export async function checkPackageExists(packageName: string, packageVersion: string, packageID?: string): Promise<boolean> {
+export async function checkPackageExists(packageName?: string, packageVersion?: string, packageID?: string): Promise<boolean> {
     logger.info(`checkPackageExists: Checking if package exists: ${packageName}@${packageVersion}`)
     const count = await prisma.packageMetadata.count({
         where: {
