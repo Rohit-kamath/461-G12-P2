@@ -1098,55 +1098,50 @@ function isValidZip(buffer: Buffer): boolean {
 
 export async function deletePackageByID(req: Request, res: Response) { 
     try {
-        const packageID = req.params.id;
+        const packageID = req.params?.id;
 
         // Check for required fields
         if (!packageID) {
             logger.info(`Error in retrieveAndDeletePackage: Package ID or Authentication Token is undefined`);
-            return res.status(400).send("Package ID is missing or improperly formed.");
+            return res.sendStatus(400);
         }
-
-
         // Check the package
-        const packagecount = await prismaCalls.checkPackageExistsID(packageID)
+        const packagecount = await prismaCalls.checkPackageExists(undefined, undefined, packageID)
         if (!packagecount) {
             logger.info(`Error in retrieveAndDeletePackage: Package not found`);
-            return res.status(404).send("Package does not exist.");
+            return res.sendStatus(404);
         }
-
         // Delete the package
         await prismaCalls.deletePackage(packageID);
         logger.info(`Package with ID ${packageID} has been deleted.`);
-        return res.status(200).send("Package is deleted.");
+        return res.status(200).send("Package deleted successfully");
     } catch (error) {
         logger.info(`Error in retrieveAndDeletePackage: ${error}`);
-        return res.status(500).send("Internal Server Error.");
+        return res.sendStatus(500);
     }
 }
 
 export async function deletePackageByName(req: Request, res: Response) {
     try {
-        const packageName = req.params.name;
+        const packageName = req.params?.name;
 
         if (packageName === undefined) {
             logger.info('Error in deletePackageByName: Name is undefined');
-            return res.status(400).send('Package name is required');
+            return res.sendStatus(400);
         }
-
         // Check if the package exists
-        const packageExists = await prismaCalls.checkPackageNameExists(packageName);
+        const packageExists = await prismaCalls.checkPackageExists(packageName, undefined, undefined);
         if (!packageExists) {
             logger.info(`Package not found: ${packageName}`);
-            return res.status(404).send('Package does not exist');
+            return res.sendStatus(404);
         }
-
         // deletion
         await prismaCalls.deletePackageVersions(packageName);
         
         logger.info(`Package deleted successfully: ${packageName}`);
-        return res.status(200).send(`Package '${packageName}' and its versions have been deleted`);
+        return res.status(200).send("Package deleted successfully");
     } catch (error) {
         logger.error(`Error in deletePackageByName: ${error}`);
-        return res.status(500).send('Internal server error');
+        return res.sendStatus(500);
     }
 }
