@@ -29,11 +29,10 @@ function App() {
     setPackageDirectory(`/${packageName}/${packageVersion}`);
   };
     // Package Reset
-  const resetPackageRegistry = () => {
+  const resetPackageRegistry = async() => {
     const confirmReset = window.confirm('Are you sure you want to reset the package registry?');
     if (confirmReset) {
-      // reset logic
-      // maybe this??? await axios.post('/reset-package-registry');
+      const response = await axios.delete('/reset');
       console.log('Package registry reset successfully.');
     }
   };
@@ -45,34 +44,53 @@ function App() {
 
   const uploadZipFile = async (file: File) => {
     const formData = new FormData();
-    formData.append('packageContent', file);
-
-    try {
-      setUploadStatus(`Uploading ${file.name}...`);
-
-      const response = await axios.post('/package', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      setUploadStatus(`Upload successful for ${file.name}: ${response.data}`);
-    } catch (error: any) {
-      setUploadStatus(`Error uploading ${file.name}: ${error.message}`);
-    }
+  
+    // Convert zip file to base64 encoding
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = async () => {
+      const base64Content = reader.result?.toString().split(',')[1];
+      if (base64Content) {
+        formData.append('packageContent', base64Content);
+  
+        try {
+          setUploadStatus(`Uploading ${file.name}...`);
+  
+          const response = await axios.post('/packages', formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          });
+  
+          setUploadStatus(`Upload successful for ${file.name}: ${response.data}`);
+        } catch (error: any) {
+          setUploadStatus(`Error uploading ${file.name}: ${error.message}`);
+        }
+      }
+    };
+  
+    reader.onerror = () => {
+      setUploadStatus(`Error reading ${file.name}`);
+    };
   };
-
-  const uploadZipFiles = () => {
+  
+  const uploadZipFiles = async () => {
     if (!selectedFiles || selectedFiles.length === 0) {
       setUploadStatus('No files selected');
       return;
     }
-
-    // Iterate over each file and upload individually
-    for (let i = 0; i < selectedFiles.length; i++) {
-      uploadZipFile(selectedFiles[i]);
+  
+    try {
+      for (const file of selectedFiles) {
+        await uploadZipFile(file);
+      }
+      setUploadStatus('All files uploaded successfully');
+    } catch (error) {
+      console.error('Error uploading files:', error);
     }
   };
+  
+  
 
   const handleSearchTermChange = (e: ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
@@ -80,7 +98,7 @@ function App() {
 
   const searchPackages = async () => {
     try {
-      const response = await axios.get(`http://localhost:5000/search?term=${searchTerm}`);
+      const response = await axios.get(`/package/byName/:${searchTerm}`);
       setSearchResults(response.data);
       setSelectedPackage(null); // Reset selected package when a new search is performed
     } catch (error: any) {
@@ -95,7 +113,7 @@ function App() {
   const downloadPackage = async () => {
     if (selectedPackage) {
       try {
-        const response = await axios.get(`http://localhost:5000/download?package=${selectedPackage}`);
+        const response = await axios.get(`/package/:${selectedPackage}`);
       } catch (error: any) {
         console.error(`Error downloading package: ${error.message}`);
       }
