@@ -76,7 +76,7 @@ app.get('/package/byName/:name', async (req, res) => {
 
 app.delete('/package/byID/:id', async (req, res) => {
     try {
-        logger.info(`DELETE /package/byID/:id request: ${req.body}`);
+        logger.info(`DELETE /package/byID/:id request: ${JSON.stringify(req.body)}`);
         await apiPackage.deletePackageByID(req, res);
     } catch (error) {
         logger.info(`Error in delete(/package/byID/:id) in server.ts: ${error}`);
@@ -84,9 +84,9 @@ app.delete('/package/byID/:id', async (req, res) => {
     }
 });
 
-app.delete('package/byName/:name', async (req, res) => {
+app.delete('/package/byName/:name', async (req, res) => {
     try {
-        logger.info(`DELETE /package/byName/:name request: ${req.body}`);
+        logger.info(`DELETE /package/byName/:name request: ${JSON.stringify(req.body)}`);
         await apiPackage.deletePackageByName(req, res);
     } catch (error) {
         logger.info(`Error in delete(/package/byName/:name) in server.ts: ${error}`);
