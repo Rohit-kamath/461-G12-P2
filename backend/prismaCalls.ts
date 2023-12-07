@@ -116,7 +116,7 @@ export async function createPackageHistoryEntry(metadataId: string, action: Acti
     }
 }
 
-export async function checkPackageExists(packageName: string, packageVersion: string, packageID?: string): Promise<boolean> {
+export async function checkPackageExists(packageName?: string, packageVersion?: string, packageID?: string): Promise<boolean> {
     logger.info(`checkPackageExists: Checking if package exists: ${packageName}@${packageVersion}`)
     const count = await prisma.packageMetadata.count({
         where: {
@@ -341,6 +341,81 @@ export async function getS3Link(metadataId: string): Promise<string | null> {
         return packageData.S3Link;
     } catch (error) {
         logger.error(`Error in getS3Link: ${error}`);
+        throw error;
+    }
+}
+
+
+export async function deletePackage(packageId: string): Promise<void> {
+    await prisma.$transaction(async (prisma) => {
+        // Delete related entries in PackageHistoryEntry
+        await prisma.packageHistoryEntry.deleteMany({
+            where: {
+                metadata: {
+                    id: packageId,
+                },
+            },
+        });
+        // Delete the related PackageRating entry
+        await prisma.packageRating.deleteMany({
+            where: {
+                metadata: {
+                    id: packageId,
+                },
+            },
+        });
+        // Delete the related PackageMetadata entry
+        await prisma.packageMetadata.deleteMany({
+            where: {
+                id: packageId,
+            },
+        });
+        // Delete the related PackageData entry
+        await prisma.packageData.deleteMany({
+            where: {
+                id: packageId,
+            },
+        });
+        //delete the package itself
+        await prisma.package.delete({
+            where: {
+                id: packageId,
+            },
+        });
+    });
+}
+
+export async function deletePackageVersions(packageName: string): Promise<void> {
+    try {
+        // Begin a transaction
+        await prisma.$transaction(async (prisma) => {
+            // Find all metadata entries for the given package name
+            const metadataEntries = await prisma.packageMetadata.findMany({
+                where: { name: packageName },
+                select: { id: true }
+            });
+
+            if (metadataEntries.length === 0) {
+                logger.info(`No package found with name: ${packageName}`);
+                return;
+            }
+
+            // Delete all related Package entries
+            for (const metadata of metadataEntries) {
+                await prisma.package.deleteMany({
+                    where: { metadataId: metadata.id }
+                });
+            }
+
+            // Delete PackageMetadata entries
+            await prisma.packageMetadata.deleteMany({
+                where: { name: packageName }
+            });
+
+            logger.info(`Successfully deleted all versions of package: ${packageName}`);
+        });
+    } catch (error) {
+        logger.error(`Error while deleting packages by name ${packageName}`);
         throw error;
     }
 }
