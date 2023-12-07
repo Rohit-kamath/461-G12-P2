@@ -1,4 +1,5 @@
 import { createLogger, format, transports } from 'winston';
+import WinstonCloudWatch from 'winston-cloudwatch';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -21,10 +22,21 @@ switch (LOG_LEVEL) {
         winstonLogLevel = 'silent';
 }
 
+// Local File Transport for logging to a file
+const fileTransport = new transports.File({ filename: LOG_FILE, level: winstonLogLevel });
+
+// CloudWatch Transport
+const cloudWatchTransport = new WinstonCloudWatch({
+    logGroupName: 'MyApp/Production',
+    logStreamName: `instance-${process.pid}`,
+    awsRegion: process.env.REGION_AWS,
+    jsonMessage: true,
+    level: winstonLogLevel,
+});
+
 const createModuleLogger = (moduleName: string) => {
-    // Determine the appropriate transport based on the environment.
-    const selectedTransports = [];
-    selectedTransports.push(new transports.File({ filename: LOG_FILE }));
+    // Use both local file transport and CloudWatch transport
+    const selectedTransports = [fileTransport, cloudWatchTransport];
 
     return createLogger({
         level: winstonLogLevel,
