@@ -1114,7 +1114,7 @@ export async function deletePackageByID(req: Request, res: Response) {
         // Delete the package
         await prismaCalls.deletePackage(packageID);
         logger.info(`Package with ID ${packageID} has been deleted.`);
-        return res.status(200).send("Package deleted successfully");
+        return res.sendStatus(200);
     } catch (error) {
         logger.info(`Error in retrieveAndDeletePackage: ${error}`);
         return res.sendStatus(500);
@@ -1139,7 +1139,7 @@ export async function deletePackageByName(req: Request, res: Response) {
         await prismaCalls.deletePackageVersions(packageName);
         
         logger.info(`Package deleted successfully: ${packageName}`);
-        return res.status(200).send("Package deleted successfully");
+        return res.sendStatus(200);
     } catch (error) {
         logger.error(`Error in deletePackageByName: ${error}`);
         return res.sendStatus(500);
