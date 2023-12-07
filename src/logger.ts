@@ -6,6 +6,7 @@ dotenv.config();
 
 const LOG_LEVEL = process.env.LOG_LEVEL || '1';
 const LOG_FILE = process.env.LOG_FILE || 'combined.log';
+const ENVIRONMENT = process.env.NODE_ENV || 'on_ec2';
 
 let winstonLogLevel: 'silent' | 'info' | 'debug';
 switch (LOG_LEVEL) {
@@ -37,6 +38,9 @@ const cloudWatchTransport = new WinstonCloudWatch({
 const createModuleLogger = (moduleName: string) => {
     // Use both local file transport and CloudWatch transport
     const selectedTransports = [fileTransport, cloudWatchTransport];
+    if(ENVIRONMENT === 'development') {
+        selectedTransports.pop();
+    }
 
     return createLogger({
         level: winstonLogLevel,
