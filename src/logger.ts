@@ -29,7 +29,7 @@ const fileTransport = new transports.File({ filename: LOG_FILE, level: winstonLo
 const cloudWatchTransport = new WinstonCloudWatch({
     logGroupName: 'MyApp/Production',
     logStreamName: `instance-${process.pid}`,
-    awsRegion: process.env.REGION_AWS,
+    awsRegion: process.env.REGION_AWS || 'us-east-2',
     jsonMessage: true,
     level: winstonLogLevel,
 });
