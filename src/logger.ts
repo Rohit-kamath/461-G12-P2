@@ -7,8 +7,8 @@ dotenv.config();
 const LOG_LEVEL = process.env.LOG_LEVEL || '1';
 const LOG_FILE = process.env.LOG_FILE || 'combined.log';
 const ENVIRONMENT = process.env.ON_EC2 || 'false';
-const ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID;
-const SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY;
+const ACCESS_KEY_ID = process.env.ACCESS_KEY_ID_AWS;
+const SECRET_ACCESS_KEY = process.env.SECRET_ACCESS_KEY_AWS;
 const REGION = process.env.REGION_AWS || 'us-east-2';
 
 let winstonLogLevel: 'silent' | 'info' | 'debug';
