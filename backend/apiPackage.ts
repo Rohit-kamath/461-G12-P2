@@ -65,7 +65,7 @@ export function parseVersion(version: string) {
 
 export async function getPackages(req: Request, res: Response){
     try {
-        const offset = req.query?.offset === undefined ? 0 : parseInt(req.query.offset as string);
+        const offset = !req.query?.offset ? 0 : parseInt(req.query.offset as string);
         if(offset > 5){
             logger.info("getPackages: offset is greater than 5");
             return res.sendStatus(413);
@@ -74,12 +74,12 @@ export async function getPackages(req: Request, res: Response){
         const packageQueries = req.body as apiSchema.PackageQuery[];
         const packageMetaDataArray: PackageMetaDataPopularity[] = [];
         for (const packageQuery of packageQueries) {
-            if (packageQuery.Name === undefined) {
+            if (!packageQuery.Name) {
                 console.log("packaageQuery.Name is undefined");
                 logger.info("getPackages: packaageQuery.Name is undefined");
                 return res.sendStatus(400);
             }
-            if (packageQuery.Version === undefined) {
+            if (!packageQuery.Version) {
                 console.log("packaageQuery.Version is undefined");
                 logger.info("getPackages: packaageQuery.Version is undefined");
                 return res.sendStatus(400);
@@ -87,7 +87,7 @@ export async function getPackages(req: Request, res: Response){
             const queryName = packageQuery.Name as string;
             const { min: minVersion, max: maxVersion, minInclusive: minInclusive, maxInclusive: maxInclusive } = parseVersion(packageQuery.Version as string);
             const dbPackageMetaData = await prismaCalls.getMetaDataByQuery(queryName, minVersion, maxVersion, minInclusive, maxInclusive, offset);
-            if (dbPackageMetaData === null) {
+            if (!dbPackageMetaData) {
                 logger.info(`Error in getPackageMetaData: packageMetaData is null`);
                 return res.sendStatus(500);
             }
@@ -100,7 +100,7 @@ export async function getPackages(req: Request, res: Response){
                         Version: dbPackageMetaData.version,
                         ID: dbPackageMetaData.id,
                     };
-                    if ( (packageQuery.Popularity !== undefined) && (packageQuery.Popularity == true) ) {
+                    if (packageQuery.Popularity) {
                         metaData.DownloadCount = downloadCount;
                     }
                     return metaData;
@@ -119,14 +119,14 @@ export async function getPackages(req: Request, res: Response){
 
 export async function getPackagesByName(req: Request, res: Response) {
     try {
-        if (req.params?.name === undefined) {
+        if (!req.params?.name) {
             logger.info(`Error in getPackagesByName: Name is undefined`);
             return res.sendStatus(400);
         }
         const queryName = req.params.name;
         const apiPackageHistories = await prismaCalls.getPackageHistories(queryName);
 
-        if (apiPackageHistories === null) {
+        if (!apiPackageHistories) {
             logger.info(`Error in getPackagesByName: apiPackageHistories is null`);
             return res.sendStatus(500);
         }
@@ -146,13 +146,13 @@ export async function getPackagesByName(req: Request, res: Response) {
 export async function getPackagesByRegEx(req: Request, res: Response) {
     try {
         const popularity = req.body?.debloat === 'true'
-        if (req.body?.RegEx === undefined) {
+        if (!req.body?.RegEx) {
             logger.info(`Error in getPackagesByRegEx: RegEx is undefined`);
             return res.sendStatus(400);
         }
         const regEx: string = req.body.RegEx;
         const dbPackageMetaData = await prismaCalls.getMetaDataByRegEx(regEx);
-        if (dbPackageMetaData === null) {
+        if (!dbPackageMetaData) {
             logger.info(`Error in getPackagesByRegEx: dbPackageMetaData is null`);
             return res.sendStatus(500);
         }
@@ -895,12 +895,12 @@ export async function getPackageDownload(req: Request, res: Response) {
     try {
         const packageID = req.params.id;
 
-        if (packageID === undefined) {
+        if (!packageID) {
             logger.info(`Error in getPackageDownload: Package name is undefined`);
             return res.sendStatus(400);
         }
         const dbPackage = await prismaCalls.getPackage(packageID as string);
-        if (dbPackage === null) {
+        if (!dbPackage) {
             logger.info(`Error in getPackageDownload: Package not found`)
             return res.sendStatus(404);
         }
@@ -953,12 +953,12 @@ export async function updatePackage(req: Request, res: Response) {
         logger.info(`shouldDebloat: ${shouldDebloat}`);
         logger.info(`calculateSizeCost: ${calculateSizeCost}`);
         const metadata = req.body?.metadata;
-        if(metadata === undefined){
+        if(!metadata){
             logger.info(`Error in updatePackage: metaData is undefined`);
             return res.sendStatus(400);
         }
         const data = req.body?.data;
-        if(data === undefined){
+        if(!data){
             logger.info(`Error in updatePackage: datas is undefined`);
             return res.sendStatus(400);
         }
@@ -987,7 +987,7 @@ export async function updatePackage(req: Request, res: Response) {
             return res.sendStatus(400);
         }
         const S3Link = await prismaCalls.getS3Link(packageId);
-        if(S3Link === null){
+        if(!S3Link){
             logger.info(`Error in updatePackage: S3Link is null`);
             return res.sendStatus(500);
         }
@@ -1008,7 +1008,7 @@ export async function updatePackage(req: Request, res: Response) {
             sizeCost = await calculateTotalSizeCost(Buffer.from(S3Link, 'base64'));
         }
         const updatedData = await prismaCalls.updatePackageDetails(packageId, {...data});
-        if(updatedData === null){
+        if(!updatedData){
             logger.info(`Error in updatePackage: updatedData is null`);
             return res.sendStatus(500);
         }
