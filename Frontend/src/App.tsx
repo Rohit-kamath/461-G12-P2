@@ -32,7 +32,7 @@ function App() {
   const resetPackageRegistry = async() => {
     const confirmReset = window.confirm('Are you sure you want to reset the package registry?');
     if (confirmReset) {
-      const response = await axios.delete('/reset');
+      await axios.delete('/reset');
       console.log('Package registry reset successfully.');
     }
   };
@@ -56,7 +56,7 @@ function App() {
         try {
           setUploadStatus(`Uploading ${file.name}...`);
   
-          const response = await axios.post('/packages', formData, {
+          const response = await axios.post('/package', formData, {
             headers: {
               'Content-Type': 'multipart/form-data',
             },
@@ -113,7 +113,7 @@ function App() {
   const downloadPackage = async () => {
     if (selectedPackage) {
       try {
-        const response = await axios.get(`/package/:${selectedPackage}`);
+        await axios.get(`/package/${selectedPackage}`);
       } catch (error: any) {
         console.error(`Error downloading package: ${error.message}`);
       }
