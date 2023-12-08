@@ -7,8 +7,8 @@ dotenv.config();
 const LOG_LEVEL = process.env.LOG_LEVEL || '1';
 const LOG_FILE = process.env.LOG_FILE || 'combined.log';
 const ENVIRONMENT = process.env.ON_EC2 || 'false';
-// const ACCESS_KEY_ID = process.env.ACCESS_KEY_ID_AWS;
-// const SECRET_ACCESS_KEY = process.env.SECRET_ACCESS_KEY_AWS;
+const ACCESS_KEY_ID = process.env.ACCESS_KEY_ID_AWS || "ERROR";
+const SECRET_ACCESS_KEY = process.env.SECRET_ACCESS_KEY_AWS || "ERROR";
 const REGION = process.env.REGION_AWS || 'us-east-2';
 
 let winstonLogLevel: 'silent' | 'info' | 'debug';
@@ -33,11 +33,15 @@ const fileTransport = new transports.File({ filename: LOG_FILE, level: winstonLo
 const cloudWatchTransport = new WinstonCloudWatch({
     logGroupName: 'MyApp/Production',
     logStreamName: `instance-${process.pid}`,
-    awsRegion: REGION || 'us-east-2',
     jsonMessage: true,
     level: winstonLogLevel,
-    // awsAccessKeyId: ACCESS_KEY_ID,
-    // awsSecretKey: SECRET_ACCESS_KEY,
+    awsRegion: REGION,
+    awsOptions: {
+        credentials: {
+            accessKeyId: ACCESS_KEY_ID,
+            secretAccessKey: SECRET_ACCESS_KEY,
+        },
+    },
 });
 
 const createModuleLogger = (moduleName: string) => {
