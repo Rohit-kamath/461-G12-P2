@@ -53,7 +53,8 @@ describe('upload', () => {
     it('should return 409 status code to indicate package already exists', async () => {
         try {
             const response = await axios.post(`${APIURL}/package`, {
-                "URL": "https://github.com/feross/safe-buffer"
+                "Content": null,
+                "URL": "https://github.com/feross/safe-buffer",
             });
             console.log(response.status);
             throw new Error('Request did not fail as expected');
