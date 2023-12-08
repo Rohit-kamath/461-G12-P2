@@ -51,7 +51,7 @@ function App() {
     reader.onload = async () => {
       const base64Content = reader.result?.toString().split(',')[1];
       if (base64Content) {
-        formData.append('packageContent', base64Content);
+        formData.append('Content', base64Content);
   
         try {
           setUploadStatus(`Uploading ${file.name}...`);
