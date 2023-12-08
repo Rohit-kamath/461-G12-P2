@@ -113,7 +113,7 @@ function App() {
   const downloadPackage = async () => {
     if (selectedPackage) {
       try {
-        await axios.get(`/package/:${selectedPackage}`);
+        await axios.get(`/package/${selectedPackage}`);
       } catch (error: any) {
         console.error(`Error downloading package: ${error.message}`);
       }
