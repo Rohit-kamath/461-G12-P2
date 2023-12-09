@@ -1595,19 +1595,8 @@ export async function executeUpdateTransaction(req: Request, res: Response){
         }
         if(rollbackNeeded){
             logger.info('Error processing transaction packages, rolling back');
-            for(const packageId of successfulPackages){
-                try{
-                    logger.info(`Deleting package as part of the rollback process: ${packageId}`)
-                    const s3BucketName = process.env.S3_BUCKET_NAME;
-                    if(s3BucketName){
-                        await deleteFromS3(s3BucketName, packageId);
-                    }else{
-                        logger.error('S3 bucket name not configured');
-                    }
-                }catch(s3Error){
-                    logger.error(`Error deleting package from S3 during rollback: ${s3Error}`);
-                }
-            }
+            await prismaCalls.updateTransactionStatus(transactionId, 'FAILED');
+            await prismaCalls.deleteTransactionPackages(transactionId);
             const transaction_bucket = process.env.TRANSACTION_BUCKET_NAME;
             if(transaction_bucket){
                 await deleteFromS3(transaction_bucket, `${transactionId}/`);
