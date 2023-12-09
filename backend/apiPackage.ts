@@ -981,6 +981,10 @@ export async function updatePackage(req: Request, res: Response) {
             logger.info("Error in updatePackage: No Content or URL provided in the upload");
             return res.sendStatus(400);
         }
+        if(data?.URL && data?.Content) {
+            logger.info("Error in updatePackage: Must upload either Base64 ZIP or URL, not both.");
+            return res.sendStatus(400);
+        }
         if(!metadata.Name || !metadata.Version || !metadata.ID) {
             logger.info(`Error in updatePackage: All metadata fields are required`);
             return res.sendStatus(400);
@@ -1172,7 +1176,7 @@ export async function initiateTransaction(req: Request, res: Response) {
         
         if (!transactionType || !['UPLOAD', 'DOWNLOAD', 'UPDATE', 'RATE'].includes(transactionType)) {
             logger.info(`Error in initiateTransaction: Invalid or missing transaction type`);
-            return res.status(400).send('Invalid or missing transaction type');
+            return res.sendStatus(400)
         }
 
         const transactionId = uuidv4();
@@ -1205,19 +1209,19 @@ export async function appendToUploadTransaction(req: Request, res: Response) {
 
     if (!transactionId || !(content || url) || (content && url)) {
         logger.info('Invalid request data for transaction append');
-        return res.status(400).send('Invalid request data');
+        return res.sendStatus(400)
     }
 
     try {
         const transaction = await prismaCalls.getTransactionById(transactionId);
         if (!transaction) {
             logger.info(`Transaction ID not found: ${transactionId}`);
-            return res.status(404).send('Transaction ID not found');
+            return res.sendStatus(404);
         }
 
         if (transaction.status !== 'PENDING' || transaction.type !== 'UPLOAD') {
             logger.info(`Transaction is not in a state to be appended: ${transactionId}`);
-            return res.status(422).send('Transaction is not appendable');
+            return res.sendStatus(422);
         }
 
         const transactionPackageId = uuidv4();
@@ -1264,25 +1268,25 @@ export async function executeUploadTransaction(req: Request, res: Response) {
     const transactionId = req.body.transactionId;
     if (!transactionId) {
         logger.info('Transaction ID is required');
-        return res.status(400).send('Transaction ID is required');
+        return res.sendStatus(400);
     }
 
     const transaction = await prismaCalls.getTransactionById(transactionId);
     logger.info(`Transaction: ${JSON.stringify(transaction)}`);
     if (!transaction) {
         logger.info(`Transaction ID not found: ${transactionId}`);
-        return res.status(404).send('Transaction ID not found');
+        return res.sendStatus(404);
     }
     if (transaction.status !== 'PENDING' || transaction.type !== 'UPLOAD') {
         logger.info(`Transaction is not in a state to be executed: ${transactionId}`);
-        return res.status(422).send('Transaction is not executable');
+        return res.sendStatus(422);
     }
 
     const transactionPackages = await prismaCalls.getTransactionPackages(transactionId);
     logger.info(`Transaction packages: ${JSON.stringify(transactionPackages)}`);
     if (!transactionPackages || transactionPackages.length === 0) {
         logger.info(`Transaction has no packages: ${transactionId}`);
-        return res.status(404).send('Transaction has no packages');
+        return res.sendStatus(404);
     }
 
     const successfulPackages = [];
@@ -1368,8 +1372,8 @@ export async function executeUploadTransaction(req: Request, res: Response) {
                 logger.info(`Error processing transaction package: ${error}`);
                 rollbackNeeded = true;
                 break;
+            }
         }
-    }
     if (rollbackNeeded) {
         logger.info('Error processing transaction packages, rolling back');
         for (const packageId of successfulPackages) {
@@ -1394,7 +1398,7 @@ export async function executeUploadTransaction(req: Request, res: Response) {
         } else {
             logger.error('Transaction bucket name not configured');
         }
-        return res.status(500).send('Transaction failed, rolled back changes');
+        return res.sendStatus(500);
     }
     logger.info('Deleting transaction packages');
     await prismaCalls.deleteTransactionPackages(transactionId);
@@ -1459,14 +1463,14 @@ export async function appendToRateTransaction(req: Request, res: Response){
 
     if (!transactionId || !Array.isArray(packageIds) || packageIds.length === 0) {
         logger.info('Missing transaction ID or package IDs');
-        return res.status(400).send('Transaction ID and package IDs are required');
+        return res.sendStatus(400);
     }
 
     try {
         const transaction = await prismaCalls.getTransactionById(transactionId);
         if (!transaction || transaction.type !== 'RATE') {
             logger.info(`Transaction not found or not a RATE transaction: ${transactionId}`);
-            return res.status(404).send('Transaction not found or not a RATE transaction');
+            return res.sendStatus(404);
         }
 
         for (const packageId of packageIds) {
@@ -1479,6 +1483,117 @@ export async function appendToRateTransaction(req: Request, res: Response){
         res.sendStatus(200);
     } catch (error) {
         logger.error(`Error in appendToRateTransaction: ${error}`);
+        res.sendStatus(500);
+    }
+}
+
+export async function appendToUpdateTransaction(req: Request, res: Response){
+    const transactionId = req.body?.transactionId;
+    const metaData = req.body?.metadata;
+    const packageId = metaData?.ID;
+    const data = req.body?.data;
+    const content = data?.Content;
+    const url = data?.URL;
+    if(!transactionId){
+        logger.info(`Error in appendToUpdateTransaction: transactionId is undefined`);
+        return res.sendStatus(400);
+    }
+    if(!packageId){
+        logger.info(`Error in appendToUpdateTransaction: packageId is undefined`);
+        return res.sendStatus(400);
+    }
+    if(!data){
+        logger.info(`Error in appendToUpdateTransaction: data is undefined`);
+        return res.sendStatus(400);
+    }
+    if(!content && !url){
+        logger.info(`Error in appendToUpdateTransaction: content and url are undefined`);
+        return res.sendStatus(400);
+    }
+    if(content && url){
+        logger.info(`Error in appendToUpdateTransaction: content and url are both defined`);
+        return res.sendStatus(400);
+    }
+    if(!metaData){
+        logger.info(`Error in appendToUpdateTransaction: metaData is undefined`);
+        return res.sendStatus(400);
+    }
+    try{
+        const exists = await prismaCalls.checkPackageExists(metaData.Name, metaData.Version, metaData.ID);
+        if(!exists){
+            logger.info(`Error in appendToUpdateTransaction: Package does not exist.`);
+            return res.sendStatus(404);
+        }
+        const S3Link = await prismaCalls.getS3Link(packageId);
+        if(!S3Link){
+            logger.info(`Error in appendToUpdateTransaction: S3Link is null`);
+            return res.sendStatus(500);
+        }
+        let packageContent = content ? Buffer.from(content, 'base64') : await downloadFromS3(S3Link);
+        await uploadToS3(packageId, packageContent);
+
+        await prismaCalls.createTransactionPackage({
+            id: packageId,
+            transactionId,
+            URL: url
+        });
+
+        logger.info(`TransactionPackage appended successfully in update: ${packageId}`);
+        res.sendStatus(200);
+    }catch(error){
+        logger.error(`Error in appendToUpdateTransaction: ${error}`);
+        res.sendStatus(500);
+    }
+}
+
+export async function executeUpdateTransaction(req: Request, res: Response){
+    const transactionId = req.body?.transactionId;
+    if(!transactionId){
+        logger.info(`Error in executeUpdateTransaction: transactionId is undefined`);
+        return res.sendStatus(400);
+    }
+
+    const transaction = await prismaCalls.getTransactionById(transactionId);
+    logger.info(`Transaction: ${JSON.stringify(transaction)}`);
+    if(!transaction){
+        logger.info(`Error in executeUpdateTransaction: Transaction not found`);
+        return res.sendStatus(404);
+    }
+    if(transaction.status !== 'PENDING' || transaction.type !== 'UPDATE'){
+        logger.info(`Error in executeUpdateTransaction: Transaction is not in a state to be executed`);
+        return res.sendStatus(422);
+    }
+
+    const transactionPackages = await prismaCalls.getTransactionPackages(transactionId);
+    logger.info(`Transaction packages: ${JSON.stringify(transactionPackages)}`);
+    if(!transactionPackages || transactionPackages.length === 0){
+        logger.info(`Error in executeUpdateTransaction: Transaction has no packages`);
+        return res.sendStatus(404);
+    }
+
+    const successfulPackages = [];
+    logger.info(`Executing update transaction: ${transactionId}`);
+    try{
+        for(const curPackage of transactionPackages){
+            logger.info('Processing new upload transaction package');
+            try{
+                if(!curPackage.URL){
+                    logger.info('Transaction package has no URL');
+                    throw new Error('Transaction package has no URL');
+                }
+                const updateData = await prismaCalls.updatePackageDetails(curPackage.id, {URL: curPackage.URL});
+                if(!updateData){
+                    logger.info(`Error in executeUpdateTransaction: updateData is null`);
+                    return res.sendStatus(500);
+                }
+                successfulPackages.push(curPackage.id);
+            }catch(error){
+                logger.info(`Error processing transaction package: ${error}`);
+                res.sendStatus(500);
+            }
+        }
+    }catch(error){
+        logger.error(`Error executing update transaction: ${error}`);
         res.sendStatus(500);
     }
 }
