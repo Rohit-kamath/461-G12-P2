@@ -1565,7 +1565,6 @@ export async function executeUpdateTransaction(req: Request, res: Response){
         return res.sendStatus(404);
     }
 
-    const successfulPackages = [];
     let rollbackNeeded = false;
     logger.info(`Executing update transaction: ${transactionId}`);
     try{
@@ -1586,7 +1585,6 @@ export async function executeUpdateTransaction(req: Request, res: Response){
                         return res.sendStatus(500);
                     }
                 }
-                successfulPackages.push(curPackage.id);
             }catch(error){
                 logger.info(`Error processing transaction package: ${error}`);
                 rollbackNeeded = true;
