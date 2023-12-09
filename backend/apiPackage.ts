@@ -5,7 +5,7 @@ import * as prismaSchema from '@prisma/client';
 import JSZip from 'jszip';
 import { v4 as uuidv4 } from 'uuid';
 import AWS from 'aws-sdk';
-import { ManagedUpload } from 'aws-sdk/clients/s3';
+import S3, { ManagedUpload } from 'aws-sdk/clients/s3';
 import createModuleLogger from '../src/logger';
 import { NetScore } from '../src/controllers/netScore';
 import semver from 'semver';
@@ -1011,12 +1011,7 @@ export async function updatePackage(req: Request, res: Response) {
             return res.sendStatus(500);
         }
 
-        let packageContent;
-        if(data?.Content){
-            packageContent = Buffer.from(data.Content, 'base64');
-        }else{
-            packageContent = await downloadFromS3(S3Link);
-        }
+        let packageContent = data?.Content ? Buffer.from(data.Content, 'base64') : await downloadFromS3(S3Link);
 
         if(shouldDebloat){
             packageContent = await debloatPackage(packageContent);
@@ -1529,13 +1524,12 @@ export async function appendToUpdateTransaction(req: Request, res: Response){
             logger.info(`Error in appendToUpdateTransaction: S3Link is null`);
             return res.sendStatus(500);
         }
-        const packageContent = content ? Buffer.from(content, 'base64') : await downloadFromS3(S3Link);
-        await uploadToS3(packageId, packageContent);
+        const transactionUrl = content ? S3Link : url;
 
         await prismaCalls.createTransactionPackage({
             id: packageId,
             transactionId,
-            URL: url
+            URL: transactionUrl
         });
 
         logger.info(`TransactionPackage appended successfully in update: ${packageId}`);
@@ -1581,10 +1575,15 @@ export async function executeUpdateTransaction(req: Request, res: Response){
                     logger.info('Transaction package has no URL');
                     throw new Error('Transaction package has no URL');
                 }
-                const updateData = await prismaCalls.updatePackageDetails(curPackage.id, {URL: curPackage.URL});
-                if(!updateData){
-                    logger.info(`Error in executeUpdateTransaction: updateData is null`);
-                    return res.sendStatus(500);
+                if(isS3Link(curPackage.URL)){
+                    const packageContent = await downloadFromS3(curPackage.URL);
+                    await uploadToS3(curPackage.id, packageContent);
+                }else{
+                    const updateData = await prismaCalls.updatePackageDetails(curPackage.id, {URL: curPackage.URL});
+                    if(!updateData){
+                        logger.info(`Error in executeUpdateTransaction: updateData is null`);
+                        return res.sendStatus(500);
+                    }
                 }
                 successfulPackages.push(curPackage.id);
             }catch(error){
