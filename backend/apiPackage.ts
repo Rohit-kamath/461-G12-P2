@@ -5,7 +5,7 @@ import * as prismaSchema from '@prisma/client';
 import JSZip from 'jszip';
 import { v4 as uuidv4 } from 'uuid';
 import AWS from 'aws-sdk';
-import S3, { ManagedUpload } from 'aws-sdk/clients/s3';
+import { ManagedUpload } from 'aws-sdk/clients/s3';
 import createModuleLogger from '../src/logger';
 import { NetScore } from '../src/controllers/netScore';
 import semver from 'semver';
@@ -1566,6 +1566,7 @@ export async function executeUpdateTransaction(req: Request, res: Response){
     }
 
     const successfulPackages = [];
+    let rollbackNeeded = false;
     logger.info(`Executing update transaction: ${transactionId}`);
     try{
         for(const curPackage of transactionPackages){
@@ -1588,9 +1589,32 @@ export async function executeUpdateTransaction(req: Request, res: Response){
                 successfulPackages.push(curPackage.id);
             }catch(error){
                 logger.info(`Error processing transaction package: ${error}`);
-                res.sendStatus(500);
+                break;
             }
         }
+    if(rollbackNeeded){
+        logger.info('Error processing transaction packages, rolling back');
+        for(const packageId of successfulPackages){
+            try{
+                logger.info(`Deleting package as part of the rollback process: ${packageId}`)
+                const s3BucketName = process.env.S3_BUCKET_NAME;
+                if(s3BucketName){
+                    await deleteFromS3(s3BucketName, packageId);
+                }else{
+                    logger.error('S3 bucket name not configured');
+                }
+            }catch(s3Error){
+                logger.error(`Error deleting package from S3 during rollback: ${s3Error}`);
+            }
+        }
+        const transaction_bucket = process.env.TRANSACTION_BUCKET_NAME;
+        if(transaction_bucket){
+            await deleteFromS3(transaction_bucket, `${transactionId}/`);
+        }else{
+            logger.error('Transaction bucket name not configured');
+        }
+        return res.sendStatus(500);
+    }
     }catch(error){
         logger.error(`Error executing update transaction: ${error}`);
         res.sendStatus(500);
