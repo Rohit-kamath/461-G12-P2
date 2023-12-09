@@ -1566,7 +1566,7 @@ export async function executeUpdateTransaction(req: Request, res: Response){
     }
 
     const successfulPackages = [];
-    const rollbackNeeded = false;
+    let rollbackNeeded = false;
     logger.info(`Executing update transaction: ${transactionId}`);
     try{
         for(const curPackage of transactionPackages){
@@ -1589,34 +1589,36 @@ export async function executeUpdateTransaction(req: Request, res: Response){
                 successfulPackages.push(curPackage.id);
             }catch(error){
                 logger.info(`Error processing transaction package: ${error}`);
+                rollbackNeeded = true;
                 break;
             }
         }
-    if(rollbackNeeded){
-        logger.info('Error processing transaction packages, rolling back');
-        for(const packageId of successfulPackages){
-            try{
-                logger.info(`Deleting package as part of the rollback process: ${packageId}`)
-                const s3BucketName = process.env.S3_BUCKET_NAME;
-                if(s3BucketName){
-                    await deleteFromS3(s3BucketName, packageId);
-                }else{
-                    logger.error('S3 bucket name not configured');
+        if(rollbackNeeded){
+            logger.info('Error processing transaction packages, rolling back');
+            for(const packageId of successfulPackages){
+                try{
+                    logger.info(`Deleting package as part of the rollback process: ${packageId}`)
+                    const s3BucketName = process.env.S3_BUCKET_NAME;
+                    if(s3BucketName){
+                        await deleteFromS3(s3BucketName, packageId);
+                    }else{
+                        logger.error('S3 bucket name not configured');
+                    }
+                }catch(s3Error){
+                    logger.error(`Error deleting package from S3 during rollback: ${s3Error}`);
                 }
-            }catch(s3Error){
-                logger.error(`Error deleting package from S3 during rollback: ${s3Error}`);
             }
+            const transaction_bucket = process.env.TRANSACTION_BUCKET_NAME;
+            if(transaction_bucket){
+                await deleteFromS3(transaction_bucket, `${transactionId}/`);
+            }else{
+                logger.error('Transaction bucket name not configured');
+            }
+            return res.sendStatus(500);
         }
-        const transaction_bucket = process.env.TRANSACTION_BUCKET_NAME;
-        if(transaction_bucket){
-            await deleteFromS3(transaction_bucket, `${transactionId}/`);
-        }else{
-            logger.error('Transaction bucket name not configured');
-        }
-        return res.sendStatus(500);
-    }
+        return res.sendStatus(200);
     }catch(error){
         logger.error(`Error executing update transaction: ${error}`);
-        res.sendStatus(500);
+        return res.sendStatus(500);
     }
 }
