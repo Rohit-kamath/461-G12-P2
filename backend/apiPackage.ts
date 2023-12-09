@@ -1566,7 +1566,7 @@ export async function executeUpdateTransaction(req: Request, res: Response){
     }
 
     const successfulPackages = [];
-    let rollbackNeeded = false;
+    const rollbackNeeded = false;
     logger.info(`Executing update transaction: ${transactionId}`);
     try{
         for(const curPackage of transactionPackages){
