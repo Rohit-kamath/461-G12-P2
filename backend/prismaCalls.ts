@@ -250,6 +250,10 @@ export async function resetDatabase() {
         logger.info('Deleted package ratings');
         await prisma.packageHistoryEntry.deleteMany();
         logger.info('Deleted package history');
+        await prisma.transactionPackage.deleteMany();
+        logger.info('Deleted transaction packages');
+        await prisma.transaction.deleteMany();
+        logger.info('Deleted transactions');
         await prisma.packageMetadata.deleteMany();
         logger.info('Deleted package metadata');
     } catch (error) {
@@ -345,45 +349,58 @@ export async function getS3Link(metadataId: string): Promise<string | null> {
     }
 }
 
-
 export async function deletePackage(packageId: string): Promise<void> {
     await prisma.$transaction(async (prisma) => {
-        // Delete related entries in PackageHistoryEntry
+        const packageRecord = await prisma.package.findUnique({
+            where: { metadataId: packageId },
+        });
+        
+        if (packageRecord) {
+            await prisma.package.delete({
+                where: { id: packageRecord.id },
+            });
+        }
+
         await prisma.packageHistoryEntry.deleteMany({
-            where: {
-                metadata: {
-                    id: packageId,
-                },
-            },
+            where: { metadataId: packageId },
         });
-        // Delete the related PackageRating entry
-        await prisma.packageRating.deleteMany({
-            where: {
-                metadata: {
-                    id: packageId,
-                },
-            },
+
+        const packageRating = await prisma.packageRating.findUnique({
+            where: { metadataId: packageId },
         });
-        // Delete the related PackageMetadata entry
-        await prisma.packageMetadata.deleteMany({
-            where: {
-                id: packageId,
-            },
+        if (packageRating) {
+            await prisma.packageRating.delete({
+                where: { metadataId: packageId },
+            });
+        }
+
+        await prisma.packageMetadata.delete({
+            where: { id: packageId },
         });
-        // Delete the related PackageData entry
-        await prisma.packageData.deleteMany({
-            where: {
-                id: packageId,
-            },
+
+        const packageData = await prisma.packageData.findUnique({
+            where: { id: packageId },
         });
-        //delete the package itself
-        await prisma.package.delete({
+        if (packageData) {
+            await prisma.packageData.delete({
+                where: { id: packageId },
+            });
+        }
+    });
+}
+
+
+
+export async function deleteTransactionPackages(transactionId: string): Promise<void> {
+    await prisma.$transaction(async (prisma) => {
+        await prisma.transactionPackage.deleteMany({
             where: {
-                id: packageId,
+                transactionId: transactionId,
             },
         });
     });
 }
+
 
 export async function deletePackageVersions(packageName: string): Promise<void> {
     try {
@@ -417,5 +434,77 @@ export async function deletePackageVersions(packageName: string): Promise<void> 
     } catch (error) {
         logger.error(`Error while deleting packages by name ${packageName}`);
         throw error;
+    }
+}
+
+export async function createTransaction(transactionId: string, type: prismaSchema.TransactionType): Promise<prismaSchema.Transaction | null> {
+    try {
+        return await prisma.transaction.create({
+            data: {
+                id: transactionId,
+                type: type,
+                status: 'PENDING'
+            }
+        });
+    } catch (error) {
+        logger.error(`createTransaction: Error creating transaction in the database: ${error}`);
+        return null;
+    }
+}
+
+export async function createTransactionPackage(transactionData: { id: string; transactionId: string; URL?: string; }): Promise<void> {
+    try {
+        await prisma.transactionPackage.create({
+            data: transactionData,
+        });
+
+        logger.info(`TransactionPackage created successfully: ${transactionData.id}`);
+    } catch (error) {
+        logger.error(`Error in createTransactionPackage: ${error}`);
+        throw new Error('Failed to create TransactionPackage in the database.');
+    }
+}
+
+export async function getTransactionById(id: string): Promise<prismaSchema.Transaction | null> {
+    try {
+        return await prisma.transaction.findUnique({
+            where: { id },
+        });
+    } catch (error) {
+        logger.error(`Error in getTransactionById: ${error}`);
+        throw new Error('Failed to retrieve transaction from the database.');
+    }
+}
+
+export async function getTransactionPackages(transactionId: string) {
+    try {
+        // Retrieve all packages associated with the given transaction ID
+        const packages = await prisma.transactionPackage.findMany({
+            where: { transactionId: transactionId },
+            select: { id: true, URL: true }
+        });
+
+        return packages;
+    } catch (error) {
+        logger.error(`Error in getTransactionPackages: ${error}`);
+        throw new Error('Failed to retrieve transaction packages from the database.');
+    }
+}
+
+export async function updateTransactionStatus(transactionId: string, newStatus: string): Promise<void> {
+    try {
+        await prisma.transaction.update({
+            where: {
+                id: transactionId,
+            },
+            data: {
+                status: newStatus,
+            },
+        });
+
+        logger.info(`Transaction status updated successfully: ${transactionId} to ${newStatus}`);
+    } catch (error) {
+        logger.error(`Error in updateTransactionStatus: ${error}`);
+        throw new Error('Failed to update transaction status in the database.');
     }
 }
