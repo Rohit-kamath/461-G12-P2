@@ -1529,7 +1529,7 @@ export async function appendToUpdateTransaction(req: Request, res: Response){
             logger.info(`Error in appendToUpdateTransaction: S3Link is null`);
             return res.sendStatus(500);
         }
-        let packageContent = content ? Buffer.from(content, 'base64') : await downloadFromS3(S3Link);
+        const packageContent = content ? Buffer.from(content, 'base64') : await downloadFromS3(S3Link);
         await uploadToS3(packageId, packageContent);
 
         await prismaCalls.createTransactionPackage({
