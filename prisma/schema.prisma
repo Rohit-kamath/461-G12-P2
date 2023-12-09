@@ -8,12 +8,12 @@ datasource db {
 }
 
 model Package {
-  id         String          @id @db.VarChar(255)
-  metadataId String          @unique
-  dataId     String          @unique
-  sizeCost   Int?          
-  metadata   PackageMetadata @relation(fields: [metadataId], references: [id])
-  data       PackageData     @relation(fields: [dataId], references: [id])
+  id            String          @id @db.VarChar(255)
+  metadataId    String          @unique
+  dataId        String          @unique
+  sizeCost      Int?          
+  metadata      PackageMetadata @relation(fields: [metadataId], references: [id])
+  data          PackageData     @relation(fields: [dataId], references: [id])
 }
 
 model PackageMetadata {
@@ -53,10 +53,34 @@ enum Action {
   RATE
 }
 
-model PackageHistoryEntry {
-  id         Int             @id @default(autoincrement())
-  metadataId String          @unique
-  metadata   PackageMetadata @relation(fields: [metadataId], references: [id])
-  date       DateTime
-  action     Action
+enum TransactionType {
+  UPLOAD
+  DOWNLOAD
+  UPDATE
+  RATE
 }
+
+model PackageHistoryEntry {
+  id              Int             @id @default(autoincrement())
+  metadataId      String          @unique
+  metadata        PackageMetadata @relation(fields: [metadataId], references: [id])
+  date            DateTime
+  action          Action
+}
+
+model Transaction {
+  id         String               @id @db.VarChar(255)
+  type       TransactionType
+  status     String               @db.VarChar(255) // 'PENDING', 'COMPLETED', 'FAILED'
+  createdAt  DateTime             @default(now())
+  updatedAt  DateTime             @updatedAt
+  packages   TransactionPackage[] // Relation to TransactionPackage
+}
+
+model TransactionPackage {
+    id            String       @id @db.VarChar(255)
+    transactionId String       @db.VarChar(255)
+    URL           String?      @db.VarChar(255)
+    transaction   Transaction  @relation(fields: [transactionId], references: [id])
+}
+

@@ -63,3 +63,24 @@ export type User = {
     name: string;
     isAdmin: boolean;
 };
+
+export type TransactionType = 'UPLOAD' | 'DOWNLOAD' | 'UPDATE' | 'RATE';
+
+type UploadResult = Package[];
+type DownloadResult = { metadata: PackageMetadata; data: PackageData }[];
+type UpdateResult = { message: string };
+type RateResult = PackageRating;
+type TransactionResult = UploadResult | DownloadResult | UpdateResult | RateResult;
+
+export type Transaction = {
+    transactionId: string;
+    transactionType: TransactionType;
+    status: string;
+    packages?: Package[];
+}
+
+export type GroupResponse = {
+    transactionId: string;
+    transactionType: TransactionType;
+    result: TransactionResult;
+}

@@ -298,23 +298,24 @@ export async function extractMetadataFromZip(filebuffer: Buffer): Promise<apiSch
     }
 }
 
-export async function uploadToS3(fileName: string, fileBuffer: Buffer): Promise<ManagedUpload.SendData> {
-    logger.info('UploadToS3: Uploading to S3')
+export async function uploadToS3(fileName: string, fileBuffer: Buffer, bucketNameOverride?: string): Promise<ManagedUpload.SendData> {
+    logger.info('UploadToS3: Uploading to S3');
+
+    // Determine which bucket to use
+    const bucketName = bucketNameOverride || process.env.S3_BUCKET_NAME;
+    if (!bucketName) {
+        logger.info(`UploadToS3: S3 bucket name not configured.`);
+        throw new Error('S3 bucket name not configured.');
+    }
+
+    const params: AWS.S3.Types.PutObjectRequest = {
+        Bucket: bucketName,
+        Key: fileName,
+        Body: fileBuffer,
+    };
+
+    // Uploading files to the bucket
     return new Promise((resolve, reject) => {
-        const bucketName = process.env.S3_BUCKET_NAME;
-
-        if (!bucketName) {
-            logger.info(`UploadToS3: S3 bucket name not configured.`);
-            throw new Error('S3 bucket name not configured.');
-        }
-
-        const params: AWS.S3.Types.PutObjectRequest = {
-            Bucket: bucketName,
-            Key: fileName,
-            Body: fileBuffer,
-        };
-
-        // Uploading files to the bucket
         s3.upload(params, function (err: Error, data: ManagedUpload.SendData) {
             if (err) {
                 logger.info(`UploadToS3: An error occurred while uploading to S3: ${err}`);
@@ -326,17 +327,30 @@ export async function uploadToS3(fileName: string, fileBuffer: Buffer): Promise<
     });
 }
 
-async function downloadFromS3(s3Link: string): Promise<Buffer> {
-    logger.info('downloadFromS3: Downloading from S3')
-    // Extract bucket name and key from the S3 link
-    const bucketName = process.env.S3_BUCKET_NAME;
 
-    // Ensure bucket name is defined
-    if (!bucketName) {
-        throw new Error('S3 bucket name is not configured.');
+async function downloadFromS3(s3Link: string): Promise<Buffer> {
+    logger.info('downloadFromS3: Downloading from S3');
+
+    const transactionBucket = process.env.TRANSACTION_BUCKET_NAME;
+    const zipBucket = process.env.S3_BUCKET_NAME;
+
+    if (!transactionBucket || !zipBucket) {
+        logger.info(`downloadFromS3: S3 bucket name not configured.`);
+        throw new Error('S3 bucket name not configured.');
     }
 
-    const key = s3Link.split('amazonaws.com/')[1];
+    let bucketName, key;
+    if (s3Link.includes(transactionBucket)) {
+        bucketName = transactionBucket;
+        key = s3Link.split('amazonaws.com/')[1];
+    } else if (s3Link.includes(zipBucket)) {
+        bucketName = zipBucket;
+        key = s3Link.split('amazonaws.com/')[1];
+    } else {
+        throw new Error('Invalid S3 link');
+    }
+
+    logger.info(`downloadFromS3: Bucket: ${bucketName}, Key: ${key}`);
 
     const params = {
         Bucket: bucketName,
@@ -351,6 +365,7 @@ async function downloadFromS3(s3Link: string): Promise<Buffer> {
         throw new Error('Failed to download from S3');
     }
 }
+
 
 export async function calculateGithubMetrics(owner: string, repo: string): Promise<apiSchema.PackageRating> {
     logger.info(`CalculateGithubMetrics: Calculating metrics for ${owner}/${repo}`);
@@ -685,7 +700,7 @@ export async function uploadPackage(req: Request, res: Response) {
         await prismaCalls.storePackageDataInDatabase(metadata.ID, PackageData);
         await prismaCalls.storePackageInDatabase(Package);
         await storeGithubMetrics(metadata.ID, metrics);
-        logger.info(`Uploadeding package with file name: ${metadata.ID}`);
+        logger.info(`Uploading package with file name: ${metadata.ID}`);
         await uploadToS3(metadata.ID, Buffer.from(encodedContent, 'base64'));
         res.json(Package);
     } catch (error) {
@@ -1027,12 +1042,17 @@ export async function updatePackage(req: Request, res: Response) {
 export async function callResetDatabase(req: Request, res: Response) {
     try {
         const bucketName = process.env.S3_BUCKET_NAME;
+        const bucketName2 = process.env.TRANSACTION_BUCKET_NAME;
         if (!bucketName) {
             logger.info(`callResetDatabase: AWS S3 bucket name is not defined in environment variables.`)
             throw new Error("AWS S3 bucket name is not defined in environment variables.");
         }
-
+        if (!bucketName2) {
+            logger.info(`callResetDatabase: 2nd AWS S3 bucket name is not defined in environment variables.`)
+            throw new Error("2nd AWS S3 bucket name is not defined in environment variables.");
+        }
         await emptyS3Bucket(bucketName);
+        await emptyS3Bucket(bucketName2);
         logger.info('S3 Bucket content deleted.');
         await prismaCalls.resetDatabase();
         logger.info('200 status Registry is reset.');
@@ -1143,5 +1163,322 @@ export async function deletePackageByName(req: Request, res: Response) {
     } catch (error) {
         logger.error(`Error in deletePackageByName: ${error}`);
         return res.sendStatus(500);
+    }
+}
+
+export async function initiateTransaction(req: Request, res: Response) {
+    try {
+        const transactionType = req.body.transactionType as prismaSchema.TransactionType;
+        
+        if (!transactionType || !['UPLOAD', 'DOWNLOAD', 'UPDATE', 'RATE'].includes(transactionType)) {
+            logger.info(`Error in initiateTransaction: Invalid or missing transaction type`);
+            return res.status(400).send('Invalid or missing transaction type');
+        }
+
+        const transactionId = uuidv4();
+
+        const newTransaction = await prismaCalls.createTransaction(transactionId, transactionType);
+        
+        if (!newTransaction) {
+            logger.info('Error in initiateTransaction: Failed to create new transaction');
+            return res.sendStatus(500);
+        }
+
+        const responseObject = {
+            transactionId: newTransaction.id,
+            transactionType: newTransaction.type,
+            status: newTransaction.status
+        };
+
+        logger.info(`Transaction initiated successfully: ${JSON.stringify(responseObject)}`);
+        return res.status(200).json(responseObject);
+    } catch (error) {
+        logger.error(`Error in initiateTransaction: ${error}`);
+        return res.sendStatus(500);
+    }
+}
+
+export async function appendToUploadTransaction(req: Request, res: Response) {
+    const transactionId = req.body.transactionId;
+    const content = req.body.Content;
+    const url = req.body.URL;
+
+    if (!transactionId || !(content || url) || (content && url)) {
+        logger.info('Invalid request data for transaction append');
+        return res.status(400).send('Invalid request data');
+    }
+
+    try {
+        const transaction = await prismaCalls.getTransactionById(transactionId);
+        if (!transaction) {
+            logger.info(`Transaction ID not found: ${transactionId}`);
+            return res.status(404).send('Transaction ID not found');
+        }
+
+        if (transaction.status !== 'PENDING' || transaction.type !== 'UPLOAD') {
+            logger.info(`Transaction is not in a state to be appended: ${transactionId}`);
+            return res.status(422).send('Transaction is not appendable');
+        }
+
+        const transactionPackageId = uuidv4();
+
+        let link;
+        if (content) {
+            const zipBuffer = Buffer.from(content, 'base64');
+            if (!isValidZip(zipBuffer)) {
+                logger.info('appendToUploadTransaction: Invalid ZIP file uploaded');
+                return res.sendStatus(400);
+            }
+            const s3Path = `${transactionId}/${transactionPackageId}`;
+            try {
+                const transaction_bucket_name = process.env.TRANSACTION_BUCKET_NAME;
+                if (!transaction_bucket_name) {
+                    logger.info('appendToUploadTransaction: Transaction bucket name not configured.');
+                    return res.sendStatus(500);
+                }
+                const uploadResult = await uploadToS3(s3Path, zipBuffer, process.env.TRANSACTION_BUCKET_NAME);
+                link = uploadResult.Location;
+            } catch (error) {
+                logger.error(`appendToUploadTransaction: Error uploading to S3: ${error}`);
+                return res.sendStatus(500);
+            }
+        } else {
+            link = url;
+        }
+
+        await prismaCalls.createTransactionPackage({
+            id: transactionPackageId,
+            transactionId,
+            URL: link
+        });
+
+        logger.info(`TransactionPackage appended successfully: ${transactionPackageId}`);
+        res.sendStatus(200);
+    } catch (error) {
+        logger.error(`Error appending to upload transaction: ${error}`);
+        res.sendStatus(500);
+    }
+}
+
+export async function executeUploadTransaction(req: Request, res: Response) {
+    const transactionId = req.body.transactionId;
+    if (!transactionId) {
+        logger.info('Transaction ID is required');
+        return res.status(400).send('Transaction ID is required');
+    }
+
+    const transaction = await prismaCalls.getTransactionById(transactionId);
+    logger.info(`Transaction: ${JSON.stringify(transaction)}`);
+    if (!transaction) {
+        logger.info(`Transaction ID not found: ${transactionId}`);
+        return res.status(404).send('Transaction ID not found');
+    }
+    if (transaction.status !== 'PENDING' || transaction.type !== 'UPLOAD') {
+        logger.info(`Transaction is not in a state to be executed: ${transactionId}`);
+        return res.status(422).send('Transaction is not executable');
+    }
+
+    const transactionPackages = await prismaCalls.getTransactionPackages(transactionId);
+    logger.info(`Transaction packages: ${JSON.stringify(transactionPackages)}`);
+    if (!transactionPackages || transactionPackages.length === 0) {
+        logger.info(`Transaction has no packages: ${transactionId}`);
+        return res.status(404).send('Transaction has no packages');
+    }
+
+    const successfulPackages = [];
+    const packageResponses = [];
+
+    let rollbackNeeded = false;
+    logger.info(`Executing upload transaction: ${transactionId}`);
+    try {
+        for (const curPackage of transactionPackages) {
+            logger.info('Processing new transaction package');
+            try {
+                let metadata, encodedContent, githubInfo, url, sizeCost;
+                if (!curPackage.URL) {
+                    logger.info('Transaction package has no URL');
+                    throw new Error('Transaction package has no URL');
+                }
+                if (isS3Link(curPackage.URL)) {
+                    const buffer = await downloadFromS3(curPackage.URL);
+                    metadata = await extractMetadataFromZip(buffer);
+                    url = await getGithubUrlFromZip(buffer);
+                    githubInfo = parseGitHubUrl(url);
+                    encodedContent = buffer.toString('base64');
+                    sizeCost = await calculateTotalSizeCost(buffer);
+                }
+                else {
+                    url = await linkCheck(curPackage.URL);
+                    if (!url) {
+                        logger.info("Invalid or unsupported URL provided in a group upload.");
+                        throw new Error("Invalid or unsupported URL provided in a group upload.");
+                    }
+                    const zipBuffer = await downloadGitHubRepoZip(url);
+                    metadata = await extractMetadataFromZip(zipBuffer);
+                    githubInfo = parseGitHubUrl(url);
+                    encodedContent = zipBuffer.toString('base64');
+                    sizeCost = await calculateTotalSizeCost(zipBuffer);
+                }
+                const packageExists = await prismaCalls.checkPackageExists(metadata.Name, metadata.Version);
+                if (packageExists) {
+                    logger.info("409 Package exists already.");
+                    throw new Error("409 Package exists already.");
+                }
+                if (!githubInfo) {
+                    logger.info("Invalid GitHub repository URL in a group upload.");
+                    throw new Error("Invalid GitHub repository URL in a group upload.");
+                }
+                const metrics = await calculateGithubMetrics(githubInfo.owner, githubInfo.repo);
+                if (!isPackageIngestible(metrics)) {
+                    logger.info("424 Package is not uploaded due to the disqualified rating.");
+                    throw new Error("424 Package is not uploaded due to the disqualified rating.");
+                }
+                await prismaCalls.uploadMetadataToDatabase(metadata);
+
+                const PackageData = { S3Link: curPackage.URL, URL: url };
+                const apiResponsePackageData: apiSchema.PackageData = {
+                    S3Link: PackageData.S3Link, 
+                    URL: PackageData.URL
+                };
+
+                const truncatedContent = encodedContent.substring(0, 100) + '...';
+                logger.info(`PackageData: ${JSON.stringify({ ...PackageData, Content: truncatedContent })}`);
+                
+                const packageResponse = {
+                    metadata: {
+                        Name: metadata.Name,
+                        Version: metadata.Version,
+                        ID: metadata.ID
+                    },
+                    data: {
+                        Content: encodedContent
+                    }
+                };
+
+                packageResponses.push(packageResponse);
+
+                await prismaCalls.createPackageHistoryEntry(metadata.ID, Action.CREATE);
+                await prismaCalls.storePackageDataInDatabase(metadata.ID, apiResponsePackageData);
+                await prismaCalls.storePackageInDatabase({ metadata, data: apiResponsePackageData, sizeCost });
+                await storeGithubMetrics(metadata.ID, metrics);
+                await uploadToS3(metadata.ID, Buffer.from(encodedContent, 'base64'));
+
+                successfulPackages.push(metadata.ID);
+            } catch (error) {
+                logger.info(`Error processing transaction package: ${error}`);
+                rollbackNeeded = true;
+                break;
+        }
+    }
+    if (rollbackNeeded) {
+        logger.info('Error processing transaction packages, rolling back');
+        for (const packageId of successfulPackages) {
+            try {
+                logger.info(`Deleting package as part of the rollback process: ${packageId}`)
+                const s3BucketName = process.env.S3_BUCKET_NAME;
+                if (s3BucketName) {
+                    await deleteFromS3(s3BucketName, packageId);
+                } else {
+                    logger.error('S3 bucket name not configured');
+                }
+            } catch (s3Error) {
+                logger.error(`Error deleting package from S3 during rollback: ${s3Error}`);
+            }
+            await prismaCalls.deletePackage(packageId);
+        }
+        await prismaCalls.updateTransactionStatus(transactionId, 'FAILED');
+        await prismaCalls.deleteTransactionPackages(transactionId);
+        const transaction_bucket = process.env.TRANSACTION_BUCKET_NAME;
+        if (transaction_bucket) {
+            await deleteFromS3(transaction_bucket, `${transactionId}/`);
+        } else {
+            logger.error('Transaction bucket name not configured');
+        }
+        return res.status(500).send('Transaction failed, rolled back changes');
+    }
+    logger.info('Deleting transaction packages');
+    await prismaCalls.deleteTransactionPackages(transactionId);
+    logger.info('Updating transaction status to completed')
+    await prismaCalls.updateTransactionStatus(transactionId, 'COMPLETED');
+    const transaction_bucket = process.env.TRANSACTION_BUCKET_NAME;
+    if (transaction_bucket) {
+        await deleteFromS3(transaction_bucket, `${transactionId}/`);
+    } else {
+        logger.error('Transaction bucket name not configured');
+    }
+    const response = { transactionId, packages: packageResponses };
+    res.status(200).json(response);
+    } catch (error) {
+        logger.error(`Error executing upload transaction: ${error}`);
+        res.sendStatus(500);
+    }
+}
+
+function isS3Link(url: string) {
+    const s3LinkPattern = 'amazonaws.com';
+    return url.includes(s3LinkPattern);
+}
+
+async function deleteFromS3(bucketName: string, key: string): Promise<void> {
+    try {
+        if (key.endsWith('/')) {
+            const listParams: AWS.S3.ListObjectsV2Request = {
+                Bucket: bucketName,
+                Prefix: key
+            };
+            const listedObjects = await s3.listObjectsV2(listParams).promise();
+
+            if (listedObjects.Contents && listedObjects.Contents.length > 0) {
+                const deleteParams: AWS.S3.DeleteObjectsRequest = {
+                    Bucket: bucketName,
+                    Delete: { Objects: listedObjects.Contents.map(({ Key }) => ({ Key: Key! })) }
+                };
+
+                await s3.deleteObjects(deleteParams).promise();
+
+                if (listedObjects.IsTruncated) {
+                    await deleteFromS3(bucketName, key);
+                }
+            }
+        } else {
+            const deleteParams: AWS.S3.DeleteObjectRequest = {
+                Bucket: bucketName,
+                Key: key
+            };
+
+            await s3.deleteObject(deleteParams).promise();
+        }
+    } catch (error) {
+        console.error('Error in deleteFromS3:', error);
+        throw error;
+    }
+}
+
+export async function appendToRateTransaction(req: Request, res: Response){
+    const { transactionId, packageIds } = req.body;
+
+    if (!transactionId || !Array.isArray(packageIds) || packageIds.length === 0) {
+        logger.info('Missing transaction ID or package IDs');
+        return res.status(400).send('Transaction ID and package IDs are required');
+    }
+
+    try {
+        const transaction = await prismaCalls.getTransactionById(transactionId);
+        if (!transaction || transaction.type !== 'RATE') {
+            logger.info(`Transaction not found or not a RATE transaction: ${transactionId}`);
+            return res.status(404).send('Transaction not found or not a RATE transaction');
+        }
+
+        for (const packageId of packageIds) {
+            await prismaCalls.createTransactionPackage({
+                id: packageId, 
+                transactionId: transactionId
+            });
+        }
+
+        res.sendStatus(200);
+    } catch (error) {
+        logger.error(`Error in appendToRateTransaction: ${error}`);
+        res.sendStatus(500);
     }
 }

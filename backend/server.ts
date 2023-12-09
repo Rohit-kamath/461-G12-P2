@@ -24,7 +24,14 @@ app.use(express.json());
 app.use(express.static('Frontend/dist'));
 
 const storage = multer.memoryStorage(); // Store the file in memory
-const upload = multer({ storage: storage });
+const upload = multer({
+    storage: storage,
+    limits: { 
+        fileSize: 50 * 1024 * 1024, // 50 MB
+        fieldSize: 50 * 1024 * 1024 // 50 MB
+    }
+});
+
 
 /*
 app.get('/upload-page', (req, res) => {
@@ -133,6 +140,46 @@ app.put('/package/:id', async (req, res) => {
         logger.info(`Error in put(/packages/:id) in server.ts: ${error}`);
         res.sendStatus(500);
     }
+});
+
+app.post('/transaction/initiate', async (req, res) => {
+    try {
+        logger.info(`POST /transaction/initiate request: ${JSON.stringify(req.body)}`);
+        await apiPackage.initiateTransaction(req, res);
+    } catch (error) {
+        logger.info(`Error in post(/transaction/initiate) in server.ts: ${error}`);
+        res.sendStatus(500);
+    }
+});
+
+app.post('/transaction/append', async (req, res) => {
+    try {
+        logger.info(`POST /transaction/append request: ${JSON.stringify(req.body)}`);
+        await apiPackage.appendToUploadTransaction(req, res);
+    } catch (error) {
+        logger.info(`Error in post(/transaction/append) in server.ts: ${error}`);
+        res.sendStatus(500);
+    }
+});
+
+app.post('/transaction/execute', async (req, res) => {
+    try {
+        logger.info(`POST /transaction/execute request: ${JSON.stringify(req.body)}`);
+        await apiPackage.executeUploadTransaction(req, res);
+    } catch (error) {
+        logger.info(`Error in post(/transaction/execute) in server.ts: ${error}`);
+        res.sendStatus(500);
+    }
+});
+
+app.post('/transaction/append/rate', async (req, res) => {
+    try {
+        logger.info(`POST /transaction/append/rate request: ${JSON.stringify(req.body)}`);
+        await apiPackage.appendToRateTransaction(req, res);
+        } catch (error) {
+            logger.info(`Error in post(/transaction/append/rate) in server.ts: ${error}`);
+            res.sendStatus(500);
+        }
 });
 
 app.put('/authenticate', (req, res) => {
