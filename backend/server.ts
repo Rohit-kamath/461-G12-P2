@@ -182,6 +182,26 @@ app.post('/transaction/append/rate', async (req, res) => {
         }
 });
 
+app.post('/transaction/append/update', async (req, res) => {
+    try {
+        logger.info(`POST /transaction/append/update request: ${JSON.stringify(req.body)}`);
+        await apiPackage.appendToUpdateTransaction(req, res);
+        } catch (error) {
+            logger.info(`Error in post(/transaction/append/update) in server.ts: ${error}`);
+            res.sendStatus(500);
+        }
+});
+
+app.post('/transaction/execute/update', async (req, res) => {
+    try {
+        logger.info(`POST /transaction/execute/update request: ${JSON.stringify(req.body)}`);
+        await apiPackage.executeUpdateTransaction(req, res);
+        } catch (error) {
+            logger.info(`Error in post(/transaction/execute/update) in server.ts: ${error}`);
+            res.sendStatus(500);
+        }
+});
+
 app.put('/authenticate', (req, res) => {
     res.sendStatus(501)
 });
