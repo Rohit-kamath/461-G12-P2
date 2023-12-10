@@ -202,6 +202,16 @@ app.post('/transaction/execute/update', async (req, res) => {
         }
 });
 
+app.post('/transaction/append/download', async (req, res) => {
+    try {
+        logger.info(`POST /transaction/append/download request: ${JSON.stringify(req.body)}`);
+        await apiPackage.appendToDownloadTransaction(req, res);
+        } catch (error) {
+            logger.info(`Error in post(/transaction/append/download) in server.ts: ${error}`);
+            res.sendStatus(500);
+        }
+});
+
 app.put('/authenticate', (req, res) => {
     res.sendStatus(501)
 });
