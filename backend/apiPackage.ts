@@ -1580,3 +1580,110 @@ export async function executeUpdateTransaction(req: Request, res: Response){
         return res.sendStatus(500);
     }
 }
+
+export async function appendToDownloadTransaction(req : Request, res : Response){
+    const transactionId = req.body?.transactionId;
+    const packageId = req.body?.packageId;
+    if(!transactionId){
+        logger.info(`Error in appendToDownloadTransaction: transactionId is undefined`);
+        return res.sendStatus(400);
+    }
+    if(!packageId){
+        logger.info(`Error in appendToDownloadTransaction: packageId is undefined`);
+        return res.sendStatus(400);
+    }
+    try{
+        const exists = await prismaCalls.checkPackageExists(undefined, undefined, packageId);
+        if(!exists){
+            logger.info(`Error in appendToDownloadTransaction: Package does not exist.`);
+            return res.sendStatus(404);
+        }
+        const S3Link = await prismaCalls.getS3Link(packageId);
+        if(!S3Link){
+            logger.info(`Error in appendToDownloadTransaction: S3Link is null`);
+            return res.sendStatus(500);
+        }
+        await prismaCalls.createTransactionPackage({
+            id: packageId,
+            transactionId,
+            URL: S3Link
+        });
+        logger.info(`TransactionPackage appended successfully in download: ${packageId}`);
+        res.sendStatus(200);
+    }catch(error){
+        logger.error(`Error in appendToDownloadTransaction: ${error}`);
+        res.sendStatus(500);
+    }
+}
+
+export async function executeDownloadTransaction(req: Request, res: Response){
+    const transactionId = req.body?.transactionId;
+    if(!transactionId){
+        logger.info(`Error in executeDownloadTransaction: transactionId is undefined`);
+        return res.sendStatus(400);
+    }
+
+    const transaction = await prismaCalls.getTransactionById(transactionId);
+    logger.info(`Transaction: ${JSON.stringify(transaction)}`);
+    if(!transaction){
+        logger.info(`Error in executeDownloadTransaction: Transaction not found`);
+        return res.sendStatus(404);
+    }
+    if(transaction.status !== 'PENDING' || transaction.type !== 'DOWNLOAD'){
+        logger.info(`Error in executeDownloadTransaction: Transaction is not in a state to be executed`);
+        return res.sendStatus(422);
+    }
+
+    const transactionPackages = await prismaCalls.getTransactionPackages(transactionId);
+    logger.info(`Transaction packages: ${JSON.stringify(transactionPackages)}`);
+    if(!transactionPackages || transactionPackages.length === 0){
+        logger.info(`Error in executeDownloadTransaction: Transaction has no packages`);
+        return res.sendStatus(404);
+    }
+
+    const packageResponses = [];
+    logger.info(`Executing download transaction: ${transactionId}`);
+    try{
+        for(const curPackage of transactionPackages){
+            logger.info('Processing new download transaction package');
+            try{
+                if(!curPackage.URL){
+                    logger.info('Transaction package has no URL');
+                    throw new Error('Transaction package has no URL');
+                }
+                if(!isS3Link(curPackage.URL)){
+                    logger.info('Transaction package has no S3 link');
+                    throw new Error('Transaction package has no S3 link');
+                }
+                const packageContent = await downloadFromS3(curPackage.URL);
+                const dbPackage = await prismaCalls.getPackage(curPackage.id);
+                if(!dbPackage){
+                    logger.info(`Error in executeDownloadTransaction: Package not found`);
+                    return res.sendStatus(404);
+                }
+                const base64Content = packageContent.toString('base64');
+                const packageMetaData: apiSchema.PackageMetadata = {
+                    Name: dbPackage.metadata.name,
+                    Version: dbPackage.metadata.version,
+                    ID: dbPackage.metadata.id,
+                };
+                const apiResponsePackageData: apiSchema.ApiResponsePackageData = {
+                    Content: base64Content,
+                };
+                const packageResponse: apiSchema.Package = {
+                    metadata: packageMetaData,
+                    data: apiResponsePackageData,
+                };
+                packageResponses.push(packageResponse);
+            }catch(error){
+                logger.info(`Error processing download transaction package: ${error}`);
+                return res.sendStatus(500);
+            }
+        }
+        return res.status(200).json(packageResponses);
+    }
+    catch(error){
+        logger.error(`Error executing download transaction: ${error}`);
+        return res.sendStatus(500);
+    }
+}
