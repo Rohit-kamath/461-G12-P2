@@ -8,27 +8,37 @@ function App() {
   const [searchResults, setSearchResults] = useState<string[] | null>(null);
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
 
-    // Package Directory
+  // Package Directory
   const [isPackageDirectoryOpen, setIsPackageDirectoryOpen] = useState<boolean>(false);
   const [packageName, setPackageName] = useState<string>('');
   const [packageVersion, setPackageVersion] = useState<string>('');
   const [packageDirectory, setPackageDirectory] = useState<string | null>(null);
-    // Open package directory
+
+  // Update Fields
+  const [updateFields, setUpdateFields] = useState<{ version: string, description: string }>({ version: '', description: '' });
+
+  // Package Rating
+  const [packageRating, setPackageRating] = useState<number | null>(null);
+
+  // Open package directory
   const openPackageDirectory = () => {
     setIsPackageDirectoryOpen(true);
   };
-    // Close package directory
+
+  // Close package directory
   const closePackageDirectory = () => {
     setIsPackageDirectoryOpen(false);
     setPackageName('');
     setPackageVersion('');
     setPackageDirectory(null);
   };
-    // Package Info
+
+  // Package Info
   const submitPackageInfo = () => {
     setPackageDirectory(`/${packageName}/${packageVersion}`);
   };
-    // Package Reset
+
+  // Package Reset
   const resetPackageRegistry = async() => {
     const confirmReset = window.confirm('Are you sure you want to reset the package registry?');
     if (confirmReset) {
@@ -44,7 +54,7 @@ function App() {
 
   const uploadZipFile = async (file: File) => {
     const formData = new FormData();
-  
+
     // Convert zip file to base64 encoding
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -52,34 +62,34 @@ function App() {
       const base64Content = reader.result?.toString().split(',')[1];
       if (base64Content) {
         formData.append('Content', base64Content);
-  
+
         try {
           setUploadStatus(`Uploading ${file.name}...`);
-  
+
           const response = await axios.post('/package', formData, {
             headers: {
               'Content-Type': 'multipart/form-data',
             },
           });
-  
+
           setUploadStatus(`Upload successful for ${file.name}: ${response.data}`);
         } catch (error: any) {
           setUploadStatus(`Error uploading ${file.name}: ${error.message}`);
         }
       }
     };
-  
+
     reader.onerror = () => {
       setUploadStatus(`Error reading ${file.name}`);
     };
   };
-  
+
   const uploadZipFiles = async () => {
     if (!selectedFiles || selectedFiles.length === 0) {
       setUploadStatus('No files selected');
       return;
     }
-  
+
     try {
       for (const file of selectedFiles) {
         await uploadZipFile(file);
@@ -89,8 +99,6 @@ function App() {
       console.error('Error uploading files:', error);
     }
   };
-  
-  
 
   const handleSearchTermChange = (e: ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
@@ -98,7 +106,7 @@ function App() {
 
   const searchPackages = async () => {
     try {
-      const response = await axios.get(`/package/byName/:${searchTerm}`);
+      const response = await axios.get(`/package/byName/${searchTerm}`);
       setSearchResults(response.data);
       setSelectedPackage(null); // Reset selected package when a new search is performed
     } catch (error: any) {
@@ -116,6 +124,33 @@ function App() {
         await axios.get(`/package/${selectedPackage}`);
       } catch (error: any) {
         console.error(`Error downloading package: ${error.message}`);
+      }
+    }
+  };
+
+  // Update functionality
+  const handleUpdateClick = () => {
+    const version = prompt('Enter new version:');
+    const description = prompt('Enter update description:');
+
+    if (version && description) {
+      setUpdateFields({ version, description });
+      //api call to update package
+    }
+  };
+
+  // Rating functionality
+  const handleRatingClick = async () => {
+    const packageId = prompt('Enter package ID:');
+
+    if (packageId) {
+      const response = await axios.get(`/package/${packageId}/rate`);//Make API call to get ratings based on packageId
+
+      if ((response).status === 200) {
+        const ratings = response.data;
+        setPackageRating(ratings);
+      } else {
+        alert('Unable to retrieve ratings for the specified package ID.');
       }
     }
   };
@@ -158,6 +193,15 @@ function App() {
               <div className="selected-package">
                 <h3>Selected Package: {selectedPackage}</h3>
                 <button onClick={downloadPackage}>Download</button>
+                <button onClick={handleUpdateClick}>Update</button>
+                <button onClick={handleRatingClick}>Check Ratings</button>
+              </div>
+            )}
+
+            {packageRating !== null && (
+              <div className="package-rating">
+                <h3>Package Ratings</h3>
+                <p>Ratings for {selectedPackage}: {packageRating}</p>
               </div>
             )}
           </div>
