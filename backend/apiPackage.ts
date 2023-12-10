@@ -556,40 +556,13 @@ export async function uploadPackage(req: Request, res: Response) {
         let sizeCost = null;
         let url: string | null = null;
 
-        if (!req.file && !req.body.URL && !req.body.Content) {
+        if (!req.body.URL && !req.body.Content) {
             logger.info("No file or URL provided in the upload. 400 No file uploaded");
             return res.sendStatus(400);
-        }
-        else if (req.file && req.body.URL) {
-            logger.info("Must upload either file or URL, not both. 400 No file uploaded");
-            return res.sendStatus(400);
-        }
-        else if (req.file && req.body.Content) {
-            logger.info("Must upload either Base64 ZIP or ZIP, not both. 400 No file uploaded");
-            return res.sendStatus(400);
-        }
-        else if (req.body.Content && req.body.URL) {
+        }else if (req.body.Content && req.body.URL) {
             logger.info("Must upload either Base64 ZIP or URL, not both. 400 No file uploaded");
             return res.sendStatus(400);
-        }
-        else if (req.file) {
-            logger.info("Zip File upload detected.");
-            let fileBuffer = req.file.buffer;
-            if (!isValidZip(fileBuffer)) {
-                logger.info('uploadPackage: Invalid ZIP file uploaded');
-                return res.sendStatus(400);
-            }
-            logger.info("Checking and calling if debloating is required.")
-            fileBuffer = shouldDebloat ? await debloatPackage(req.file.buffer) : req.file.buffer;
-            logger.info("Checking and calling if size cost is required.")
-            sizeCost = calculateSizeCost ? await calculateTotalSizeCost(fileBuffer) : 0;
-            metadata = await extractMetadataFromZip(fileBuffer);
-            url = await getGithubUrlFromZip(fileBuffer);
-            githubInfo = parseGitHubUrl(url);
-            encodedContent = fileBuffer.toString('base64');
-            logger.info(`Converted zip file to Base64 string, encoded content: ${encodedContent.substring(0, 100)}...`);
-        }
-        else if (req.body.URL) {
+        }else if (req.body.URL) {
             logger.info("URL upload detected.");
             url = await linkCheck(req.body.URL);
             if (!url) {
@@ -605,8 +578,7 @@ export async function uploadPackage(req: Request, res: Response) {
             githubInfo = parseGitHubUrl(url);
             encodedContent = debloatedBuffer.toString('base64');
             logger.info(`Converted zip file to Base64 string, encoded content:  ${encodedContent.substring(0, 100)}...`);
-        }
-        else if (req.body.Content) {
+        }else if (req.body.Content) {
             logger.info("Base64 ZIP upload detected.");
             logger.info("Decoding Base64 string.");
             const decodedBuffer = Buffer.from(req.body.Content, 'base64');
@@ -617,8 +589,7 @@ export async function uploadPackage(req: Request, res: Response) {
             url = await getGithubUrlFromZip(fileBuffer);
             githubInfo = parseGitHubUrl(url);
             encodedContent = req.body.Content;
-        }
-        else {
+        }else {
             logger.info("Must upload a proper zip or provide a URL. 400 Invalid upload type");
             return res.sendStatus(400);
         }
