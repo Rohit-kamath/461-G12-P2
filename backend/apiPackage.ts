@@ -1424,11 +1424,12 @@ async function deleteFromS3(bucketName: string, key: string): Promise<void> {
     }
 }
 
-export async function appendToRateTransaction(req: Request, res: Response){
-    const { transactionId, packageIds } = req.body;
+export async function appendToRateTransaction(req: Request, res: Response) {
+    const transactionId = req.body.transactionId;
+    const packageId = req.body.packageId;
 
-    if (!transactionId || !Array.isArray(packageIds) || packageIds.length === 0) {
-        logger.info('Missing transaction ID or package IDs');
+    if (!transactionId || !packageId) {
+        logger.info('Missing transaction ID or package ID');
         return res.sendStatus(400);
     }
 
@@ -1439,19 +1440,76 @@ export async function appendToRateTransaction(req: Request, res: Response){
             return res.sendStatus(404);
         }
 
-        for (const packageId of packageIds) {
-            await prismaCalls.createTransactionPackage({
-                id: packageId, 
-                transactionId: transactionId
-            });
-        }
+        await prismaCalls.createTransactionPackage({
+            id: packageId, 
+            transactionId: transactionId
+        });
 
+        logger.info(`Package ID ${packageId} appended to transaction ${transactionId}`);
         res.sendStatus(200);
     } catch (error) {
         logger.error(`Error in appendToRateTransaction: ${error}`);
         res.sendStatus(500);
     }
 }
+
+export async function executeRateTransaction(req: Request, res: Response) {
+    const transactionId = req.body?.transactionId;
+    if (!transactionId) {
+        logger.info('Error in executeRateTransaction: transactionId is undefined');
+        return res.sendStatus(400);
+    }
+
+    try {
+        const transaction = await prismaCalls.getTransactionById(transactionId);
+        if (!transaction) {
+            logger.info('Error in executeRateTransaction: Transaction not found');
+            return res.sendStatus(404);
+        }
+        if (transaction.status !== 'PENDING' || transaction.type !== 'RATE') {
+            logger.info('Error in executeRateTransaction: Transaction is not in a state to be executed');
+            return res.sendStatus(422);
+        }
+
+        const transactionPackages = await prismaCalls.getTransactionPackages(transactionId);
+        if (!transactionPackages || transactionPackages.length === 0) {
+            logger.info('Error in executeRateTransaction: Transaction has no packages');
+            return res.sendStatus(404);
+        }
+
+        const packageRatings = [];
+        for (const curPackage of transactionPackages) {
+            const packageRating = await prismaCalls.getPackageRatingById(curPackage.id);
+            if (!packageRating) {
+                logger.error(`Error in executeRateTransaction: No rating found for package ID ${curPackage.id}`);
+                await prismaCalls.updateTransactionStatus(transactionId, 'FAILED');
+                await prismaCalls.deleteTransactionPackages(transactionId);
+                return res.sendStatus(404);
+            }
+
+            packageRatings.push({
+                packageId: curPackage.id,
+                rating: packageRating
+            });
+        }
+
+        await prismaCalls.updateTransactionStatus(transactionId, 'COMPLETED');
+        await prismaCalls.deleteTransactionPackages(transactionId);
+
+        const response = {
+            packages: packageRatings
+        };
+        res.status(200).json(response);
+    } catch (error) {
+        logger.error(`Error executing rate transaction: ${error}`);
+        await prismaCalls.updateTransactionStatus(transactionId, 'FAILED');
+        await prismaCalls.deleteTransactionPackages(transactionId);
+        res.sendStatus(500);
+    }
+}
+
+
+
 
 export async function appendToUpdateTransaction(req: Request, res: Response){
     const transactionId = req.body?.transactionId;
