@@ -125,10 +125,11 @@ function App() {
       } catch (error: any) {
         console.error(`Error downloading package: ${error.message}`);
       }
+      //const s3link = https://${s3BucketName}.s3.${awsRegion}.amazonaws.com/${metadata.ID} HOW DO I INCORPORATE THIS INTO THE API CALL?
     }
   };
 
-  // Update functionality
+  // Update functionality ******* IS THIS ALL THAT IS UPDATED??
   const handleUpdateClick = () => {
     const version = prompt('Enter new version:');
     const description = prompt('Enter update description:');
