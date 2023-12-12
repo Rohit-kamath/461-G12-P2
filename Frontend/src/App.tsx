@@ -13,7 +13,6 @@ function App() {
   const [packageName, setPackageName] = useState<string>('');
   const [packageVersion, setPackageVersion] = useState<string>('');
   const [packageDirectory, setPackageDirectory] = useState<string | null>(null);
-  const [packageIdInput, setPackageIdInput] = useState<string>('');
 
   // Update Fields
   const [updateFields, setUpdateFields] = useState<{ content: string | null, url: string | null}>({ content: '', url: '' });
@@ -35,18 +34,24 @@ function App() {
   };
 
   // Package Info
-  const submitPackageInfo = () => {
+  const submitPackageInfo = async () => {
     // Validate package version consists of only numbers
     if (!/^(\d+(\.\d+)*)?$/.test(packageVersion)) {
       alert('Error: Version must contain only numbers.');
       return;
     }
-    // Validate package ID consists of only numbers
-    if (!/^\d+$/.test(packageIdInput)) {
-      alert('Error: Package ID must contain only numbers.');
+    setPackageDirectory(`/${packageName}/${packageVersion}`);
+    const response = await axios.get(`/package/byName/${packageName}`);
+    if(response.status === 200){
+      console.log('Success')
       return;
     }
-    setPackageDirectory(`/${packageName}/${packageVersion}/${packageIdInput}`);
+    else if(response.status === 404){
+      axios.post('/package', { name: packageName, version: packageVersion });
+    }
+    else{
+      alert('Error: Package does not exist.');
+    }
   };
 
   // Package Reset
@@ -168,7 +173,7 @@ function App() {
       }
     }
     else{
-      alert('Please enter either content or url');
+      alert('Please enter either content or url, not both');
     }
   };
 
@@ -182,8 +187,12 @@ function App() {
       if ((response).status === 200) {
         const ratings = response.data;
         setPackageRating(ratings);
-      } else {
-        alert('Unable to retrieve ratings for the specified package ID.');
+      }
+      else if ((response).status === 404) {
+        alert('Error: Package does not exist.');
+      }
+      else{
+        alert('Error: Request did not fail as expected.');
       }
     }
   };
@@ -294,14 +303,6 @@ function App() {
                   id="packageVersion"
                   value={packageVersion}
                   onChange={(e) => setPackageVersion(e.target.value)}
-                />
-
-                <label htmlFor="packageId">Package ID:</label>
-                <input
-                  type="text"
-                  id="packageId"
-                  value={packageIdInput}
-                  onChange={(e) => setPackageIdInput(e.target.value)}
                 />
                 <button type="button" onClick={submitPackageInfo}>
                   Submit
