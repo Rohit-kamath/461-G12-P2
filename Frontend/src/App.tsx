@@ -13,6 +13,7 @@ function App() {
   const [packageName, setPackageName] = useState<string>('');
   const [packageVersion, setPackageVersion] = useState<string>('');
   const [packageDirectory, setPackageDirectory] = useState<string | null>(null);
+  const [packageIdInput, setPackageIdInput] = useState<string>('');
 
   // Update Fields
   const [updateFields, setUpdateFields] = useState<{ version: string, description: string }>({ version: '', description: '' });
@@ -35,7 +36,17 @@ function App() {
 
   // Package Info
   const submitPackageInfo = () => {
-    setPackageDirectory(`/${packageName}/${packageVersion}`);
+    // Validate package version consists of only numbers
+    if (!/^(\d+(\.\d+)*)?$/.test(packageVersion)) {
+      alert('Error: Version must contain only numbers.');
+      return;
+    }
+    // Validate package ID consists of only numbers
+    if (!/^\d+$/.test(packageIdInput)) {
+      alert('Error: Package ID must contain only numbers.');
+      return;
+    }
+    setPackageDirectory(`/${packageName}/${packageVersion}/${packageIdInput}`);
   };
 
   // Package Reset
@@ -264,6 +275,13 @@ function App() {
                   onChange={(e) => setPackageVersion(e.target.value)}
                 />
 
+                <label htmlFor="packageId">Package ID:</label>
+                <input
+                  type="text"
+                  id="packageId"
+                  value={packageIdInput}
+                  onChange={(e) => setPackageIdInput(e.target.value)}
+                />
                 <button type="button" onClick={submitPackageInfo}>
                   Submit
                 </button>
