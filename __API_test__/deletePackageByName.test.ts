@@ -2,7 +2,7 @@ import axios from 'axios';
 import * as apiSchema from "../backend/apiSchema";
 import createModuleLogger from '../src/logger';
 
-const APIURL = "http://localhost:8080";
+const APIURL = "http://ece461-packageregistry-depenv.eba-bphpcw3d.us-east-2.elasticbeanstalk.com";
 const logger = createModuleLogger('deletePackageByName.test.ts');
 
 logger.info("Starting tests for deletePackageByName.test.ts");
