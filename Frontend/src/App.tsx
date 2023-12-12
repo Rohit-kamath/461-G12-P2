@@ -169,15 +169,26 @@ function App() {
       <h1>Zip File Uploader</h1>
 
       <div className="file-upload">
-        <input type="file" accept=".zip" multiple onChange={handleFileChange} />
-        <button onClick={uploadZipFiles}>Upload Zip Files</button>
+        <label htmlFor="fileInput">Select Zip Files:</label>
+        <input id="fileInput" type="file" accept=".zip" multiple onChange={handleFileChange} />
+        <button type="button" onClick={uploadZipFiles}>
+          Upload Zip Files
+        </button>
         {uploadStatus && <p>{uploadStatus}</p>}
       </div>
 
       <div className="search-packages">
         <h2>Search Packages</h2>
-        <input type="text" placeholder="Enter package name" value={searchTerm} onChange={handleSearchTermChange} />
-        <button onClick={searchPackages}>Search</button>
+        <input
+          type="text"
+          id="searchInput"
+          placeholder="Enter package name"
+          value={searchTerm}
+          onChange={handleSearchTermChange}
+        />
+        <button type="button" onClick={searchPackages}>
+          Search
+        </button>
 
         {searchResults && (
           <div className="search-results">
@@ -193,16 +204,24 @@ function App() {
             {selectedPackage && (
               <div className="selected-package">
                 <h3>Selected Package: {selectedPackage}</h3>
-                <button onClick={downloadPackage}>Download</button>
-                <button onClick={handleUpdateClick}>Update</button>
-                <button onClick={handleRatingClick}>Check Ratings</button>
+                <button type="button" onClick={downloadPackage}>
+                  Download
+                </button>
+                <button type="button" onClick={handleUpdateClick}>
+                  Update
+                </button>
+                <button type="button" onClick={handleRatingClick}>
+                  Check Ratings
+                </button>
               </div>
             )}
 
             {packageRating !== null && (
               <div className="package-rating">
                 <h3>Package Ratings</h3>
-                <p>Ratings for {selectedPackage}: {packageRating}</p>
+                <p>
+                  Ratings for {selectedPackage}: {packageRating}
+                </p>
               </div>
             )}
           </div>
@@ -211,19 +230,35 @@ function App() {
 
       <div className="package-directory">
         <h2>Package Directory</h2>
-        <button onClick={openPackageDirectory}>Open Package Directory</button>
+        <button type="button" onClick={openPackageDirectory}>
+          Open Package Directory
+        </button>
 
         {isPackageDirectoryOpen && (
           <div className="package-info">
             <h3>Enter Package Information</h3>
-            <label>Name:</label>
-            <input type="text" value={packageName} onChange={(e) => setPackageName(e.target.value)} />
+            <label htmlFor="packageName">Name:</label>
+            <input
+              type="text"
+              id="packageName"
+              value={packageName}
+              onChange={(e) => setPackageName(e.target.value)}
+            />
 
-            <label>Version:</label>
-            <input type="text" value={packageVersion} onChange={(e) => setPackageVersion(e.target.value)} />
+            <label htmlFor="packageVersion">Version:</label>
+            <input
+              type="text"
+              id="packageVersion"
+              value={packageVersion}
+              onChange={(e) => setPackageVersion(e.target.value)}
+            />
 
-            <button onClick={submitPackageInfo}>Submit</button>
-            <button onClick={closePackageDirectory}>Cancel</button>
+            <button type="button" onClick={submitPackageInfo}>
+              Submit
+            </button>
+            <button type="button" onClick={closePackageDirectory}>
+              Cancel
+            </button>
 
             {packageDirectory && (
               <div className="directory-view">
@@ -237,7 +272,9 @@ function App() {
 
       <div className="package-reset">
         <h2>Package Reset</h2>
-        <button onClick={resetPackageRegistry}>Reset Package Registry</button>
+        <button type="button" onClick={resetPackageRegistry}>
+          Reset Package Registry
+        </button>
       </div>
     </div>
   );
