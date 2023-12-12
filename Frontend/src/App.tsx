@@ -165,118 +165,131 @@ function App() {
   }, [searchTerm]);
 
   return (
-    <div className="container">
-      <h1>Zip File Uploader</h1>
-
-      <div className="file-upload">
-        <label htmlFor="fileInput">Select Zip Files:</label>
-        <input id="fileInput" type="file" accept=".zip" multiple onChange={handleFileChange} />
-        <button type="button" onClick={uploadZipFiles}>
-          Upload Zip Files
-        </button>
-        {uploadStatus && <p>{uploadStatus}</p>}
-      </div>
-
-      <div className="search-packages">
-        <h2>Search Packages</h2>
-        <input
-          type="text"
-          id="searchInput"
-          placeholder="Enter package name"
-          value={searchTerm}
-          onChange={handleSearchTermChange}
+    <html lang="en">
+      <head>
+        <meta charSet="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta
+          name="description"
+          content="This is the frontend for a reliable package registry web app."
         />
-        <button type="button" onClick={searchPackages}>
-          Search
-        </button>
+        <title>Zip File Uploader</title>
+      </head>
+      <body>
+        <div className="container">
+          <h1>Zip File Uploader</h1>
 
-        {searchResults && (
-          <div className="search-results">
-            <h3>Search Results</h3>
-            <ul>
-              {searchResults.map((result, index) => (
-                <li key={index} onClick={() => handlePackageClick(result)}>
-                  {result}
-                </li>
-              ))}
-            </ul>
+          <div className="file-upload">
+            <label htmlFor="fileInput">Select Zip Files:</label>
+            <input id="fileInput" type="file" accept=".zip" multiple onChange={handleFileChange} />
+            <button type="button" onClick={uploadZipFiles}>
+              Upload Zip Files
+            </button>
+            {uploadStatus && <p>{uploadStatus}</p>}
+          </div>
 
-            {selectedPackage && (
-              <div className="selected-package">
-                <h3>Selected Package: {selectedPackage}</h3>
-                <button type="button" onClick={downloadPackage}>
-                  Download
-                </button>
-                <button type="button" onClick={handleUpdateClick}>
-                  Update
-                </button>
-                <button type="button" onClick={handleRatingClick}>
-                  Check Ratings
-                </button>
-              </div>
-            )}
+          <div className="search-packages">
+            <h2>Search Packages</h2>
+            <input
+              type="text"
+              id="searchInput"
+              placeholder="Enter package name"
+              value={searchTerm}
+              onChange={handleSearchTermChange}
+            />
+            <button type="button" onClick={searchPackages}>
+              Search
+            </button>
 
-            {packageRating !== null && (
-              <div className="package-rating">
-                <h3>Package Ratings</h3>
-                <p>
-                  Ratings for {selectedPackage}: {packageRating}
-                </p>
+            {searchResults && (
+              <div className="search-results">
+                <h3>Search Results</h3>
+                <ul>
+                  {searchResults.map((result, index) => (
+                    <li key={index} onClick={() => handlePackageClick(result)}>
+                      {result}
+                    </li>
+                  ))}
+                </ul>
+
+                {selectedPackage && (
+                  <div className="selected-package">
+                    <h3>Selected Package: {selectedPackage}</h3>
+                    <button type="button" onClick={downloadPackage}>
+                      Download
+                    </button>
+                    <button type="button" onClick={handleUpdateClick}>
+                      Update
+                    </button>
+                    <button type="button" onClick={handleRatingClick}>
+                      Check Ratings
+                    </button>
+                  </div>
+                )}
+
+                {packageRating !== null && (
+                  <div className="package-rating">
+                    <h3>Package Ratings</h3>
+                    <p>
+                      Ratings for {selectedPackage}: {packageRating}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>
-        )}
-      </div>
 
-      <div className="package-directory">
-        <h2>Package Directory</h2>
-        <button type="button" onClick={openPackageDirectory}>
-          Open Package Directory
-        </button>
-
-        {isPackageDirectoryOpen && (
-          <div className="package-info">
-            <h3>Enter Package Information</h3>
-            <label htmlFor="packageName">Name:</label>
-            <input
-              type="text"
-              id="packageName"
-              value={packageName}
-              onChange={(e) => setPackageName(e.target.value)}
-            />
-
-            <label htmlFor="packageVersion">Version:</label>
-            <input
-              type="text"
-              id="packageVersion"
-              value={packageVersion}
-              onChange={(e) => setPackageVersion(e.target.value)}
-            />
-
-            <button type="button" onClick={submitPackageInfo}>
-              Submit
-            </button>
-            <button type="button" onClick={closePackageDirectory}>
-              Cancel
+          <div className="package-directory">
+            <h2>Package Directory</h2>
+            <button type="button" onClick={openPackageDirectory}>
+              Open Package Directory
             </button>
 
-            {packageDirectory && (
-              <div className="directory-view">
-                <h3>Package Directory View</h3>
-                <p>Directory: {packageDirectory}</p>
+            {isPackageDirectoryOpen && (
+              <div className="package-info">
+                <h3>Enter Package Information</h3>
+                <label htmlFor="packageName">Name:</label>
+                <input
+                  type="text"
+                  id="packageName"
+                  value={packageName}
+                  onChange={(e) => setPackageName(e.target.value)}
+                />
+
+                <label htmlFor="packageVersion">Version:</label>
+                <input
+                  type="text"
+                  id="packageVersion"
+                  value={packageVersion}
+                  onChange={(e) => setPackageVersion(e.target.value)}
+                />
+
+                <button type="button" onClick={submitPackageInfo}>
+                  Submit
+                </button>
+                <button type="button" onClick={closePackageDirectory}>
+                  Cancel
+                </button>
+
+                {packageDirectory && (
+                  <div className="directory-view">
+                    <h3>Package Directory View</h3>
+                    <p>Directory: {packageDirectory}</p>
+                  </div>
+                )}
               </div>
             )}
           </div>
-        )}
-      </div>
 
-      <div className="package-reset">
-        <h2>Package Reset</h2>
-        <button type="button" onClick={resetPackageRegistry}>
-          Reset Package Registry
-        </button>
-      </div>
-    </div>
+          <div className="package-reset">
+            <h2>Package Reset</h2>
+            <button type="button" onClick={resetPackageRegistry}>
+              Reset Package Registry
+            </button>
+          </div>
+        </div>
+      </body>
+    </html>
   );
 }
 export default App;
