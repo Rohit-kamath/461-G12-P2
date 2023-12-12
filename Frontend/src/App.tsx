@@ -16,7 +16,7 @@ function App() {
   const [packageIdInput, setPackageIdInput] = useState<string>('');
 
   // Update Fields
-  const [updateFields, setUpdateFields] = useState<{ version: string, description: string }>({ version: '', description: '' });
+  const [updateFields, setUpdateFields] = useState<{ content: string | null, url: string | null}>({ content: '', url: '' });
 
   // Package Rating
   const [packageRating, setPackageRating] = useState<number | null>(null);
@@ -132,22 +132,43 @@ function App() {
   const downloadPackage = async () => {
     if (selectedPackage) {
       try {
-        await axios.get(`/package/${selectedPackage}`);
+        const response = await axios.get(`/package/${selectedPackage}`);
+        const base64Content = response.data;
+        // Convert base64 to binary
+        const binaryContent = atob(base64Content);
+        // Create a Uint8Array from the binary data
+        const uint8Array = new Uint8Array(binaryContent.length);
+        for (let i = 0; i < binaryContent.length; i++) {
+          uint8Array[i] = binaryContent.charCodeAt(i);
+        }
+        // Create a blob from the Uint8Array
+        const blob = new Blob([uint8Array], { type: 'application/zip' });
+        // Create a link element and simulate a click to trigger the download
+        const link = document.createElement('a');
+        link.href = window.URL.createObjectURL(blob);
+        link.download = `${selectedPackage}.zip`; // Set the desired file name
+        link.click();
       } catch (error: any) {
         console.error(`Error downloading package: ${error.message}`);
       }
-      //const s3link = https://${s3BucketName}.s3.${awsRegion}.amazonaws.com/${metadata.ID} HOW DO I INCORPORATE THIS INTO THE API CALL?
     }
   };
-
-  // Update functionality ******* IS THIS ALL THAT IS UPDATED??
+  
   const handleUpdateClick = () => {
-    const version = prompt('Enter new version:');
-    const description = prompt('Enter update description:');
+    const content = prompt('Enter new content:');
+    const url = prompt('Or enter update url:');
 
-    if (version && description) {
-      setUpdateFields({ version, description });
-      //api call to update package
+    if ((content || url) && !(content && url)) {
+      setUpdateFields({ content, url });
+      if(url){
+        axios.put(`/package/${selectedPackage}`, { url });
+      }
+      else{
+        axios.put(`/package/${selectedPackage}`, { content });
+      }
+    }
+    else{
+      alert('Please enter either content or url');
     }
   };
 
