@@ -128,6 +128,7 @@ export async function getPackagesByName(req: Request, res: Response) {
 
         if (!apiPackageHistories) {
             logger.info(`Error in getPackagesByName: apiPackageHistories is null`);
+            console.log(`Error in getPackagesByName: apiPackageHistories is null`);
             return res.sendStatus(500);
         }
         
@@ -139,6 +140,7 @@ export async function getPackagesByName(req: Request, res: Response) {
         return res.status(200).json(apiPackageHistories);
     } catch (error) {
         logger.info(`Error in getPackagesByName: ${error}`);
+        console.log(`Error in getPackagesByName: ${error}`);
         return res.sendStatus(500);
     }
 }
@@ -1092,7 +1094,7 @@ export async function deletePackageByID(req: Request, res: Response) {
 
         // Check for required fields
         if (!packageID) {
-            logger.info(`Error in retrieveAndDeletePackage: Package ID or Authentication Token is undefined`);
+            logger.info(`Error in retrieveAndDeletePackage: Package ID is undefined`);
             return res.sendStatus(400);
         }
         // Check the package
@@ -1113,6 +1115,7 @@ export async function deletePackageByID(req: Request, res: Response) {
 
 export async function deletePackageByName(req: Request, res: Response) {
     try {
+        console.log(req.params);
         const packageName = req.params?.name;
 
         if (packageName === undefined) {
@@ -1126,8 +1129,11 @@ export async function deletePackageByName(req: Request, res: Response) {
             return res.sendStatus(404);
         }
         // deletion
-        await prismaCalls.deletePackageVersions(packageName);
-        
+        const packageIDarray = await prismaCalls.getPackageIDs(packageName);
+        for (const packageID of packageIDarray) {
+            await prismaCalls.deletePackage(packageID);
+        }
+
         logger.info(`Package deleted successfully: ${packageName}`);
         return res.sendStatus(200);
     } catch (error) {

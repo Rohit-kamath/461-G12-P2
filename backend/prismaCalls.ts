@@ -390,7 +390,6 @@ export async function deletePackage(packageId: string): Promise<void> {
 }
 
 
-
 export async function deleteTransactionPackages(transactionId: string): Promise<void> {
     await prisma.$transaction(async (prisma) => {
         await prisma.transactionPackage.deleteMany({
@@ -401,41 +400,24 @@ export async function deleteTransactionPackages(transactionId: string): Promise<
     });
 }
 
-
-export async function deletePackageVersions(packageName: string): Promise<void> {
+export async function getPackageIDs(PackageName: string): Promise<string[]> {
     try {
-        // Begin a transaction
-        await prisma.$transaction(async (prisma) => {
-            // Find all metadata entries for the given package name
-            const metadataEntries = await prisma.packageMetadata.findMany({
-                where: { name: packageName },
-                select: { id: true }
-            });
-
-            if (metadataEntries.length === 0) {
-                logger.info(`No package found with name: ${packageName}`);
-                return;
-            }
-
-            // Delete all related Package entries
-            for (const metadata of metadataEntries) {
-                await prisma.package.deleteMany({
-                    where: { metadataId: metadata.id }
-                });
-            }
-
-            // Delete PackageMetadata entries
-            await prisma.packageMetadata.deleteMany({
-                where: { name: packageName }
-            });
-
-            logger.info(`Successfully deleted all versions of package: ${packageName}`);
+        const packageIDs = await prisma.packageMetadata.findMany({
+            where: {
+                name: PackageName,
+            },
+            select: {
+                id: true,
+            },
         });
+
+        return packageIDs.map((packageID) => packageID.id);
     } catch (error) {
-        logger.error(`Error while deleting packages by name ${packageName}`);
-        throw error;
+        logger.error(`Error in getPackageIDs: ${error}`);
+        throw new Error('Failed to retrieve package IDs from the database.');
     }
 }
+
 
 export async function createTransaction(transactionId: string, type: prismaSchema.TransactionType): Promise<prismaSchema.Transaction | null> {
     try {
@@ -508,3 +490,4 @@ export async function updateTransactionStatus(transactionId: string, newStatus: 
         throw new Error('Failed to update transaction status in the database.');
     }
 }
+
