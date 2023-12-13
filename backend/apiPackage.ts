@@ -1223,7 +1223,7 @@ export async function appendToUploadTransaction(req: Request, res: Response) {
         }
 
         await prismaCalls.createTransactionPackage({
-            id: transactionPackageId,
+            packageid: transactionPackageId,
             transactionId,
             URL: link
         });
@@ -1455,7 +1455,7 @@ export async function appendToRateTransaction(req: Request, res: Response) {
         }
 
         await prismaCalls.createTransactionPackage({
-            id: packageId, 
+            packageid: packageId, 
             transactionId: transactionId
         });
 
@@ -1493,7 +1493,7 @@ export async function executeRateTransaction(req: Request, res: Response) {
 
         const packageRatings = [];
         for (const curPackage of transactionPackages) {
-            const packageRating = await prismaCalls.getPackageRatingById(curPackage.id);
+            const packageRating = await prismaCalls.getPackageRatingById(curPackage.packageid);
             if (!packageRating) {
                 logger.error(`Error in executeRateTransaction: No rating found for package ID ${curPackage.id}`);
                 await prismaCalls.updateTransactionStatus(transactionId, 'FAILED');
@@ -1567,7 +1567,7 @@ export async function appendToUpdateTransaction(req: Request, res: Response){
         const transactionUrl = content ? S3Link : url;
 
         await prismaCalls.createTransactionPackage({
-            id: packageId,
+            packageid: packageId,
             transactionId,
             URL: transactionUrl
         });
@@ -1617,9 +1617,9 @@ export async function executeUpdateTransaction(req: Request, res: Response){
                 }
                 if(isS3Link(curPackage.URL)){
                     const packageContent = await downloadFromS3(curPackage.URL);
-                    await uploadToS3(curPackage.id, packageContent);
+                    await uploadToS3(curPackage.packageid, packageContent);
                 }else{
-                    const updateData = await prismaCalls.updatePackageDetails(curPackage.id, {URL: curPackage.URL});
+                    const updateData = await prismaCalls.updatePackageDetails(curPackage.packageid, {URL: curPackage.URL});
                     if(!updateData){
                         logger.info(`Error in executeUpdateTransaction: updateData is null`);
                         return res.sendStatus(500);
@@ -1677,7 +1677,7 @@ export async function appendToDownloadTransaction(req : Request, res : Response)
             return res.sendStatus(500);
         }
         await prismaCalls.createTransactionPackage({
-            id: packageId,
+            packageid: packageId,
             transactionId,
             URL: S3Link
         });
@@ -1729,7 +1729,7 @@ export async function executeDownloadTransaction(req: Request, res: Response){
                 throw new Error('Transaction package has no S3 link');
             }
             const packageContent = await downloadFromS3(curPackage.URL);
-            const dbPackage = await prismaCalls.getPackage(curPackage.id);
+            const dbPackage = await prismaCalls.getPackage(curPackage.packageid);
             if(!dbPackage){
                 logger.info(`Error in executeDownloadTransaction: Package not found`);
                 return res.sendStatus(404);
