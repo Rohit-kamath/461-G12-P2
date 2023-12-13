@@ -1,6 +1,5 @@
 import axios from 'axios';
-
-const APIURL = 'http://localhost:8080';
+const APIURL = 'http://ece461-packageregistry-depenv.eba-bphpcw3d.us-east-2.elasticbeanstalk.com';
 
 describe('groupUpload Process', () => {
 
