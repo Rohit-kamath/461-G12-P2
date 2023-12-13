@@ -647,9 +647,11 @@ export async function uploadPackage(req: Request, res: Response) {
 
         const Package: apiSchema.Package = {
             metadata: metadata,
-            data: apiResponsePackageData,
-            sizeCost: sizeCost
+            data: apiResponsePackageData
         };
+        if(calculateSizeCost){
+            Package.sizeCost = sizeCost;
+        }
 
         const logAPIPackage = {
             metadata: metadata,
