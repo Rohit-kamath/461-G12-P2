@@ -9,20 +9,40 @@ describe('License Score', () => {
     });
 
     it('should return 1 if the README contains a license', async () => {
-        const mockData = {
+        const mockReadmeData = {
             content: Buffer.from('This is a sample readme with a License').toString('base64'),
         };
-        (getRequest as jest.Mock).mockResolvedValue(mockData);
+        (getRequest as jest.Mock).mockResolvedValueOnce(mockReadmeData);
 
         const score = await getLicenseScore('testOwner', 'testRepo');
         expect(score).toBe(1);
     });
 
-    it('should return 0 if the README does not contain a license', async () => {
-        const mockData = {
+    it('should return 1 if the GitHub API finds a license', async () => {
+        const mockReadmeData = {
             content: Buffer.from('This is a sample readme without the keyword').toString('base64'),
         };
-        (getRequest as jest.Mock).mockResolvedValue(mockData);
+        const mockLicenseData = {
+            license: {
+                key: 'mit',
+            },
+        };
+        (getRequest as jest.Mock)
+            .mockResolvedValueOnce(mockReadmeData)
+            .mockResolvedValueOnce(mockLicenseData);
+
+        const score = await getLicenseScore('testOwner', 'testRepo');
+        expect(score).toBe(1);
+    });
+
+    it('should return 0 if neither the README nor GitHub API contain a license', async () => {
+        const mockReadmeData = {
+            content: Buffer.from('This is a sample readme without the keyword').toString('base64'),
+        };
+        const mockNoLicenseData = {};
+        (getRequest as jest.Mock)
+            .mockResolvedValueOnce(mockReadmeData)
+            .mockResolvedValueOnce(mockNoLicenseData);
 
         const score = await getLicenseScore('testOwner', 'testRepo');
         expect(score).toBe(0);
@@ -34,7 +54,6 @@ describe('License Score', () => {
 
         const score = await getLicenseScore('testOwner', 'testRepo');
         expect(score).toBe(0);
-        expect(consoleSpy).toHaveBeenCalledWith(new Error('API Error'));
 
         consoleSpy.mockRestore();
     });

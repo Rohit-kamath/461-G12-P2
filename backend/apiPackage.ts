@@ -1265,6 +1265,7 @@ export async function executeUploadTransaction(req: Request, res: Response) {
     const packageResponses = [];
 
     let rollbackNeeded = false;
+    let errorInfo = null;
     logger.info(`Executing upload transaction: ${transactionId}`);
     try {
         for (const curPackage of transactionPackages) {
@@ -1298,15 +1299,18 @@ export async function executeUploadTransaction(req: Request, res: Response) {
                 const packageExists = await prismaCalls.checkPackageExists(metadata.Name, metadata.Version);
                 if (packageExists) {
                     logger.info("409 Package exists already.");
+                    errorInfo = { statusCode: 409 };
                     throw new Error("409 Package exists already.");
                 }
                 if (!githubInfo) {
                     logger.info("Invalid GitHub repository URL in a group upload.");
+                    errorInfo = { statusCode: 400 };
                     throw new Error("Invalid GitHub repository URL in a group upload.");
                 }
                 const metrics = await calculateGithubMetrics(githubInfo.owner, githubInfo.repo);
                 if (!isPackageIngestible(metrics)) {
                     logger.info("424 Package is not uploaded due to the disqualified rating.");
+                    errorInfo = { statusCode: 424 };
                     throw new Error("424 Package is not uploaded due to the disqualified rating.");
                 }
                 await prismaCalls.uploadMetadataToDatabase(metadata);
@@ -1370,7 +1374,11 @@ export async function executeUploadTransaction(req: Request, res: Response) {
         } else {
             logger.error('Transaction bucket name not configured');
         }
-        return res.sendStatus(500);
+        if (errorInfo) {
+            return res.sendStatus(errorInfo.statusCode);
+        } else {
+            return res.sendStatus(500);
+        }
     }
     logger.info('Deleting transaction packages');
     await prismaCalls.deleteTransactionPackages(transactionId);
@@ -1383,10 +1391,10 @@ export async function executeUploadTransaction(req: Request, res: Response) {
         logger.error('Transaction bucket name not configured');
     }
     const response = { transactionId, packages: packageResponses };
-    res.status(200).json(response);
+    return res.status(200).json(response);
     } catch (error) {
         logger.error(`Error executing upload transaction: ${error}`);
-        res.sendStatus(500);
+        return res.sendStatus(500);
     }
 }
 

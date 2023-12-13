@@ -60,12 +60,15 @@ export class Responsiveness extends MetricParent {
                 })
                 .then((median) => {
                     if (median !== undefined) {
-                        if (median <= 1) {
+                        const maxResponseTime = 30;
+    
+                        if (median <= 7) {
                             resolve(1);
-                        } else if (median > 10) {
+                        } else if (median > maxResponseTime) {
                             resolve(0);
                         } else {
-                            resolve(1 - (median - 1) / 9);
+                            const scaledScore = 1 - (median - 7) / (maxResponseTime - 7);
+                            resolve(scaledScore);
                         }
                     }
                 })
