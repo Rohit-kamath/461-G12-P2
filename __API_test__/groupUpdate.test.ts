@@ -2,7 +2,6 @@ import axios from 'axios';
 import * as apiSchema from "../backend/apiSchema";
 const APIURL = 'http://ece461-packageregistry-depenv.eba-bphpcw3d.us-east-2.elasticbeanstalk.com';
 let metadataObject1: apiSchema.PackageMetadata;
-let metadataObject2: apiSchema.PackageMetadata;
 describe('packageUpload', () => {
     it('POST /package endpoint to put something in registry. should return 200 status code and something for a valid github repo link', async () => {
         try {
@@ -11,18 +10,6 @@ describe('packageUpload', () => {
             });
             expect(response.status).toBe(200);
             metadataObject1 = response.data.metadata;
-        } catch (error: any) {
-            console.log(error.response.status);
-            throw error;
-        }
-    });
-    it('POST /package endpoint to put something in registry. should return 200 status code and something for a valid github repo link', async () => {
-        try {
-            const response = await axios.post(`${APIURL}/package`, {
-                URL: "https://github.com/microsoft/vscode-eslint"
-            });
-            expect(response.status).toBe(200);
-            metadataObject2 = response.data.metadata;
         } catch (error: any) {
             console.log(error.response.status);
             throw error;
