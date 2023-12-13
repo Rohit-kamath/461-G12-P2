@@ -19,7 +19,6 @@ export async function getMetaDataByQuery(queryName: apiSchema.PackageName, minVe
         // Ensure that the offset is at least 1 (treat 0 as page 1)
         const page = Math.max(0, offset);
 
-        // Calculate the number of records to skip based on the page number and page size
         const pageSize = 10;
         const recordsToSkip = page * pageSize;
 
@@ -94,7 +93,6 @@ export async function uploadMetadataToDatabase(metadata: apiSchema.PackageMetada
 export async function createPackageHistoryEntry(metadataId: string, action: Action): Promise<void> {
     logger.info(`createPackageHistoryEntry: Creating package history entry for metadata ID: ${metadataId}`)
     try {
-        // Check if metadataId exists
         const metadataExists = await prisma.packageMetadata.findUnique({
             where: { id: metadataId },
         });
@@ -102,7 +100,6 @@ export async function createPackageHistoryEntry(metadataId: string, action: Acti
             throw new Error(`No metadata found for ID: ${metadataId}`);
         }
 
-        // Create PackageHistoryEntry
         await prisma.packageHistoryEntry.create({
             data: {
                 metadataId: metadataId,
@@ -198,7 +195,6 @@ export async function getPackage(queryID: apiSchema.PackageID): Promise<FullPack
     }
 }
 
-// For update endpoint
 export async function updatePackageDetails(packageId: apiSchema.PackageID, packageData: apiSchema.PackageData): Promise<apiSchema.PackageData | null> {
     try {
         // metadata has been validated in updatePackage
@@ -230,15 +226,14 @@ export async function getDownloadCount(packageId: string): Promise<number> {
     const downloadEntries = await prisma.packageHistoryEntry.findMany({
         where: {
             metadata: {
-            id: packageId, // Filtering by the package ID
+                id: packageId,
             },
-        action: Action.DOWNLOAD, // Filtering by the action "DOWNLOAD"
+            action: Action.DOWNLOAD
         },
     });
 
-    return downloadEntries.length; // Return the length of the filtered entries
+    return downloadEntries.length;
 }
-
 
 export async function resetDatabase() {
     try {
@@ -389,7 +384,6 @@ export async function deletePackage(packageId: string): Promise<void> {
     });
 }
 
-
 export async function deleteTransactionPackages(transactionId: string): Promise<void> {
     await prisma.$transaction(async (prisma) => {
         await prisma.transactionPackage.deleteMany({
@@ -417,7 +411,6 @@ export async function getPackageIDs(PackageName: string): Promise<string[]> {
         throw new Error('Failed to retrieve package IDs from the database.');
     }
 }
-
 
 export async function createTransaction(transactionId: string, type: prismaSchema.TransactionType): Promise<prismaSchema.Transaction | null> {
     try {
@@ -490,4 +483,3 @@ export async function updateTransactionStatus(transactionId: string, newStatus: 
         throw new Error('Failed to update transaction status in the database.');
     }
 }
-
