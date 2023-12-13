@@ -30,30 +30,30 @@ describe('Responsiveness Metric', () => {
         expect(responsiveness['score_list'][0]).toBe(2);
     });
 
-    it('should calculate metric correctly for median <= 1', async () => {
+    it('should calculate metric correctly for median <= 7', async () => {
         (responsivenessApi.fetchIssues as jest.Mock).mockResolvedValue([]);
-        responsiveness['score_list'] = [0.5, 0.8, 0.6];
+        responsiveness['score_list'] = [2, 3, 1];
 
         const result = await responsiveness.calculateMetric();
 
         expect(result).toBe(1);
     });
 
-    it('should calculate metric correctly for median > 10', async () => {
+    it('should calculate metric correctly for median > 30', async () => {
         (responsivenessApi.fetchIssues as jest.Mock).mockResolvedValue([]);
-        responsiveness['score_list'] = [12, 14, 11];
+        responsiveness['score_list'] = [31, 33, 35];
 
         const result = await responsiveness.calculateMetric();
 
         expect(result).toBe(0);
     });
 
-    it('should calculate metric correctly for 1 < median <= 10', async () => {
+    it('should calculate metric correctly for 7 < median <= 30', async () => {
         (responsivenessApi.fetchIssues as jest.Mock).mockResolvedValue([]);
-        responsiveness['score_list'] = [3, 4, 2];
+        responsiveness['score_list'] = [8, 9, 10];
 
         const result = await responsiveness.calculateMetric();
-
-        expect(result).toBeCloseTo(0.7778, 4); // (1 - (3 - 1) / 9) = 0.7778
+        const expectedScore = 1 - (9 - 7) / (30 - 7);
+        expect(result).toBeCloseTo(expectedScore, 4);
     });
 });
