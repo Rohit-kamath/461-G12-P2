@@ -66,7 +66,7 @@ describe('groupUpload Process', () => {
 
         it('should successfully append a package using URL', async () => {
             try {
-                const response = await axios.post(`${APIURL}/transaction/append`, {
+                const response = await axios.post(`${APIURL}/transaction/append/upload`, {
                     transactionId: transaction1Id,
                     URL: validURL
                 });
@@ -79,7 +79,7 @@ describe('groupUpload Process', () => {
 
         it('should successfully append a package using base64 content', async () => {
             try {
-                const response = await axios.post(`${APIURL}/transaction/append`, {
+                const response = await axios.post(`${APIURL}/transaction/append/upload`, {
                     transactionId: transaction1Id,
                     Content: validBase64Content
                 });
@@ -92,7 +92,7 @@ describe('groupUpload Process', () => {
 
         it('should successfully append a package using URL to other transaction', async () => {
             try {
-                const response = await axios.post(`${APIURL}/transaction/append`, {
+                const response = await axios.post(`${APIURL}/transaction/append/upload`, {
                     transactionId: transaction2Id,
                     URL: validURL2
                 });
@@ -105,7 +105,7 @@ describe('groupUpload Process', () => {
 
         it('should append duplicate package from previous transaction using URL, should still succeed', async () => {
             try {
-                const response = await axios.post(`${APIURL}/transaction/append`, {
+                const response = await axios.post(`${APIURL}/transaction/append/upload`, {
                     transactionId: transaction2Id,
                     URL: validURL
                 });
@@ -118,7 +118,7 @@ describe('groupUpload Process', () => {
 
         it('should successfully append a package using URL to other transaction', async () => {
             try {
-                const response = await axios.post(`${APIURL}/transaction/append`, {
+                const response = await axios.post(`${APIURL}/transaction/append/upload`, {
                     transactionId: transaction2Id,
                     URL: validURL3
                 });
@@ -131,7 +131,7 @@ describe('groupUpload Process', () => {
 
         it('should fail to append due to invalid transaction ID', async () => {
             try {
-                await axios.post(`${APIURL}/transaction/append`, {
+                await axios.post(`${APIURL}/transaction/append/upload`, {
                     transactionId: '1234',
                     URL: validURL3
                 });
@@ -147,7 +147,7 @@ describe('groupUpload Process', () => {
 
         it('should fail to append due invalid request data', async () => {
             try {
-                await axios.post(`${APIURL}/transaction/append`, {
+                await axios.post(`${APIURL}/transaction/append/upload`, {
                     transactionId: emptyTransactionId,
                     Invalid: validURL3
                 });
@@ -165,7 +165,7 @@ describe('groupUpload Process', () => {
     describe('Execute Upload Transaction', () => {
         it('should successfully execute the transaction', async () => {
             try {
-                const response = await axios.post(`${APIURL}/transaction/execute`, {
+                const response = await axios.post(`${APIURL}/transaction/execute/upload`, {
                     transactionId: transaction1Id
                 });
                 expect(response.status).toBe(200);
@@ -177,7 +177,7 @@ describe('groupUpload Process', () => {
 
         it('should fail to execute mid transaction due to duplicate package and rollback', async () => {
             try {
-                await axios.post(`${APIURL}/transaction/execute`, {
+                await axios.post(`${APIURL}/transaction/execute/upload`, {
                     transactionId: transaction2Id
                 });
                 throw new Error('Expected Axios to throw an error for status code 409, but it did not.');
@@ -192,7 +192,7 @@ describe('groupUpload Process', () => {
 
         it('should fail to execute due to invalid transaction ID', async () => {
             try {
-                await axios.post(`${APIURL}/transaction/execute`, {
+                await axios.post(`${APIURL}/transaction/execute/upload`, {
                     transactionId: '1234'
                 });
                 throw new Error('Expected Axios to throw an error, but it did not.');
@@ -207,7 +207,7 @@ describe('groupUpload Process', () => {
 
         it('should fail to execute due to missing transaction ID', async () => {
             try {
-                await axios.post(`${APIURL}/transaction/execute`, {
+                await axios.post(`${APIURL}/transaction/execute/upload`, {
                 });
                 throw new Error('Expected Axios to throw an error, but it did not.');
             } catch (error: any) {
@@ -221,7 +221,7 @@ describe('groupUpload Process', () => {
 
         it('should fail to execute due to it being a completed transaction', async () => {
             try {
-                await axios.post(`${APIURL}/transaction/execute`, {
+                await axios.post(`${APIURL}/transaction/execute/upload`, {
                     transactionId: transaction1Id
                 });
                 throw new Error('Expected Axios to throw an error, but it did not.');
@@ -236,7 +236,7 @@ describe('groupUpload Process', () => {
 
         it('should fail to execute due to it being an empty transaction', async () => {
             try {
-                await axios.post(`${APIURL}/transaction/execute`, {
+                await axios.post(`${APIURL}/transaction/execute/upload`, {
                     transactionId: emptyTransactionId
                 });
                 throw new Error('Expected Axios to throw an error, but it did not.');
@@ -262,4 +262,3 @@ describe('groupUpload Process', () => {
         });
     });
 });
-
