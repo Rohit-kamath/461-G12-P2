@@ -7,7 +7,6 @@ const logger = createModuleLogger('deletePackageByName.test.ts');
 
 logger.info("Starting tests for deletePackageByName.test.ts");
 
-// Reset the environment for a clean test setup
 describe('reset environment', () => {
     it('should return 200 status code for successful reset', async () => {
         await axios.delete(`${APIURL}/reset`);
@@ -15,9 +14,8 @@ describe('reset environment', () => {
 });
 
 describe('DELETE /package/byName/:name endpoint', () => {
-    let packageName : apiSchema.PackageName; // Use the name of the package to be created
-    let packageID : apiSchema.PackageID; // Use the ID of the package to be created
-    // Create a package with the specified name for deletion test
+    let packageName : apiSchema.PackageName;
+    let packageID : apiSchema.PackageID;
     it('should create a package for testing delete operation', async () => {
         const uploadResponse = await axios.post(`${APIURL}/package`, {
             "URL": "https://github.com/mathiasbynens/jsesc", 
@@ -28,13 +26,11 @@ describe('DELETE /package/byName/:name endpoint', () => {
         packageName = packageResponse.metadata.Name;
     });
 
-    // Test deletion of the package by name
     it('should return 200 status code for successful deletion of the package', async () => {
         const deleteResponse = await axios.delete(`${APIURL}/package/byName/${packageName}`);
         expect(deleteResponse.status).toBe(200);
     });
 
-    // Test to ensure the package is actually deleted
     it('should return 404 status code when trying to access the deleted package', async () => {
         try {
             await axios.get(`${APIURL}/package/byName/${packageName}`);
@@ -44,7 +40,7 @@ describe('DELETE /package/byName/:name endpoint', () => {
             if (axios.isAxiosError(error) && error.response) {
                 expect(error.response.status).toBe(404);
             } else {
-                throw error; // rethrow if it's not an Axios error
+                throw error;
             }
         }
     });
@@ -56,13 +52,12 @@ describe('DELETE /package/byName/:name endpoint', () => {
             if (axios.isAxiosError(error) && error.response) {
                 expect(error.response.status).toBe(404);
             } else {
-                throw error; // rethrow if it's not an Axios error
+                throw error;
             }
         }
     });
 });
 
-// Reset after tests
 describe('reset environment', () => {
     it('should return 200 status code for successful reset', async () => {
         await axios.delete(`${APIURL}/reset`);

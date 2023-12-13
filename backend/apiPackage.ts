@@ -1133,18 +1133,17 @@ export async function deletePackageByID(req: Request, res: Response) {
     try {
         const packageID = req.params?.id;
 
-        // Check for required fields
         if (!packageID) {
             logger.info(`Error in retrieveAndDeletePackage: Package ID is undefined`);
             return res.sendStatus(400);
         }
-        // Check the package
+
         const packagecount = await prismaCalls.checkPackageExists(undefined, undefined, packageID)
         if (!packagecount) {
             logger.info(`Error in retrieveAndDeletePackage: Package not found`);
             return res.sendStatus(404);
         }
-        // Delete the package
+
         await prismaCalls.deletePackage(packageID);
         logger.info(`Package with ID ${packageID} has been deleted.`);
         return res.sendStatus(200);
@@ -1163,7 +1162,7 @@ export async function deletePackageByName(req: Request, res: Response) {
             logger.info('Error in deletePackageByName: Name is undefined');
             return res.sendStatus(400);
         }
-        // Check if the package exists
+
         const packageExists = await prismaCalls.checkPackageExists(packageName, undefined, undefined);
         if (!packageExists) {
             logger.info(`Package not found: ${packageName}`);
@@ -1239,7 +1238,7 @@ export async function appendToUploadTransaction(req: Request, res: Response) {
 
         const transactionPackageId = uuidv4();
 
-        let link;
+        let link = url;
         if (content) {
             const zipBuffer = Buffer.from(content, 'base64');
             if (!isValidZip(zipBuffer)) {
@@ -1259,8 +1258,6 @@ export async function appendToUploadTransaction(req: Request, res: Response) {
                 logger.error(`appendToUploadTransaction: Error uploading to S3: ${error}`);
                 return res.sendStatus(500);
             }
-        } else {
-            link = url;
         }
 
         await prismaCalls.createTransactionPackage({
@@ -1568,7 +1565,6 @@ export async function appendToUpdateTransaction(req: Request, res: Response){
     const metaData = req.body?.metadata;
     const packageId = metaData?.ID;
     const data = req.body?.data;
-    const content = data?.Content;
     const url = data?.URL;
     if(!transactionId){
         logger.info(`Error in appendToUpdateTransaction: transactionId is undefined`);
@@ -1582,12 +1578,8 @@ export async function appendToUpdateTransaction(req: Request, res: Response){
         logger.info(`Error in appendToUpdateTransaction: data is undefined`);
         return res.sendStatus(400);
     }
-    if(!content && !url){
-        logger.info(`Error in appendToUpdateTransaction: content and url are undefined`);
-        return res.sendStatus(400);
-    }
-    if(content && url){
-        logger.info(`Error in appendToUpdateTransaction: content and url are both defined`);
+    if(!url){
+        logger.info(`Error in appendToUpdateTransaction: url is undefined`);
         return res.sendStatus(400);
     }
     if(!metaData){
@@ -1600,17 +1592,11 @@ export async function appendToUpdateTransaction(req: Request, res: Response){
             logger.info(`Error in appendToUpdateTransaction: Package does not exist.`);
             return res.sendStatus(404);
         }
-        const S3Link = await prismaCalls.getS3Link(packageId);
-        if(!S3Link){
-            logger.info(`Error in appendToUpdateTransaction: S3Link is null`);
-            return res.sendStatus(500);
-        }
-        const transactionUrl = content ? S3Link : url;
 
         await prismaCalls.createTransactionPackage({
             packageid: packageId,
             transactionId,
-            URL: transactionUrl
+            URL: url
         });
 
         logger.info(`TransactionPackage appended successfully in update: ${packageId}`);
@@ -1676,12 +1662,6 @@ export async function executeUpdateTransaction(req: Request, res: Response){
             logger.info('Error processing transaction packages, rolling back');
             await prismaCalls.updateTransactionStatus(transactionId, 'FAILED');
             await prismaCalls.deleteTransactionPackages(transactionId);
-            const transaction_bucket = process.env.TRANSACTION_BUCKET_NAME;
-            if(transaction_bucket){
-                await deleteFromS3(transaction_bucket, `${transactionId}/`);
-            }else{
-                logger.error('Transaction bucket name not configured');
-            }
             throw new Error('Error processing transaction packages, rolling back');
         }
         await prismaCalls.updateTransactionStatus(transactionId, 'COMPLETED');
