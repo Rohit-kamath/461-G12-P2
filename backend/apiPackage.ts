@@ -11,7 +11,7 @@ import { NetScore } from '../src/controllers/netScore';
 import semver from 'semver';
 import { Action } from '@prisma/client';
 import axios from 'axios'
-import webpack, { Configuration } from 'webpack';
+import { minify } from 'terser';
 import tmp from 'tmp-promise';
 import fs from 'fs-extra';
 import path from 'path';
@@ -683,16 +683,14 @@ export async function uploadPackage(req: Request, res: Response) {
 }
 
 // debloat functions
-async function debloatPackage(buffer: Buffer): Promise<Buffer> {
+export async function debloatPackage(buffer: Buffer): Promise<Buffer> {
     logger.info('debloatPackage: Debloating package');
     const { path: tmpDir, cleanup } = await tmp.dir({ unsafeCleanup: true });
 
     try {
-        const zip = await JSZip.loadAsync(buffer);
-        await unzipToDirectory(zip, tmpDir);
-
-        await treeShake(tmpDir);
-
+        const zip = await JSZip.loadAsync(buffer); // works
+        await unzipToDirectory(zip, tmpDir); //works
+        await debloat(tmpDir);
         // Re-zip the contents and return the buffer
         const debloatedBuffer = await rezipDirectory(tmpDir);
         return debloatedBuffer;
@@ -717,71 +715,114 @@ export async function unzipToDirectory(zip: JSZip, directoryPath: string): Promi
     }
 }
 
-async function treeShake(directoryPath: string): Promise<void> {
-    logger.info(`treeShake: Performing tree shaking in directory: ${directoryPath}`);
-    const entryPoint = await findEntryPoint(directoryPath);
+async function debloat(directoryPath: string): Promise<void> {
+    const entryPoint = await findEntryPoint(directoryPath); // works
     if (!entryPoint) {
-        logger.info(`treeShake: Entry point not found`);
+        logger.info(`Entry point not found`);
         throw new Error('Entry point not found');
     }
 
-    const config: Configuration = {
-        mode: 'production',
-        entry: entryPoint,
-        output: {
-            path: directoryPath,
-            filename: 'bundle.js'
-        },
-        optimization: {
-            usedExports: true
+    // Minify the output files with Terser
+    try {
+        const files = await fs.readdir(directoryPath);
+        for (const file of files) {
+            if (file.endsWith('.js')) {
+                const filePath = path.join(directoryPath, file);
+                const code = await fs.readFile(filePath, 'utf8');
+                const result = await minify(code, {
+                    compress: {
+                        arguments: true, // replace arguments[index] with function parameter name whenever possible
+                        booleans_as_integers: true, // optimize boolean expressions as 0 or 1 for smaller output
+                        drop_console: true, 
+                        drop_debugger: true, 
+                        pure_funcs: ['console.log'], 
+                        passes: 3, // apply 3 compress transformations
+                        toplevel: true, 
+                        unused: true, 
+                    },
+                });
+                if (result.code !== undefined) {
+                    await fs.writeFile(filePath, result.code);
+                } else {
+                    throw new Error('Terser failed to minify the file.');
+                }
+            }
         }
-    };
-
-    return new Promise((resolve, reject) => {
-        webpack(config, (err, stats) => {
-            if (err) {
-                logger.info(`treeShake: Webpack error: ${err.message}`);
-                reject(new Error(`Webpack error: ${err.message}`));
-                return;
-            }
-            if (stats && stats.hasErrors()) {
-                logger.info(`treeShake: Webpack compilation error`);
-                reject(new Error('Webpack compilation error'));
-                return;
-            }
-            resolve();
-        });
-    });
+        logger.info('Tree shaking and minification completed successfully');
+    } catch (error) {
+        logger.error(`debloat: Terser minification error: ${error}`);
+        throw error;
+    }
 }
 
+
 async function findEntryPoint(directoryPath: string): Promise<string | null> {
-    logger.info(`findEntryPoint: Finding entry point in directory: ${directoryPath}`)
-    const commonEntryPoints = ['index.js', 'main.js', 'app.js', 'server.js'];
-    for (const entry of commonEntryPoints) {
-        if (await fs.pathExists(path.join(directoryPath, entry))) {
-            logger.info(`findEntryPoint: Entry point found: ${entry}`)
-            return path.join(directoryPath, entry);
-        }
-    }
-    // Fallback to reading package.json
+    logger.info(`findEntryPoint: Finding entry point in directory: ${directoryPath}`);
+
+    // Check for the 'main' script in package.json
     const packageJsonPath = path.join(directoryPath, 'package.json');
     if (await fs.pathExists(packageJsonPath)) {
         const packageJson = await fs.readJson(packageJsonPath);
         if (packageJson.main) {
-            logger.info(`findEntryPoint: Found entry point in package.json: ${packageJson.main}`);
-            return path.join(directoryPath, packageJson.main);
+            const mainPath = path.join(directoryPath, packageJson.main);
+            // Check if the entry point specified in package.json exists
+            if (await fs.pathExists(mainPath)) {
+                logger.info(`findEntryPoint: Found entry point in package.json: ${mainPath}`);
+                return mainPath;
+            }
         }
     }
-    logger.info(`findEntryPoint: Entry point not found`);
-    return null;
+
+    //  up to 2 subdirectories deep
+    async function searchForFile(filePath: string, currentDepth: number): Promise<string | null> {
+        if (currentDepth > 2) { 
+            return null;
+        }
+        if (await fs.pathExists(filePath)) {
+            return filePath;
+        } else {
+            // Get the directory of the current file path
+            const dir = path.dirname(filePath);
+            const items = await fs.readdir(dir, { withFileTypes: true });
+            for (const item of items) {
+                if (item.isDirectory()) {
+                    //  new path to search within the subdirectory
+                    const deeperPath = path.join(dir, item.name, path.basename(filePath));
+                    const foundPath = await searchForFile(deeperPath, currentDepth + 1);
+                    if (foundPath) {
+                        return foundPath;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+    
+    const commonEntryPoints = ['index.js', 'main.js', 'app.js', 'server.js', 'build.js'];
+    for (const entry of commonEntryPoints) {
+        const potentialEntryPoint = path.join(directoryPath, entry);
+        const foundEntryPoint = await searchForFile(potentialEntryPoint, 0);
+        if (foundEntryPoint) {
+            logger.info(`findEntryPoint: Entry point found: ${foundEntryPoint}`);
+            return foundEntryPoint;
+        }
+    }
+
+    logger.info(`findEntryPoint: Entry point not found after checking package.json and common files`);
+    return null; // No entry point found after all checks
 }
 
 export async function rezipDirectory(directoryPath: string): Promise<Buffer> {
     const zip = new JSZip();
     await addDirectoryToZip(zip, directoryPath, directoryPath);
-    return zip.generateAsync({ type: "nodebuffer" });
+    return zip.generateAsync({
+        type: "nodebuffer",
+        compression: "DEFLATE",
+        compressionOptions: {
+            level: 9 
+        }
+    });
 }
-
 async function addDirectoryToZip(zip: JSZip, directoryPath: string, rootPath: string) {
     const entries = await fs.readdir(directoryPath, { withFileTypes: true });
     for (const entry of entries) {
@@ -792,7 +833,7 @@ async function addDirectoryToZip(zip: JSZip, directoryPath: string, rootPath: st
         } else {
             // Add file to zip
             const fileContent = await fs.readFile(fullPath);
-            const zipPath = path.relative(rootPath, fullPath); // Get the relative path for the ZIP structure
+            const zipPath = path.relative(rootPath, fullPath); 
             zip.file(zipPath, fileContent);
         }
     }
