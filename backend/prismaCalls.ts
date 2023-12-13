@@ -427,13 +427,13 @@ export async function createTransaction(transactionId: string, type: prismaSchem
     }
 }
 
-export async function createTransactionPackage(transactionData: { id: string; transactionId: string; URL?: string; }): Promise<void> {
+export async function createTransactionPackage(transactionData: { packageid: string; transactionId: string; URL?: string; }): Promise<void> {
     try {
         await prisma.transactionPackage.create({
             data: transactionData,
         });
 
-        logger.info(`TransactionPackage created successfully: ${transactionData.id}`);
+        logger.info(`TransactionPackage created successfully: ${transactionData.packageid}`);
     } catch (error) {
         logger.error(`Error in createTransactionPackage: ${error}`);
         throw new Error('Failed to create TransactionPackage in the database.');
@@ -456,7 +456,7 @@ export async function getTransactionPackages(transactionId: string) {
         // Retrieve all packages associated with the given transaction ID
         const packages = await prisma.transactionPackage.findMany({
             where: { transactionId: transactionId },
-            select: { id: true, URL: true }
+            select: { id: true, packageid: true, URL: true }
         });
 
         return packages;

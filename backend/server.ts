@@ -152,9 +152,9 @@ app.post('/transaction/initiate', async (req, res) => {
     }
 });
 
-app.post('/transaction/append', async (req, res) => {
+app.post('/transaction/append/upload', async (req, res) => {
     try {
-        logger.info(`POST /transaction/append request: ${JSON.stringify(req.body)}`);
+        logger.info(`POST /transaction/append/upload request: ${JSON.stringify(req.body)}`);
         await apiPackage.appendToUploadTransaction(req, res);
     } catch (error) {
         logger.info(`Error in post(/transaction/append) in server.ts: ${error}`);
@@ -162,9 +162,9 @@ app.post('/transaction/append', async (req, res) => {
     }
 });
 
-app.post('/transaction/execute', async (req, res) => {
+app.post('/transaction/execute/upload', async (req, res) => {
     try {
-        logger.info(`POST /transaction/execute request: ${JSON.stringify(req.body)}`);
+        logger.info(`POST /transaction/execute/upload request: ${JSON.stringify(req.body)}`);
         await apiPackage.executeUploadTransaction(req, res);
     } catch (error) {
         logger.info(`Error in post(/transaction/execute) in server.ts: ${error}`);
