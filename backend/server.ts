@@ -42,8 +42,9 @@ app.get('/upload-page', (req, res) => {
 
 app.post('/package', upload.single('packageContent'), async (req, res) => {
     try {
-        const filteredBody = Object.fromEntries(Object.entries(req.body?.data || {}).filter(([key]) => key !== 'Content'));
-        logger.info(`POST /package request: ${JSON.stringify(filteredBody)}`);
+        //const filteredBody = Object.fromEntries(Object.entries(req.body?.data || {}).filter(([key]) => key !== 'Content'));
+        //logger.info(`POST /package request: ${JSON.stringify(filteredBody)}`);
+        logger.info(`POST /package request: ${JSON.stringify(req.body)}`);
         await apiPackage.uploadPackage(req, res);
     } catch (error) {
         logger.info(`Error in post(/package) server.ts: ${error}`);
