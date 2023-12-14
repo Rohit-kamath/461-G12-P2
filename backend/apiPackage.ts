@@ -178,34 +178,51 @@ export async function getPackagesByRegEx(req: Request, res: Response) {
 }
 
 export async function extractFileFromZip(zipBuffer: Buffer, filename: string): Promise<string> {
-    logger.info(`extractFileFromZip: Extracting ${filename} from zip`);
+    logger.info(`extractFileFromZip: Starting to extract ${filename} from zip`);
     const zip = await JSZip.loadAsync(zipBuffer);
+    logger.info('Zip file loaded into JSZip object.');
 
-    // Determine if there's a single root directory
-    const rootDir = Object.keys(zip.files).find(path => path.endsWith("/") && path.split('/').length === 2);
+    let fileContent = null;
+    let topLevelDirectory = '';
 
-    let file;
-
-    if (rootDir) {
-        // If a root directory exists, prepend it to the filename
-        file = zip.file(`${rootDir}${filename}`);
-    } else {
-        // Otherwise, search for the file at the root of the zip
-        file = zip.file(new RegExp(`^${filename}$`));
+    logger.info('Contents of zip:');
+    for (const relativePath in zip.files) {
+        logger.info(`Found file: ${relativePath}`);
+        if (!topLevelDirectory && relativePath.split('/').length > 1) {
+            topLevelDirectory = relativePath.split('/')[0] + '/';
+            logger.info(`Top-level directory inferred: ${topLevelDirectory}`);
+            break;
+        }
     }
 
-    if (Array.isArray(file)) {
-        file = file.length > 0 ? file[0] : null;
+    if (!topLevelDirectory) {
+        logger.info('No top-level directory found inside the zip.');
+        throw new Error('No top-level directory found inside the zip.');
     }
 
-    if (!file) {
+    const fileRegex = new RegExp(`^${topLevelDirectory}${filename}$`);
+    logger.info(`Searching for ${filename} using regex: ${fileRegex}`);
+
+    for (const relativePath in zip.files) {
+        if (fileRegex.test(relativePath)) {
+            fileContent = await zip.files[relativePath].async('string');
+            logger.info(`Found ${filename} at path: ${relativePath}`);
+            break;
+        }
+    }
+
+    if (!fileContent) {
         logger.info(`${filename} not found inside the zip.`);
         throw new Error(`${filename} not found inside the zip.`);
     }
 
-    // Extract and return the file content as a string
-    return file.async('string');
+    return fileContent;
 }
+
+
+
+
+
 
 export async function getGithubUrlFromZip(zipBuffer: Buffer): Promise<string> {
     logger.info('getGithubUrlFromZip: Extracting GitHub URL from zip');
@@ -416,12 +433,12 @@ export function parseGitHubUrl(url: string): { owner: string, repo: string } | n
 export function isPackageIngestible(metrics: apiSchema.PackageRating): boolean {
     logger.info('isPackageIngestible: Checking if package is ingestible');
     return (
-        metrics.BusFactor >= 0.0 &&
-        metrics.Correctness >= 0.0 &&
-        metrics.RampUp >= 0.0 &&
-        metrics.ResponsiveMaintainer >= 0.0 &&
-        metrics.LicenseScore >= 0.0 &&
-        metrics.NetScore >= 0.0
+        metrics.BusFactor >= 0.5 &&
+        metrics.Correctness >= 0.5 &&
+        metrics.RampUp >= 0.5 &&
+        metrics.ResponsiveMaintainer >= 0.5 &&
+        metrics.LicenseScore >= 0.5 &&
+        metrics.NetScore >= 0.5
     );
 }
 
@@ -505,7 +522,6 @@ export async function linkCheck(url: string): Promise<string | null> {
 export async function downloadGitHubRepoZip(githubUrl: string): Promise<Buffer> {
     logger.info(`downloadGitHubRepoZip: Downloading GitHub repo ZIP: ${githubUrl}`);
     try {
-        // Extract owner and repository name from the GitHub URL
         const match = githubUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
         if (!match) {
             throw new Error(`Invalid GitHub URL: ${githubUrl}`);
@@ -514,16 +530,17 @@ export async function downloadGitHubRepoZip(githubUrl: string): Promise<Buffer> 
         const owner = match[1];
         const repo = match[2];
 
-        // Construct the ZIP download URL
-        const zipUrl = `https://github.com/${owner}/${repo}/archive/refs/heads/master.zip`;
+        const repoInfoUrl = `https://api.github.com/repos/${owner}/${repo}`;
+        const repoInfoResponse = await axios.get(repoInfoUrl);
+        const defaultBranch = repoInfoResponse.data.default_branch;
 
-        // Download the ZIP file
+        const zipUrl = `https://github.com/${owner}/${repo}/archive/refs/heads/${defaultBranch}.zip`;
+
         const response = await axios.get(zipUrl, { responseType: 'arraybuffer' });
         if (response.status !== 200) {
             throw new Error(`Failed to download ZIP from ${zipUrl}`);
         }
 
-        // Convert the response to a Buffer
         const zipBuffer = Buffer.from(response.data, 'binary');
         return zipBuffer;
     } catch (error) {
@@ -663,7 +680,7 @@ export async function uploadPackage(req: Request, res: Response) {
         await storeGithubMetrics(metadata.ID, metrics);
         logger.info(`Uploading package with file name: ${metadata.ID}`);
         await uploadToS3(metadata.ID, Buffer.from(encodedContent, 'base64'));
-        res.json(Package);
+        res.status(201).json(Package);
     } catch (error) {
         logger.error('Error in POST /package: ', error);
         res.sendStatus(500);
