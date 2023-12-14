@@ -55,6 +55,7 @@ app.post('/package', upload.single('packageContent'), async (req, res) => {
 app.post('/packages', async (req, res) => {
     try {
         logger.info(`POST /packages request body: ${JSON.stringify(req.body)}`);
+        logger.info(`POST /packages request query: ${JSON.stringify(req.query)}`);
         await apiPackage.getPackages(req, res);
     } catch (error) {
         logger.info(`Error in post(/packages) in server.ts: ${error}`);

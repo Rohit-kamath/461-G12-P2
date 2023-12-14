@@ -85,10 +85,11 @@ export function parseVersion(version: string) {
     };
 }
 
-export function checkIfValidSemver(version: string) {
-    return semver.valid(version);
+export function isValidVersion(version: string): boolean {
+    const customVersionRegex = /^(\d+\.\d+\.\d+|\d+\.\d+\.\d+-\d+\.\d+\.\d+|\^\d+\.\d+\.\d+|~\d+\.\d+\.\d+)$/;
+    return customVersionRegex.test(version);
 }
-
+  
 export async function getPackages(req: Request, res: Response){
     try {
         const offset = !req.query?.offset ? 0 : parseInt(req.query.offset as string);
@@ -109,7 +110,7 @@ export async function getPackages(req: Request, res: Response){
             if (!packageQuery.Version) {
                 dbPackageMetaData = await prismaCalls.getMetaDataWithoutVersion(queryName, offset);
             }else{
-                if(!checkIfValidSemver(packageQuery.Version as string)){
+                if(!isValidVersion(packageQuery.Version as string)){
                     logger.info(`400 getPackages error: Invalid semver: ${packageQuery.Version}`);
                     return res.sendStatus(400);
                 }
