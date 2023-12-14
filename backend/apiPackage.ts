@@ -186,30 +186,20 @@ export async function extractFileFromZip(zipBuffer: Buffer, filename: string): P
     logger.info(`extractFileFromZip: Extracting ${filename} from zip`);
     const zip = await JSZip.loadAsync(zipBuffer);
 
-    // Determine if there's a single root directory
-    const rootDir = Object.keys(zip.files).find(path => path.endsWith("/") && path.split('/').length === 2);
+    let fileContent = null;
 
-    let file;
+    zip.forEach((relativePath, file) => {
+        if (relativePath.endsWith(`/${filename}`)) {
+            fileContent = file.async('string');
+        }
+    });
 
-    if (rootDir) {
-        // If a root directory exists, prepend it to the filename
-        file = zip.file(`${rootDir}${filename}`);
-    } else {
-        // Otherwise, search for the file at the root of the zip
-        file = zip.file(new RegExp(`^${filename}$`));
-    }
-
-    if (Array.isArray(file)) {
-        file = file.length > 0 ? file[0] : null;
-    }
-
-    if (!file) {
+    if (!fileContent) {
         logger.info(`${filename} not found inside the zip.`);
         throw new Error(`${filename} not found inside the zip.`);
     }
 
-    // Extract and return the file content as a string
-    return file.async('string');
+    return fileContent;
 }
 
 export async function getGithubUrlFromZip(zipBuffer: Buffer): Promise<string> {
