@@ -38,7 +38,34 @@ function getMaxVersion(versionRange: string) {
     }
 }
 
+export function checkIfBoundedVersionRange(versionRange: string) {
+    "version range: 3.3.4-5.3.4"
+    return versionRange.includes('-');
+}
+
+export function handleBoundedVersionRange(versionRange: string) {
+    "version range: 3.3.4-5.3.4"
+    const versions = versionRange.match(/\d+\.\d+\.\d+/g);
+    if (versions && versions.length > 0) {
+        return { min: versions[0], max: versions[1], minInclusive: true, maxInclusive: true };
+    }else{
+        return null;
+    }
+}
+
 export function parseVersion(version: string) {
+    if(checkIfBoundedVersionRange(version)){
+        const versionObject = handleBoundedVersionRange(version);
+        if(versionObject === null){
+            return null;
+        }
+        return {
+            min: versionObject.min,
+            max: versionObject.max,
+            minInclusive: versionObject.minInclusive,
+            maxInclusive: versionObject.maxInclusive
+        }
+    }
     const comparators = semver.toComparators(version);
     const validRange = comparators.map((comparatorSet) => comparatorSet.join(' ')).join(' || ');
     const minVersion = semver.minVersion(validRange)?.version;
@@ -86,7 +113,12 @@ export async function getPackages(req: Request, res: Response){
                     logger.info(`400 getPackages error: Invalid semver: ${packageQuery.Version}`);
                     return res.sendStatus(400);
                 }
-                const { min: minVersion, max: maxVersion, minInclusive: minInclusive, maxInclusive: maxInclusive } = parseVersion(packageQuery.Version as string);
+                const versionObject = parseVersion(packageQuery.Version as string);
+                if(versionObject === null){
+                    logger.info(`400 getPackages error: Invalid version range after checkIfValidSemver: ${packageQuery.Version}`);
+                    return res.sendStatus(400);
+                }
+                const { min: minVersion, max: maxVersion, minInclusive: minInclusive, maxInclusive: maxInclusive } = versionObject;
                 dbPackageMetaData = await prismaCalls.getMetaDataByQuery(queryName, minVersion, maxVersion, minInclusive, maxInclusive, offset);
             }
             if (!dbPackageMetaData) {
