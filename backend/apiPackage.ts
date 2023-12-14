@@ -183,16 +183,38 @@ export async function getPackagesByRegEx(req: Request, res: Response) {
 }
 
 export async function extractFileFromZip(zipBuffer: Buffer, filename: string): Promise<string> {
-    logger.info(`extractFileFromZip: Extracting ${filename} from zip`);
+    logger.info(`extractFileFromZip: Starting to extract ${filename} from zip`);
     const zip = await JSZip.loadAsync(zipBuffer);
+    logger.info('Zip file loaded into JSZip object.');
 
     let fileContent = null;
+    let topLevelDirectory = '';
 
-    zip.forEach((relativePath, file) => {
-        if (relativePath.endsWith(`/${filename}`)) {
-            fileContent = file.async('string');
+    logger.info('Contents of zip:');
+    for (const relativePath in zip.files) {
+        logger.info(`Found file: ${relativePath}`);
+        if (!topLevelDirectory && relativePath.split('/').length > 1) {
+            topLevelDirectory = relativePath.split('/')[0] + '/';
+            logger.info(`Top-level directory inferred: ${topLevelDirectory}`);
+            break;
         }
-    });
+    }
+
+    if (!topLevelDirectory) {
+        logger.info('No top-level directory found inside the zip.');
+        throw new Error('No top-level directory found inside the zip.');
+    }
+
+    const fileRegex = new RegExp(`^${topLevelDirectory}${filename}$`);
+    logger.info(`Searching for ${filename} using regex: ${fileRegex}`);
+
+    for (const relativePath in zip.files) {
+        if (fileRegex.test(relativePath)) {
+            fileContent = await zip.files[relativePath].async('string');
+            logger.info(`Found ${filename} at path: ${relativePath}`);
+            break;
+        }
+    }
 
     if (!fileContent) {
         logger.info(`${filename} not found inside the zip.`);
@@ -201,6 +223,11 @@ export async function extractFileFromZip(zipBuffer: Buffer, filename: string): P
 
     return fileContent;
 }
+
+
+
+
+
 
 export async function getGithubUrlFromZip(zipBuffer: Buffer): Promise<string> {
     logger.info('getGithubUrlFromZip: Extracting GitHub URL from zip');
@@ -504,7 +531,6 @@ export async function linkCheck(url: string): Promise<string | null> {
 export async function downloadGitHubRepoZip(githubUrl: string): Promise<Buffer> {
     logger.info(`downloadGitHubRepoZip: Downloading GitHub repo ZIP: ${githubUrl}`);
     try {
-        // Extract owner and repository name from the GitHub URL
         const match = githubUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
         if (!match) {
             throw new Error(`Invalid GitHub URL: ${githubUrl}`);
@@ -513,16 +539,17 @@ export async function downloadGitHubRepoZip(githubUrl: string): Promise<Buffer> 
         const owner = match[1];
         const repo = match[2];
 
-        // Construct the ZIP download URL
-        const zipUrl = `https://github.com/${owner}/${repo}/archive/refs/heads/master.zip`;
+        const repoInfoUrl = `https://api.github.com/repos/${owner}/${repo}`;
+        const repoInfoResponse = await axios.get(repoInfoUrl);
+        const defaultBranch = repoInfoResponse.data.default_branch;
 
-        // Download the ZIP file
+        const zipUrl = `https://github.com/${owner}/${repo}/archive/refs/heads/${defaultBranch}.zip`;
+
         const response = await axios.get(zipUrl, { responseType: 'arraybuffer' });
         if (response.status !== 200) {
             throw new Error(`Failed to download ZIP from ${zipUrl}`);
         }
 
-        // Convert the response to a Buffer
         const zipBuffer = Buffer.from(response.data, 'binary');
         return zipBuffer;
     } catch (error) {
