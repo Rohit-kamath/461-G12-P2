@@ -78,6 +78,8 @@ app.delete('/reset', async (req, res) => {
     try {
         logger.info(`DELETE /reset request headers: ${JSON.stringify(req.headers)}`);
         const xAuthHeaderValue = req.headers['X-Authorization'];
+        logger.info(`xAuthHeaderValue: ${xAuthHeaderValue}`);
+        logger.info(`typeof xAuthHeaderValue: ${typeof xAuthHeaderValue}`);
         if(xAuthHeaderValue !== "0"){
             logger.info("400 Unauthorized, uploadPackage");
             return res.sendStatus(400);
