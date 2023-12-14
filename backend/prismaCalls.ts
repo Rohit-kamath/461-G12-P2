@@ -39,22 +39,29 @@ export async function getMetaDataByQuery(queryName: apiSchema.PackageName, minVe
     try {
         // Ensure that the offset is at least 1 (treat 0 as page 1)
         const page = Math.max(0, offset);
-
+        
         const pageSize = 10;
         const recordsToSkip = page * pageSize;
+        const versionObject: any = {};
+        if(minInclusive){
+            versionObject.lte = maxVersion;
+        }else{
+            versionObject.lt = maxVersion;
+        }
 
+        if(maxInclusive){
+            versionObject.gte = minVersion;
+        }else{
+            versionObject.gt = minVersion;
+        }
         const packages = await prisma.packageMetadata.findMany({
             where: {
-                version: {
-                    [minInclusive ? 'gte' : 'gt']: maxVersion,
-                    [maxInclusive ? 'lte' : 'lt']: minVersion,
-                },
+                version: versionObject,
                 name: queryName === '*' ? undefined : queryName,
             },
             skip: recordsToSkip, // Use skip to implement pagination
             take: pageSize, // Specify the number of records to retrieve for the current page
         });
-
         return packages;
     } catch (error) {
         logger.info(`Error in getMetaDataArray: ${error}`);
