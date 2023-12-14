@@ -680,7 +680,7 @@ export async function uploadPackage(req: Request, res: Response) {
         await storeGithubMetrics(metadata.ID, metrics);
         logger.info(`Uploading package with file name: ${metadata.ID}`);
         await uploadToS3(metadata.ID, Buffer.from(encodedContent, 'base64'));
-        res.json(Package);
+        res.status(201).json(Package);
     } catch (error) {
         logger.error('Error in POST /package: ', error);
         res.sendStatus(500);
