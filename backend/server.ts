@@ -42,9 +42,14 @@ app.get('/upload-page', (req, res) => {
 
 app.post('/package', upload.single('packageContent'), async (req, res) => {
     try {
-        //const filteredBody = Object.fromEntries(Object.entries(req.body?.data || {}).filter(([key]) => key !== 'Content'));
-        //logger.info(`POST /package request: ${JSON.stringify(filteredBody)}`);
+        logger.info(`POST /package request headers: ${JSON.stringify(req.headers)}`);
+        const xAuthHeaderValue = req.headers['X-Authorization'];
+        if(xAuthHeaderValue !== "0"){
+            logger.info("400 Unauthorized, uploadPackage");
+            return res.sendStatus(400);
+        }
         logger.info(`POST /package request body: ${JSON.stringify(req.body)}`);
+        logger.info(`POST /package request headers: ${JSON.stringify(req.headers)}`);
         await apiPackage.uploadPackage(req, res);
     } catch (error) {
         logger.info(`Error in post(/package) server.ts: ${error}`);
@@ -54,6 +59,12 @@ app.post('/package', upload.single('packageContent'), async (req, res) => {
 
 app.post('/packages', async (req, res) => {
     try {
+        logger.info(`POST /packages request headers: ${JSON.stringify(req.headers)}`);
+        const xAuthHeaderValue = req.headers['X-Authorization'];
+        if(xAuthHeaderValue !== "0"){
+            logger.info("400 Unauthorized, uploadPackage");
+            return res.sendStatus(400);
+        }
         logger.info(`POST /packages request body: ${JSON.stringify(req.body)}`);
         logger.info(`POST /packages request query: ${JSON.stringify(req.query)}`);
         await apiPackage.getPackages(req, res);
@@ -65,6 +76,12 @@ app.post('/packages', async (req, res) => {
 
 app.delete('/reset', async (req, res) => {
     try {
+        logger.info(`DELETE /reset request headers: ${JSON.stringify(req.headers)}`);
+        const xAuthHeaderValue = req.headers['X-Authorization'];
+        if(xAuthHeaderValue !== "0"){
+            logger.info("400 Unauthorized, uploadPackage");
+            return res.sendStatus(400);
+        }
         logger.info(`DELETE /reset request`);
         await apiPackage.callResetDatabase(req, res);
     } catch (error) {
@@ -75,6 +92,12 @@ app.delete('/reset', async (req, res) => {
 
 app.get('/package/byName/:name', async (req, res) => {
     try {
+        logger.info(`GET /package/byName/:name headers: ${JSON.stringify(req.headers)}`);
+        const xAuthHeaderValue = req.headers['X-Authorization'];
+        if(xAuthHeaderValue !== "0"){
+            logger.info("400 Unauthorized, uploadPackage");
+            return res.sendStatus(400);
+        }
         logger.info(`GET /package/byName/:name params: ${JSON.stringify(req.params)}`);
         await apiPackage.getPackagesByName(req, res);
     } catch (error) {
@@ -85,6 +108,12 @@ app.get('/package/byName/:name', async (req, res) => {
 
 app.delete('/package/byID/:id', async (req, res) => {
     try {
+        logger.info(`DELETE /package/byID/:id request headers: ${JSON.stringify(req.headers)}`);
+        const xAuthHeaderValue = req.headers['X-Authorization'];
+        if(xAuthHeaderValue !== "0"){
+            logger.info("400 Unauthorized, uploadPackage");
+            return res.sendStatus(400);
+        }
         logger.info(`DELETE /package/byID/:id request params: ${JSON.stringify(req.params)}`);
         await apiPackage.deletePackageByID(req, res);
     } catch (error) {
@@ -95,6 +124,12 @@ app.delete('/package/byID/:id', async (req, res) => {
 
 app.delete('/package/byName/:name', async (req, res) => {
     try {
+        logger.info(`DELETE /package/byName/:name request headers: ${JSON.stringify(req.headers)}`);
+        const xAuthHeaderValue = req.headers['X-Authorization'];
+        if(xAuthHeaderValue !== "0"){
+            logger.info("400 Unauthorized, uploadPackage");
+            return res.sendStatus(400);
+        }
         logger.info(`DELETE /package/byName/:name request params: ${JSON.stringify(req.params)}`);
         await apiPackage.deletePackageByName(req, res);
     } catch (error) {
@@ -105,6 +140,12 @@ app.delete('/package/byName/:name', async (req, res) => {
 
 app.post('/package/byRegEx', async (req, res) => {
     try {
+        logger.info(`POST /package/byRegEx request headers: ${JSON.stringify(req.headers)}`);
+        const xAuthHeaderValue = req.headers['X-Authorization'];
+        if(xAuthHeaderValue !== "0"){
+            logger.info("400 Unauthorized, uploadPackage");
+            return res.sendStatus(400);
+        }
         logger.info(`POST /package/byRegEx request: ${JSON.stringify(req.body)}`);
         await apiPackage.getPackagesByRegEx(req, res);
     } catch (error) {
@@ -115,6 +156,12 @@ app.post('/package/byRegEx', async (req, res) => {
 
 app.get('/package/:id', async (req, res) => {
     try {
+        logger.info(`GET /package/:id request headers: ${JSON.stringify(req.headers)}`);
+        const xAuthHeaderValue = req.headers['X-Authorization'];
+        if(xAuthHeaderValue !== "0"){
+            logger.info("400 Unauthorized, uploadPackage");
+            return res.sendStatus(400);
+        }
         logger.info(`GET /package/:id request params: ${JSON.stringify(req.params)}`);
         await apiPackage.getPackageDownload(req, res);
     } catch (error) {
@@ -125,6 +172,12 @@ app.get('/package/:id', async (req, res) => {
 
 app.get('/package/:id/rate', async (req, res) => {
     try {
+        logger.info(`GET /package/:id/rate request headers: ${JSON.stringify(req.headers)}`);
+        const xAuthHeaderValue = req.headers['X-Authorization'];
+        if(xAuthHeaderValue !== "0"){
+            logger.info("400 Unauthorized, uploadPackage");
+            return res.sendStatus(400);
+        }
         logger.info(`GET /package/:id/rate request params: ${JSON.stringify(req.params)}`);
         await apiPackage.getPackageRatings(req, res);
     } catch (error) {
@@ -135,6 +188,12 @@ app.get('/package/:id/rate', async (req, res) => {
 
 app.put('/package/:id', async (req, res) => {
     try {
+        logger.info(`PUT /package/:id request headers: ${JSON.stringify(req.headers)}`);
+        const xAuthHeaderValue = req.headers['X-Authorization'];
+        if(xAuthHeaderValue !== "0"){
+            logger.info("400 Unauthorized, uploadPackage");
+            return res.sendStatus(400);
+        }
         const filteredBody = Object.fromEntries(Object.entries(req.body?.data || {}).filter(([key]) => key !== 'Content'));
         logger.info(`PUT /package/:id request body: ${JSON.stringify(filteredBody)}`);
         logger.info(`PUT /package/:id request params: ${JSON.stringify(req.params)} `);
