@@ -21,8 +21,7 @@ export async function getLicenseScore(owner: string, repo: string): Promise<numb
 
         return 0;
     } catch (error) {
-        console.log(error);
-        logger.info('Error in License: with repo: ' + repo + ' and owner: ' + owner, error);
+        logger.info('No license found or repository not found');
         return 0;
     }
 }

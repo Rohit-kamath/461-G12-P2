@@ -18,7 +18,7 @@ logger.info('Starting server...');
 app.use(cors());
 
 // Parse JSON bodies
-app.use(express.json());
+app.use(express.json( { limit: '50mb' }));
 
 // Serve static files from the "Frontend" directory
 app.use(express.static('Frontend/dist'));
@@ -42,8 +42,9 @@ app.get('/upload-page', (req, res) => {
 
 app.post('/package', upload.single('packageContent'), async (req, res) => {
     try {
-        const filteredBody = Object.fromEntries(Object.entries(req.body?.data || {}).filter(([key]) => key !== 'Content'));
-        logger.info(`POST /package request: ${JSON.stringify(filteredBody)}`);
+        //const filteredBody = Object.fromEntries(Object.entries(req.body?.data || {}).filter(([key]) => key !== 'Content'));
+        //logger.info(`POST /package request: ${JSON.stringify(filteredBody)}`);
+        logger.info(`POST /package request: ${JSON.stringify(req.body)}`);
         await apiPackage.uploadPackage(req, res);
     } catch (error) {
         logger.info(`Error in post(/package) server.ts: ${error}`);

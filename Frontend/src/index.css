@@ -56,6 +56,34 @@ button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
+.upload-section {
+  text-align: left;
+}
+
+.file-upload {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.file-upload .url-label {
+  margin-left: 1rem;
+}
+
+span {
+  margin: 0 0.5rem;
+}
+
+.upload-status {
+  margin-top: 1rem;
+}
+
+button {
+  margin-top: 1rem;
+}
+
 @media (prefers-color-scheme: light) {
   :root {
     color: #213547;

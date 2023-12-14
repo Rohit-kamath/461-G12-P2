@@ -1,12 +1,14 @@
-import { useState, ChangeEvent, useEffect } from 'react';
+import { useState, ChangeEvent, useEffect, useRef } from 'react';
 import axios from 'axios';
 
 function App() {
-  const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState<string>('');
   const [searchResults, setSearchResults] = useState<string[] | null>(null);
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
+  const [uploadURL, setUploadURL] = useState<string>('');
+  const [searchType, setSearchType] = useState('name');
+  const [searchInput, setSearchInput] = useState('');
 
   // Package Directory
   const [isPackageDirectoryOpen, setIsPackageDirectoryOpen] = useState<boolean>(false);
@@ -64,70 +66,103 @@ function App() {
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    setSelectedFiles(files || null);
+    const file = e.target.files ? e.target.files[0] : null;
+    setSelectedFile(file);
+    setUploadURL('');
   };
+  
+  const uploadZipFile = async () => {
+    if (selectedFile) {
+      const reader = new FileReader();
+      reader.readAsDataURL(selectedFile);
+      reader.onload = async () => {
+        const base64Content = reader.result?.toString().split(',')[1];
+        if (base64Content) {
+          try {
+            setUploadStatus(`Uploading ${selectedFile.name}...`);
 
-  const uploadZipFile = async (file: File) => {
-    const formData = new FormData();
+            const response = await axios.post('/package', { Content: base64Content }, {
+              headers: {
+                'Content-Type': 'application/json',
+              },
+            });
 
-    // Convert zip file to base64 encoding
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = async () => {
-      const base64Content = reader.result?.toString().split(',')[1];
-      if (base64Content) {
-        formData.append('Content', base64Content);
-
-        try {
-          setUploadStatus(`Uploading ${file.name}...`);
-
-          const response = await axios.post('/package', formData, {
-            headers: {
-              'Content-Type': 'multipart/form-data',
-            },
-          });
-
-          setUploadStatus(`Upload successful for ${file.name}: ${response.data}`);
-        } catch (error: any) {
-          setUploadStatus(`Error uploading ${file.name}: ${error.message}`);
+            const metadata = response.data.metadata;
+            const metadataMessage = `Name: ${metadata.Name}, Version: ${metadata.Version}, ID: ${metadata.ID}`;
+            setUploadStatus(`Upload successful for ${selectedFile.name}: ${metadataMessage}`);
+          } catch (error: any) {
+            setUploadStatus(`Error uploading ${selectedFile.name}: ${error.response?.data.message || error.message}`);
+          }
         }
-      }
-    };
+      };
 
-    reader.onerror = () => {
-      setUploadStatus(`Error reading ${file.name}`);
-    };
+      reader.onerror = () => {
+        setUploadStatus(`Error reading ${selectedFile.name}`);
+      };
+    } else {
+      setUploadStatus('No file selected');
+    }
   };
 
-  const uploadZipFiles = async () => {
-    if (!selectedFiles || selectedFiles.length === 0) {
-      setUploadStatus('No files selected');
+  const uploadURLPackage = async () => {
+    if (!uploadURL) {
+      alert('Please enter a URL');
       return;
     }
 
+    setUploadStatus('Uploading package from URL...');
+
     try {
-      for (const file of selectedFiles) {
-        await uploadZipFile(file);
-      }
-      setUploadStatus('All files uploaded successfully');
-    } catch (error) {
-      console.error('Error uploading files:', error);
+      const response = await axios.post('/package', { URL: uploadURL });
+      const metadata = response.data.metadata;
+      const metadataMessage = `Name: ${metadata.Name}, Version: ${metadata.Version}, ID: ${metadata.ID}`;
+      setUploadStatus(`Upload successful: ${metadataMessage}`);
+      setUploadURL(''); // Reset the URL input
+    } catch (error: any) {
+      setUploadStatus(`Error uploading package: ${error.response?.data.message || error.message}`);
     }
   };
 
-  const handleSearchTermChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
+  const handleUpload = () => {
+    if (selectedFile) {
+      uploadZipFile();
+    } else if (uploadURL) {
+      uploadURLPackage();
+    } else {
+      setUploadStatus('No file or URL selected');
+    }
+  };
+
+  const handleURLChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setUploadURL(e.target.value);
+    setSelectedFile(null);
   };
 
   const searchPackages = async () => {
     try {
-      const response = await axios.get(`/package/byName/${searchTerm}`);
+      let response;
+      if (searchType === 'name') {
+        response = await axios.get(`/package/byName/${searchInput}`);
+      } else if (searchType === 'regex') {
+        response = await axios.post('/package/byRegEx', { RegEx: searchInput });
+      } else {
+        setSearchResults(null);
+        return;
+      }
+      
       setSearchResults(response.data);
       setSelectedPackage(null); // Reset selected package when a new search is performed
     } catch (error: any) {
       console.error(`Error searching for packages: ${error.message}`);
     }
+  };
+
+  const handleSearchTypeChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    setSearchType(e.target.value);
+  };
+  
+  const handleSearchInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setSearchInput(e.target.value);
   };
 
   const handlePackageClick = (packageName: string) => {
@@ -197,139 +232,138 @@ function App() {
     }
   };
 
-  useEffect(() => {
-    if (searchTerm.trim() !== '') {
-      searchPackages();
-    } else {
-      setSearchResults(null);
-    }
-  }, [searchTerm]);
-
   return (
-    <html lang="en">
-      <head>
-        <meta charSet="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <meta
-          name="description"
-          content="This is the frontend for a reliable package registry web app."
+    <div className="container">
+      <h1>Package Registry</h1>
+      <div className="upload-section">
+        <h2>Upload Package</h2>
+        <div className="file-upload">
+          <label htmlFor="fileInput">Select a Zip File:</label>
+          <input 
+            id="fileInput" 
+            type="file" 
+            accept=".zip" 
+            onChange={handleFileChange} 
+          />
+          <span>OR</span>
+          <label htmlFor="urlInput" className="url-label">Enter Package URL:</label>
+          <input
+            id="urlInput"
+            type="text"
+            placeholder="NPM or GitHub URL"
+            value={uploadURL}
+            onChange={handleURLChange}
+          />
+        </div>
+        <button type="button" onClick={handleUpload}>
+          Upload
+        </button>
+        {uploadStatus && <p className="upload-status">{uploadStatus}</p>}
+      </div>
+
+      <div className="search-packages">
+        <h2>Search Packages</h2>
+        <select value={searchType} onChange={(e) => setSearchType(e.target.value)}>
+          <option value="name">By Name</option>
+          <option value="regex">By Regex</option>
+        </select>
+        <input
+          type="text"
+          id="searchInput"
+          placeholder={`Search by ${searchType}`}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
         />
-        <title>Zip File Uploader</title>
-      </head>
-      <body>
-        <div className="container">
-          <h1>Zip File Uploader</h1>
+        <button type="button" onClick={searchPackages} disabled={!searchInput}>
+          Search
+        </button>
+        {searchResults && (
+          <div className="search-results">
+            <h3>Search Results</h3>
+            <ul>
+              {searchResults.map((result, index) => (
+                <li key={index} onClick={() => handlePackageClick(result)}>
+                  {result}
+                </li>
+              ))}
+            </ul>
 
-          <div className="file-upload">
-            <label htmlFor="fileInput">Select Zip Files:</label>
-            <input id="fileInput" type="file" accept=".zip" multiple onChange={handleFileChange} />
-            <button type="button" onClick={uploadZipFiles}>
-              Upload Zip Files
-            </button>
-            {uploadStatus && <p>{uploadStatus}</p>}
+            {selectedPackage && (
+              <div className="selected-package">
+                <h3>Selected Package: {selectedPackage}</h3>
+                <button type="button" onClick={downloadPackage}>
+                  Download
+                </button>
+                <button type="button" onClick={handleUpdateClick}>
+                  Update
+                </button>
+                <button type="button" onClick={handleRatingClick}>
+                  Check Ratings
+                </button>
+              </div>
+            )}
+
+            {packageRating !== null && (
+              <div className="package-rating">
+                <h3>Package Ratings</h3>
+                <p>
+                  Ratings for {selectedPackage}: {packageRating}
+                </p>
+              </div>
+            )}
           </div>
+        )}
+      </div>
 
-          <div className="search-packages">
-            <h2>Search Packages</h2>
+      <div className="package-directory">
+        <h2>Package Directory</h2>
+        <button type="button" onClick={openPackageDirectory}>
+          Open Package Directory
+        </button>
+
+        {isPackageDirectoryOpen && (
+          <div className="package-info">
+            <h3>Enter Package Information</h3>
+            <label htmlFor="packageName">Name:</label>
             <input
               type="text"
-              id="searchInput"
-              placeholder="Enter package name"
-              value={searchTerm}
-              onChange={handleSearchTermChange}
+              id="packageName"
+              value={packageName}
+              onChange={(e) => setPackageName(e.target.value)}
             />
-            <button type="button" onClick={searchPackages}>
-              Search
+
+            <label htmlFor="packageVersion">Version:</label>
+            <input
+              type="text"
+              id="packageVersion"
+              value={packageVersion}
+              onChange={(e) => setPackageVersion(e.target.value)}
+            />
+            <button type="button" onClick={submitPackageInfo}>
+              Submit
+            </button>
+            <button type="button" onClick={closePackageDirectory}>
+              Cancel
             </button>
 
-            {searchResults && (
-              <div className="search-results">
-                <h3>Search Results</h3>
-                <ul>
-                  {searchResults.map((result, index) => (
-                    <li key={index} onClick={() => handlePackageClick(result)}>
-                      {result}
-                    </li>
-                  ))}
-                </ul>
-
-                {selectedPackage && (
-                  <div className="selected-package">
-                    <h3>Selected Package: {selectedPackage}</h3>
-                    <button type="button" onClick={downloadPackage}>
-                      Download
-                    </button>
-                    <button type="button" onClick={handleUpdateClick}>
-                      Update
-                    </button>
-                    <button type="button" onClick={handleRatingClick}>
-                      Check Ratings
-                    </button>
-                  </div>
-                )}
-
-                {packageRating !== null && (
-                  <div className="package-rating">
-                    <h3>Package Ratings</h3>
-                    <p>
-                      Ratings for {selectedPackage}: {packageRating}
-                    </p>
-                  </div>
-                )}
+            {packageDirectory && (
+              <div className="directory-view">
+                <h3>Package Directory View</h3>
+                <p>Directory: {packageDirectory}</p>
               </div>
             )}
           </div>
+        )}
+      </div>
 
-          <div className="package-directory">
-            <h2>Package Directory</h2>
-            <button type="button" onClick={openPackageDirectory}>
-              Open Package Directory
-            </button>
-
-            {isPackageDirectoryOpen && (
-              <div className="package-info">
-                <h3>Enter Package Information</h3>
-                <label htmlFor="packageName">Name:</label>
-                <input
-                  type="text"
-                  id="packageName"
-                  value={packageName}
-                  onChange={(e) => setPackageName(e.target.value)}
-                />
-
-                <label htmlFor="packageVersion">Version:</label>
-                <input
-                  type="text"
-                  id="packageVersion"
-                  value={packageVersion}
-                  onChange={(e) => setPackageVersion(e.target.value)}
-                />
-                <button type="button" onClick={submitPackageInfo}>
-                  Submit
-                </button>
-                <button type="button" onClick={closePackageDirectory}>
-                  Cancel
-                </button>
-
-                {packageDirectory && (
-                  <div className="directory-view">
-                    <h3>Package Directory View</h3>
-                    <p>Directory: {packageDirectory}</p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="package-reset">
-            <h2>Package Reset</h2>
-            <button type="button" onClick={resetPackageRegistry}>
-              Reset Package Registry
-            </button>
-          </div>
-        </div>
-      </body>
-    </html>
+      <div className="package-reset">
+        <h2>Package Reset</h2>
+        <button type="button" onClick={resetPackageRegistry}>
+          Reset Package Registry
+        </button>
+      </div>
+    </div>
   );
 }
+
 export default App;
