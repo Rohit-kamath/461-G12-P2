@@ -77,7 +77,7 @@ app.post('/packages', async (req, res) => {
 app.delete('/reset', async (req, res) => {
     try {
         logger.info(`DELETE /reset request headers: ${JSON.stringify(req.headers)}`);
-        const xAuthHeaderValue = req.headers['X-Authorization'];
+        const xAuthHeaderValue = req.headers['x-authorization'];
         logger.info(`xAuthHeaderValue: ${xAuthHeaderValue}`);
         logger.info(`typeof xAuthHeaderValue: ${typeof xAuthHeaderValue}`);
         if(xAuthHeaderValue !== "0"){
