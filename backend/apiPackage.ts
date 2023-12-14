@@ -39,16 +39,12 @@ function getMaxVersion(versionRange: string) {
 }
 
 export function parseVersion(version: string) {
+
     const comparators = semver.toComparators(version);
     const validRange = comparators.map((comparatorSet) => comparatorSet.join(' ')).join(' || ');
     const minVersion = semver.minVersion(validRange)?.version;
-    if (minVersion === null) {
-        console.log('Error in parseVersion: minVersion is null');
-        process.exit(1);
-    }
-    if (minVersion === undefined) {
-        console.log('Error in parseVersion: minVersion is undefined');
-        process.exit(1);
+    if (!minVersion) {
+        throw new Error(`Error in parseVersion: minVersion is null`);
     }
     const maxVersion = getMaxVersion(validRange);
     if (!validRange.includes(' ')) {
@@ -75,18 +71,17 @@ export async function getPackages(req: Request, res: Response){
         const packageMetaDataArray: PackageMetaDataPopularity[] = [];
         for (const packageQuery of packageQueries) {
             if (!packageQuery.Name) {
-                console.log("packaageQuery.Name is undefined");
-                logger.info("getPackages: packaageQuery.Name is undefined");
-                return res.sendStatus(400);
-            }
-            if (!packageQuery.Version) {
-                console.log("packaageQuery.Version is undefined");
-                logger.info("getPackages: packaageQuery.Version is undefined");
+                logger.info("getPackages: packageQuery.Name is undefined");
                 return res.sendStatus(400);
             }
             const queryName = packageQuery.Name as string;
-            const { min: minVersion, max: maxVersion, minInclusive: minInclusive, maxInclusive: maxInclusive } = parseVersion(packageQuery.Version as string);
-            const dbPackageMetaData = await prismaCalls.getMetaDataByQuery(queryName, minVersion, maxVersion, minInclusive, maxInclusive, offset);
+            let dbPackageMetaData;
+            if (!packageQuery.Version) {
+                dbPackageMetaData = await prismaCalls.getMetaDataWithoutVersion(queryName, offset);
+            }else{
+                const { min: minVersion, max: maxVersion, minInclusive: minInclusive, maxInclusive: maxInclusive } = parseVersion(packageQuery.Version as string);
+                dbPackageMetaData = await prismaCalls.getMetaDataByQuery(queryName, minVersion, maxVersion, minInclusive, maxInclusive, offset);
+            }
             if (!dbPackageMetaData) {
                 logger.info(`Error in getPackageMetaData: packageMetaData is null`);
                 return res.sendStatus(500);
