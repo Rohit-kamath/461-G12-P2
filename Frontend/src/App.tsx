@@ -222,6 +222,7 @@ function App() {
       if ((response).status === 200) {
         const ratings = response.data;
         setPackageRating(ratings);
+        console.log('Package ratings:', ratings);
       }
       else if ((response).status === 404) {
         alert('Error: Package does not exist.');
@@ -277,42 +278,37 @@ function App() {
         <button type="button" onClick={searchPackages} disabled={!searchInput}>
           Search
         </button>
-        {searchResults && (
-          <div className="search-results">
-            <h3>Search Results</h3>
-            <ul>
-              {searchResults.map((result, index) => (
-                <li key={index} onClick={() => handlePackageClick(result)}>
-                  {result}
-                </li>
-              ))}
-            </ul>
+      {/* Download Package Section */}
+      <div className="download-package">
+        <h2>Download Package</h2>
+        <button type="button" onClick={downloadPackage} disabled={!selectedPackage}>
+          Download
+        </button>
+      </div>
 
-            {selectedPackage && (
-              <div className="selected-package">
-                <h3>Selected Package: {selectedPackage}</h3>
-                <button type="button" onClick={downloadPackage}>
-                  Download
-                </button>
-                <button type="button" onClick={handleUpdateClick}>
-                  Update
-                </button>
-                <button type="button" onClick={handleRatingClick}>
-                  Check Ratings
-                </button>
-              </div>
-            )}
+      {/* Update Section */}
+      <div className="update-package">
+        <h2>Update Package</h2>
+        <button type="button" onClick={handleUpdateClick} disabled={!selectedPackage}>
+          Update
+        </button>
+      </div>
 
-            {packageRating !== null && (
-              <div className="package-rating">
-                <h3>Package Ratings</h3>
-                <p>
-                  Ratings for {selectedPackage}: {packageRating}
-                </p>
-              </div>
-            )}
+      {/* Ratings Section */}
+      <div className="check-ratings">
+        <h2>Check Ratings</h2>
+        <button type="button" onClick={handleRatingClick}>
+          Check Ratings
+        </button>
+        {packageRating !== null && (
+          <div className="package-rating">
+            <h3>Package Ratings</h3>
+            <p>
+              Ratings for {selectedPackage || 'selected package'}: {packageRating}
+            </p>
           </div>
         )}
+      </div>
       </div>
 
       <div className="package-directory">
