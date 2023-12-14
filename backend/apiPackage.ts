@@ -38,7 +38,34 @@ function getMaxVersion(versionRange: string) {
     }
 }
 
+export function checkIfBoundedVersionRange(versionRange: string) {
+    "version range: 3.3.4-5.3.4"
+    return versionRange.includes('-');
+}
+
+export function handleBoundedVersionRange(versionRange: string) {
+    "version range: 3.3.4-5.3.4"
+    const versions = versionRange.match(/\d+\.\d+\.\d+/g);
+    if (versions && versions.length > 0) {
+        return { min: versions[0], max: versions[1], minInclusive: true, maxInclusive: true };
+    }else{
+        return null;
+    }
+}
+
 export function parseVersion(version: string) {
+    if(checkIfBoundedVersionRange(version)){
+        const versionObject = handleBoundedVersionRange(version);
+        if(versionObject === null){
+            return null;
+        }
+        return {
+            min: versionObject.min,
+            max: versionObject.max,
+            minInclusive: versionObject.minInclusive,
+            maxInclusive: versionObject.maxInclusive
+        }
+    }
     const comparators = semver.toComparators(version);
     const validRange = comparators.map((comparatorSet) => comparatorSet.join(' ')).join(' || ');
     const minVersion = semver.minVersion(validRange)?.version;
@@ -58,11 +85,16 @@ export function parseVersion(version: string) {
     };
 }
 
+export function isValidVersion(version: string): boolean {
+    const customVersionRegex = /^(\d+\.\d+\.\d+|\d+\.\d+\.\d+-\d+\.\d+\.\d+|\^\d+\.\d+\.\d+|~\d+\.\d+\.\d+)$/;
+    return customVersionRegex.test(version);
+}
+  
 export async function getPackages(req: Request, res: Response){
     try {
         const offset = !req.query?.offset ? 0 : parseInt(req.query.offset as string);
         if(offset > 5){
-            logger.info("getPackages: offset is greater than 5");
+            logger.info("413 getPackages: offset is greater than 5");
             return res.sendStatus(413);
         }
         res.setHeader('offset', offset);
@@ -70,7 +102,7 @@ export async function getPackages(req: Request, res: Response){
         const packageMetaDataArray: PackageMetaDataPopularity[] = [];
         for (const packageQuery of packageQueries) {
             if (!packageQuery.Name) {
-                logger.info("getPackages: packageQuery.Name is undefined");
+                logger.info("400 getPackages error: packageQuery.Name is undefined");
                 return res.sendStatus(400);
             }
             const queryName = packageQuery.Name as string;
@@ -78,11 +110,20 @@ export async function getPackages(req: Request, res: Response){
             if (!packageQuery.Version) {
                 dbPackageMetaData = await prismaCalls.getMetaDataWithoutVersion(queryName, offset);
             }else{
-                const { min: minVersion, max: maxVersion, minInclusive: minInclusive, maxInclusive: maxInclusive } = parseVersion(packageQuery.Version as string);
+                if(!isValidVersion(packageQuery.Version as string)){
+                    logger.info(`400 getPackages error: Invalid semver: ${packageQuery.Version}`);
+                    return res.sendStatus(400);
+                }
+                const versionObject = parseVersion(packageQuery.Version as string);
+                if(versionObject === null){
+                    logger.info(`400 getPackages error: Invalid version range after checkIfValidSemver: ${packageQuery.Version}`);
+                    return res.sendStatus(400);
+                }
+                const { min: minVersion, max: maxVersion, minInclusive: minInclusive, maxInclusive: maxInclusive } = versionObject;
                 dbPackageMetaData = await prismaCalls.getMetaDataByQuery(queryName, minVersion, maxVersion, minInclusive, maxInclusive, offset);
             }
             if (!dbPackageMetaData) {
-                logger.info(`Error in getPackageMetaData: packageMetaData is null`);
+                logger.info(`500 Error in getPackageMetaData: packageMetaData is null`);
                 return res.sendStatus(500);
             }
             const apiPackageMetaData: PackageMetaDataPopularity[] = await Promise.all(
@@ -106,7 +147,7 @@ export async function getPackages(req: Request, res: Response){
         return res.status(200).json(packageMetaDataArray);
     } catch (error) {
         console.log(error);
-        logger.info(`Error in getPackages: ${error}`);
+        logger.info(`500 Error in getPackages: ${error}`);
         return res.sendStatus(500);
     } 
 }
