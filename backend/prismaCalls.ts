@@ -14,6 +14,27 @@ type FullPackage = prismaSchema.Prisma.PackageGetPayload<{
     };
 }>;
 
+export async function getMetaDataWithoutVersion(queryName: apiSchema.PackageName, offset : number): Promise<prismaSchema.PackageMetadata[] | null> {
+    try {
+        const page = Math.max(0, offset);
+
+        const pageSize = 10;
+        const recordsToSkip = page * pageSize;
+
+        const packages = await prisma.packageMetadata.findMany({
+            where: {
+                name: queryName === '*' ? undefined : queryName,
+            },
+            skip: recordsToSkip, // Use skip to implement pagination
+            take: pageSize, // Specify the number of records to retrieve for the current page
+        });
+
+        return packages;
+    } catch (error) {
+        logger.info(`Error in getMetaDataWithoutVersion: ${error}`);
+        return null;
+    }
+}
 export async function getMetaDataByQuery(queryName: apiSchema.PackageName, minVersion: string, maxVersion: string, minInclusive: boolean, maxInclusive: boolean, offset: number): Promise<prismaSchema.PackageMetadata[] | null> {
     try {
         // Ensure that the offset is at least 1 (treat 0 as page 1)
