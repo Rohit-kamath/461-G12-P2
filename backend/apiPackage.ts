@@ -433,12 +433,12 @@ export function parseGitHubUrl(url: string): { owner: string, repo: string } | n
 export function isPackageIngestible(metrics: apiSchema.PackageRating): boolean {
     logger.info('isPackageIngestible: Checking if package is ingestible');
     return (
-        metrics.BusFactor >= 0.0 &&
-        metrics.Correctness >= 0.0 &&
-        metrics.RampUp >= 0.0 &&
-        metrics.ResponsiveMaintainer >= 0.0 &&
-        metrics.LicenseScore >= 0.0 &&
-        metrics.NetScore >= 0.0
+        metrics.BusFactor >= 0.5 &&
+        metrics.Correctness >= 0.5 &&
+        metrics.RampUp >= 0.5 &&
+        metrics.ResponsiveMaintainer >= 0.5 &&
+        metrics.LicenseScore >= 0.5 &&
+        metrics.NetScore >= 0.5
     );
 }
 
