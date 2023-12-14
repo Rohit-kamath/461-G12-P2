@@ -39,7 +39,6 @@ function getMaxVersion(versionRange: string) {
 }
 
 export function parseVersion(version: string) {
-
     const comparators = semver.toComparators(version);
     const validRange = comparators.map((comparatorSet) => comparatorSet.join(' ')).join(' || ');
     const minVersion = semver.minVersion(validRange)?.version;
@@ -149,11 +148,7 @@ export async function getPackagesByRegEx(req: Request, res: Response) {
         }
         const regEx: string = req.body.RegEx;
         const dbPackageMetaData = await prismaCalls.getMetaDataByRegEx(regEx);
-        if (!dbPackageMetaData) {
-            logger.info(`Error in getPackagesByRegEx: dbPackageMetaData is null`);
-            return res.sendStatus(500);
-        }
-        if(dbPackageMetaData.length === 0){
+        if (!dbPackageMetaData || dbPackageMetaData.length === 0) {
             logger.info(`Error in getPackagesByRegEx: No package histories returned`);
             return res.sendStatus(404);
         }
@@ -293,8 +288,6 @@ export async function getGithubUrlFromZip(zipBuffer: Buffer): Promise<string> {
     }
 }
 
-
-
 export async function extractMetadataFromZip(filebuffer: Buffer): Promise<apiSchema.PackageMetadata> {
     logger.info('extractMetadataFromZip: Extracting metadata from zip');
     try {
@@ -341,7 +334,6 @@ export async function uploadToS3(fileName: string, fileBuffer: Buffer, bucketNam
     });
 }
 
-
 async function downloadFromS3(s3Link: string): Promise<Buffer> {
     logger.info('downloadFromS3: Downloading from S3');
 
@@ -379,7 +371,6 @@ async function downloadFromS3(s3Link: string): Promise<Buffer> {
         throw new Error('Failed to download from S3');
     }
 }
-
 
 export async function calculateGithubMetrics(owner: string, repo: string): Promise<apiSchema.PackageRating> {
     logger.info(`CalculateGithubMetrics: Calculating metrics for ${owner}/${repo}`);
