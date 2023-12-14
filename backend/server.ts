@@ -18,7 +18,7 @@ logger.info('Starting server...');
 app.use(cors());
 
 // Parse JSON bodies
-app.use(express.json());
+app.use(express.json( { limit: '50mb' }));
 
 // Serve static files from the "Frontend" directory
 app.use(express.static('Frontend/dist'));
