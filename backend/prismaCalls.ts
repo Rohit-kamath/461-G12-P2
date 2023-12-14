@@ -161,7 +161,10 @@ export async function getMetaDataByRegEx(regEx: string): Promise<prismaSchema.Pa
     });
 
     try {
-        const packagesPromise = prisma.$queryRaw<prismaSchema.PackageMetadata[]>`SELECT * FROM PackageMetadata WHERE name ~* ${regEx};`;
+        const packagesPromise : prismaSchema.PackageMetadata[] = await prisma.$queryRaw`
+            SELECT * FROM "PackageMetadata"
+            WHERE "name" ~* ${regEx};
+        `;
 
         const result = await Promise.race([packagesPromise, timeoutPromise]);
 
