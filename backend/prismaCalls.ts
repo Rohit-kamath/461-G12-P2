@@ -149,7 +149,7 @@ export async function checkPackageExists(packageName?: string, packageVersion?: 
 export async function getMetaDataByRegEx(regEx: string): Promise<prismaSchema.PackageMetadata[] | null> {
     const timeoutPromise = new Promise<prismaSchema.PackageMetadata[] | null>((_, reject) => {
         setTimeout(() => {
-            reject(new Error('Query timeout after 5 seconds'));
+            reject(null);
         }, 5000);
     });
 
