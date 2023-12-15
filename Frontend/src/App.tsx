@@ -1,6 +1,6 @@
 import { useState, ChangeEvent, useEffect, useRef } from 'react';
 import axios from 'axios';
-const xAuthorizationHeader = { "x-authorization": "0" };
+const headers = {"x-authorization": "0"};
 
 function App() {
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -44,13 +44,13 @@ function App() {
             return;
         }
         setPackageDirectory(`/${packageName}/${packageVersion}`);
-        const response = await axios.get(`/package/byName/${packageName}`, { headers: xAuthorizationHeader });
+        const response = await axios.get(`/package/byName/${packageName}`, {headers});
         if (response.status === 200) {
             console.log('Success')
             return;
         }
         else if (response.status === 404) {
-            axios.post('/package', { name: packageName, version: packageVersion }, { headers: xAuthorizationHeader });
+            axios.post('/package', { name: packageName, version: packageVersion }, {headers});
         }
         else {
             alert('Error: Package does not exist.');
@@ -61,7 +61,7 @@ function App() {
     const resetPackageRegistry = async () => {
         const confirmReset = window.confirm('Are you sure you want to reset the package registry?');
         if (confirmReset) {
-            await axios.delete('/reset', { headers: xAuthorizationHeader });
+            await axios.delete('/reset', {headers});
             console.log('Package registry reset successfully.');
         }
     };
@@ -115,7 +115,7 @@ function App() {
         setUploadStatus('Uploading package from URL...');
 
         try {
-            const response = await axios.post('/package', { URL: uploadURL }, { headers: xAuthorizationHeader});
+            const response = await axios.post('/package', { URL: uploadURL }, {headers});
             const metadata = response.data.metadata;
             const metadataMessage = `Name: ${metadata.Name}, Version: ${metadata.Version}, ID: ${metadata.ID}`;
             setUploadStatus(`Upload successful: ${metadataMessage}`);
@@ -144,9 +144,9 @@ function App() {
         try {
             let response;
             if (searchType === 'name') {
-                response = await axios.get(`/package/byName/${searchInput}`, { headers: xAuthorizationHeader });
+                response = await axios.get(`/package/byName/${searchInput}`, {headers});
             } else if (searchType === 'regex') {
-                response = await axios.post('/package/byRegEx', { RegEx: searchInput }, { headers: xAuthorizationHeader });
+                response = await axios.post('/package/byRegEx', { RegEx: searchInput }, {headers});
             } else {
                 setSearchResults(null);
                 return;
@@ -174,7 +174,7 @@ function App() {
     const downloadPackage = async () => {
         if (selectedPackage) {
             try {
-                const response = await axios.get(`/package/${selectedPackage}`, { headers: xAuthorizationHeader });
+                const response = await axios.get(`/package/${selectedPackage}`, {headers});
                 const base64Content = response.data;
                 // Convert base64 to binary
                 const binaryContent = atob(base64Content);
@@ -203,10 +203,10 @@ function App() {
         if ((content || url) && !(content && url)) {
             setUpdateFields({ content, url });
             if (url) {
-                axios.put(`/package/${selectedPackage}`, { url }, { headers: xAuthorizationHeader });
+                axios.put(`/package/${selectedPackage}`, { url }, {headers});
             }
             else {
-                axios.put(`/package/${selectedPackage}`, { content }, { headers: xAuthorizationHeader });
+                axios.put(`/package/${selectedPackage}`, { content }, {headers});
             }
         }
         else {
@@ -219,7 +219,7 @@ function App() {
         const packageId = prompt('Enter package ID:');
 
         if (packageId) {
-            const response = await axios.get(`/package/${packageId}/rate`, {headers: xAuthorizationHeader});
+            const response = await axios.get(`/package/${packageId}/rate`, {headers});
 
             if ((response).status === 200) {
                 const ratings = response.data;
