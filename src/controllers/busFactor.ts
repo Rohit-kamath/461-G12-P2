@@ -42,7 +42,7 @@ export const calculateBusFactor = (contributors: Contributor[] | null): number =
         let contributions = 0;
         for (const contributor of contributors) {
             contributions += contributor.totalContributions;
-            busFactor += 0.2;
+            busFactor += 0.45;
             if (contributions >= fractionContributors) {
                 break;
             }

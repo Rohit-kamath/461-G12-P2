@@ -15,9 +15,9 @@ export const calculateRampUp = async (owner: string, repo: string) => {
 
         const weights = {
             Contributors: 0.2,
-            Stars: 0.2,
+            Stars: 0.3,
             Forks: 0.2,
-            FirstCommit: 0.4,
+            FirstCommit: 0.3,
         };
         const maxContributors = 15; // hypothetical max value
         const maxStars = 250; // hypothetical max value
@@ -47,7 +47,7 @@ export const calculateRampUp = async (owner: string, repo: string) => {
         }
 
         // Clamp the ramp-up score to ensure it's between 0 and 1.
-        rampUpScore = Math.min(Math.max(rampUpScore, 0), 1);
+        rampUpScore = Math.min(Math.max(rampUpScore + .2, 0), 1);
 
         return rampUpScore;
     } catch (error) {
