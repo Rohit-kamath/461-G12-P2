@@ -3,7 +3,6 @@ import * as apiSchema from "../backend/apiSchema";
 import createModuleLogger from '../src/logger';
 const APIURL = 'http://ece461-packageregistry-depenv.eba-bphpcw3d.us-east-2.elasticbeanstalk.com';
 const axiosInstance = axios.create({baseURL: APIURL, headers : {"x-authorization": "0"}});
-const headers = {"x-authorization" : "0"};
 const logger = createModuleLogger('groupDownload.test.ts');
 
 logger.info('Starting groupDownload.test.ts');
