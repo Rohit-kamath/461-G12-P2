@@ -53,11 +53,7 @@ function App() {
         if (response.status === 200) {
             console.log('Success')
             return;
-        }
-        else if (response.status === 404) {
-            axios.post('/package', { name: packageName, version: packageVersion }, {headers});
-        }
-        else {
+        }else {
             alert('Error: Package does not exist.');
         }
     };

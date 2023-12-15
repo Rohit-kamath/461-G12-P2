@@ -14,7 +14,7 @@ describe('reset environment', () => {
     });
 });
 
-describe('DELETE /package/byID/:id endpoint', () => {
+describe('DELETE /package/:id endpoint', () => {
     let packageID: string;
 
     it('should create a package for testing delete operation', async () => {
@@ -29,7 +29,7 @@ describe('DELETE /package/byID/:id endpoint', () => {
 
     it('should return 200 status code for successful deletion of the package', async () => {
         console.log("Deleting package with ID:", packageID);
-        const deleteResponse = await axiosInstance.delete(`/package/byID/${packageID}`);
+        const deleteResponse = await axiosInstance.delete(`/package/${packageID}`);
         expect(deleteResponse.status).toBe(200);
     });
 

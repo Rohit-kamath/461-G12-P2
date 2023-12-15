@@ -108,18 +108,18 @@ app.get('/package/byName/:name', async (req, res) => {
     }
 });
 
-app.delete('/package/byID/:id', async (req, res) => {
+app.delete('/package/:id', async (req, res) => {
     try {
-        logger.info(`DELETE /package/byID/:id request headers: ${JSON.stringify(req.headers)}`);
+        logger.info(`DELETE /package/:id request headers: ${JSON.stringify(req.headers)}`);
         const xAuthHeaderValue = req.headers['x-authorization'];
         if(xAuthHeaderValue !== "0"){
-            logger.info("400 Unauthorized, DELETE /package/byID/:id");
+            logger.info("400 Unauthorized, DELETE /package/:id");
             return res.sendStatus(400);
         }
-        logger.info(`DELETE /package/byID/:id request params: ${JSON.stringify(req.params)}`);
+        logger.info(`DELETE /package/:id request params: ${JSON.stringify(req.params)}`);
         await apiPackage.deletePackageByID(req, res);
     } catch (error) {
-        logger.info(`Error in delete(/package/byID/:id) in server.ts: ${error}`);
+        logger.info(`Error in delete(/package/:id) in server.ts: ${error}`);
         res.sendStatus(500);
     }
 });
