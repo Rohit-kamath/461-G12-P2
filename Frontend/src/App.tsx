@@ -5,12 +5,16 @@ const headers = {"x-authorization": "0"};
 function App() {
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [uploadStatus, setUploadStatus] = useState<string | null>(null);
-    const [searchResults, setSearchResults] = useState<string[] | null>(null);
+    const [searchResults, setSearchResults] = useState<Array<any>>([]);
     const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
     const [uploadURL, setUploadURL] = useState<string>('');
     const [searchType, setSearchType] = useState('name');
     const [searchInput, setSearchInput] = useState('');
-    const [downloadId, setDownloadId] = useState('');
+    const [packageId, setPackageId] = useState<string>('');
+    const [downloadPackageId, setDownloadPackageId] = useState('');
+    const [downloadedPackageMetadata, setDownloadedPackageMetadata] = useState(null);
+
+
 
     // Package Directory
     const [isPackageDirectoryOpen, setIsPackageDirectoryOpen] = useState<boolean>(false);
@@ -138,24 +142,41 @@ function App() {
     };
 
     const searchPackages = async () => {
-        console.log("Searching packages")
-        try {
-            let response;
-            if (searchType === 'name') {
-                response = await axios.get(`/package/byName/${searchInput}`, {headers});
-            } else if (searchType === 'regex') {
-                response = await axios.post('/package/byRegEx', { RegEx: searchInput }, {headers});
-            } else {
-                setSearchResults(null);
+        if (!searchInput) {
+            setSearchResults([]);
+            return;
+        }
+    
+        let response;
+    
+        if (searchType === 'regex') {
+            try {
+                new RegExp(searchInput);
+            } catch (error) {
+                alert('Invalid regular expression');
+                setSearchResults([]);
                 return;
             }
-
-            setSearchResults(response.data);
-            setSelectedPackage(null); // Reset selected package when a new search is performed
+        }
+    
+        try {
+            if (searchType === 'name') {
+                response = await axios.get(`/package/byName/${searchInput}`, { headers });
+            } else if (searchType === 'regex') {
+                response = await axios.post('/package/byRegEx', { RegEx: searchInput }, { headers });
+            }
+    
+            if (response && response.data) {
+                setSearchResults(response.data);
+            } else {
+                setSearchResults([]);
+            }
         } catch (error: any) {
             console.error(`Error searching for packages: ${error.message}`);
+            setSearchResults([]); // Reset search results on error
         }
     };
+    
 
     const handleSearchTypeChange = (e: ChangeEvent<HTMLSelectElement>) => {
         setSearchType(e.target.value);
@@ -169,30 +190,40 @@ function App() {
         setSelectedPackage(packageName);
     };
 
+    const handleDownloadPackageChange = (e: ChangeEvent<HTMLInputElement>) => {
+        setDownloadPackageId(e.target.value);
+    };
+
     const downloadPackage = async () => {
-        console.log("Download package")
-        if (downloadId) {
-            try {
-                console.log("Downloading package")
-                const response = await axios.get(`/package/${downloadId}`, {headers});
-                const base64Content = response.data;
-                // Convert base64 to binary
+        if (!downloadPackageId) {
+            alert('Please enter a package ID');
+            return;
+        }
+
+        try {
+            const response = await axios.get(`/package/${downloadPackageId}`, { headers });
+            if (response.data && response.data.data && response.data.metadata) {
+                const { Name, Version, ID } = response.data.metadata;
+                const base64Content = response.data.data.Content;
                 const binaryContent = atob(base64Content);
-                // Create a Uint8Array from the binary data
                 const uint8Array = new Uint8Array(binaryContent.length);
                 for (let i = 0; i < binaryContent.length; i++) {
                     uint8Array[i] = binaryContent.charCodeAt(i);
                 }
-                // Create a blob from the Uint8Array
                 const blob = new Blob([uint8Array], { type: 'application/zip' });
-                // Create a link element and simulate a click to trigger the download
                 const link = document.createElement('a');
                 link.href = window.URL.createObjectURL(blob);
-                link.download = `${downloadId}.zip`; // Set the desired file name
+                link.download = `${Name}-${Version}-${ID}.zip`;
                 link.click();
-            } catch (error: any) {
-                console.error(`Error downloading package: ${error.message}`);
+
+                // Optional: Display download confirmation
+                alert(`Downloading ${Name} version ${Version}`);
+            } else {
+                alert('Package data not found');
             }
+        } catch (error: any) {
+            console.error(`Error downloading package: ${error.message}`);
+            alert(`Error: ${error.response?.data.message || error.message}`);
         }
     };
 
@@ -216,84 +247,105 @@ function App() {
 
     // Rating functionality
     const handleRatingClick = async () => {
-        const packageId = prompt('Enter package ID:');
-
-        if (packageId) {
-            const response = await axios.get(`/package/${packageId}/rate`, {headers});
-
-            if ((response).status === 200) {
-                const ratings = response.data;
-                setPackageRating(ratings);
-                console.log('Package ratings:', ratings);
-            }
-            else if ((response).status === 404) {
-                alert('Error: Package does not exist.');
-            }
-            else {
-                alert('Error: Request did not fail as expected.');
-            }
+        if (!packageId) {
+            alert('Please enter a package ID');
+            return;
+        }
+        try {
+            const response = await axios.get(`/package/${packageId}/rate`, { headers });
+            setPackageRating(response.data);
+        } catch (error: any) {
+            console.error(`Error checking package ratings: ${error.message}`);
+            alert(`Error: ${error.response?.data.message || error.message}`);
         }
     };
+    
 
     return (
         <div className="container">
             <h1>Package Registry</h1>
-            <div className="upload-section">
-                <h2>Upload Package</h2>
-                <div className="file-upload">
-                    <label htmlFor="fileInput">Select a Zip File:</label>
-                    <input
-                        id="fileInput"
-                        type="file"
-                        accept=".zip"
-                        onChange={handleFileChange}
-                    />
-                    <span>OR</span>
-                    <label htmlFor="urlInput" className="url-label">Enter Package URL:</label>
-                    <input
-                        id="urlInput"
-                        type="text"
-                        placeholder="NPM or GitHub URL"
-                        value={uploadURL}
-                        onChange={handleURLChange}
-                    />
+                <div className="upload-section">
+                    <h2>Upload Package</h2>
+                    <div className="file-upload">
+                        <label htmlFor="fileInput">Select a Zip File:</label>
+                        <input
+                            id="fileInput"
+                            type="file"
+                            accept=".zip"
+                            onChange={handleFileChange}
+                        />
+                        <span>OR</span>
+                        <label htmlFor="urlInput" className="url-label">Enter Package URL:</label>
+                        <input
+                            id="urlInput"
+                            type="text"
+                            placeholder="NPM or GitHub URL"
+                            value={uploadURL}
+                            onChange={handleURLChange}
+                        />
+                    </div>
+                    <button type="button" onClick={handleUpload}>
+                        Upload
+                    </button>
+                    {uploadStatus && <p className="upload-status">{uploadStatus}</p>}
                 </div>
-                <button type="button" onClick={handleUpload}>
-                    Upload
-                </button>
-                {uploadStatus && <p className="upload-status">{uploadStatus}</p>}
-            </div>
 
-            <div className="search-packages">
-                <h2>Search Packages</h2>
-                <select value={searchType} onChange={(e) => setSearchType(e.target.value)}>
-                    <option value="name">By Name</option>
-                    <option value="regex">By Regex</option>
-                </select>
-                <input
-                    type="text"
-                    id="searchInput"
-                    placeholder={`Search by ${searchType}`}
-                    value={searchInput}
-                    onChange={(e) => setSearchInput(e.target.value)}
-                />
-                <button type="button" onClick={searchPackages} disabled={!searchInput}>
-                    Search
-                </button>
+                <div className="search-packages">
+                    <h2>Search Packages</h2>
+                    <select value={searchType} onChange={(e) => setSearchType(e.target.value)}>
+                        <option value="name">By Name</option>
+                        <option value="regex">By Regex</option>
+                    </select>
+                    <input
+                        type="text"
+                        id="searchInput"
+                        placeholder={`Search by ${searchType}`}
+                        value={searchInput}
+                        onChange={(e) => setSearchInput(e.target.value)}
+                    />
+                    <button type="button" onClick={searchPackages} disabled={!searchInput}>
+                        Search
+                    </button>
+                    {searchResults.length > 0 && (
+                        <div className="search-results">
+                        <h3>Search Results:</h3>
+                        <ul>
+                            {searchResults.map((result, index) => (
+                                <li key={index}>
+                                    Name: {result.PackageMetadata?.Name || result.Name}, 
+                                    Version: {result.PackageMetadata?.Version || result.Version}, 
+                                    ID: {result.PackageMetadata?.ID || result.ID}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
+            </div>
+                
                 {/* Download Package Section */}
                 <div className="download-package">
                     <h2>Download Package</h2>
-                    <label htmlFor="downloadId" className="url-label">Enter Package ID:</label>
                     <input
-                        id="downloadId"
                         type="text"
-                        placeholder="Package ID"
-                        value={downloadId}
-                        onChange={(e) => setDownloadId(e.target.value)}
+                        placeholder="Enter Package ID"
+                        value={downloadPackageId}
+                        onChange={handleDownloadPackageChange}
                     />
-                    <button type="button" onClick={downloadPackage} disabled={!downloadId}>
+                    <button
+                        type="button"
+                        onClick={downloadPackage}
+                        disabled={!downloadPackageId}
+                    >
                         Download
                     </button>
+
+                    {downloadedPackageMetadata && (
+                        <div className="downloaded-package-info">
+                            <p>Name: {downloadedPackageMetadata.Name}</p>
+                            <p>Version: {downloadedPackageMetadata.Version}</p>
+                            <p>ID: {downloadedPackageMetadata.ID}</p>
+                        </div>
+                    )}
                 </div>
 
                 {/* Update Section */}
@@ -307,19 +359,28 @@ function App() {
                 {/* Ratings Section */}
                 <div className="check-ratings">
                     <h2>Check Ratings</h2>
-                    <button type="button" onClick={handleRatingClick}>
-                        Check Ratings
-                    </button>
-                    {packageRating !== null && (
-                        <div className="package-rating">
-                            <h3>Package Ratings</h3>
-                            <p>
-                                Ratings for {selectedPackage || 'selected package'}: {packageRating}
-                            </p>
-                        </div>
-                    )}
-                </div>
-            </div>
+                        <label htmlFor="packageIdInput">Package ID:</label>
+                        <input
+                            id="packageIdInput"
+                            type="text"
+                            placeholder="Enter Package ID"
+                            value={packageId}
+                            onChange={(e) => setPackageId(e.target.value)}
+                            />
+                        <button type="button" onClick={handleRatingClick}>
+                            Check Ratings
+                        </button>
+                        {packageRating !== null && (
+                            <div className="package-rating">
+                                <h3>Package Ratings:</h3>
+                                <ul>
+                                    {Object.entries(packageRating).map(([key, value]) => (
+                                        <li key={key}>{key}: {value.toFixed(2)}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+                    </div>
 
             <div className="package-directory">
                 <h2>Package Directory</h2>
