@@ -1474,7 +1474,7 @@ export async function executeUploadTransaction(req: Request, res: Response) {
     } else {
         logger.error('Transaction bucket name not configured');
     }
-    const response = { transactionId, packages: packageResponses };
+    const response = { packages: packageResponses };
     return res.status(200).json(response);
     } catch (error) {
         logger.error(`Error executing upload transaction: ${error}`);
