@@ -2,6 +2,12 @@ import { useState, ChangeEvent, useEffect, useRef } from 'react';
 import axios from 'axios';
 const headers = {"x-authorization": "0"};
 
+interface PackageQueryResult {
+    Name: string;
+    Version: string;
+    ID: string;
+}
+
 function App() {
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [uploadStatus, setUploadStatus] = useState<string | null>(null);
@@ -13,50 +19,22 @@ function App() {
     const [packageId, setPackageId] = useState<string>('');
     const [downloadPackageId, setDownloadPackageId] = useState('');
     const [downloadedPackageMetadata, setDownloadedPackageMetadata] = useState(null);
+    const [deleteType, setDeleteType] = useState('id'); // 'id' or 'name'
+    const [deleteInput, setDeleteInput] = useState('');
+    const [deleteMessage, setDeleteMessage] = useState('');
 
 
 
-    // Package Directory
-    const [isPackageDirectoryOpen, setIsPackageDirectoryOpen] = useState<boolean>(false);
-    const [packageName, setPackageName] = useState<string>('');
-    const [packageVersion, setPackageVersion] = useState<string>('');
-    const [packageDirectory, setPackageDirectory] = useState<string | null>(null);
+    // State for package queries
+    const [packageNameQuery, setPackageNameQuery] = useState('');
+    const [packageVersionQuery, setPackageVersionQuery] = useState('');
+    const [packageQueryResults, setPackageQueryResults] = useState<PackageQueryResult[]>([]);
 
     // Update Fields
     const [updateFields, setUpdateFields] = useState<{ content: string | null, url: string | null }>({ content: '', url: '' });
 
     // Package Rating
     const [packageRating, setPackageRating] = useState<number | null>(null);
-
-    // Open package directory
-    const openPackageDirectory = () => {
-        setIsPackageDirectoryOpen(true);
-    };
-
-    // Close package directory
-    const closePackageDirectory = () => {
-        setIsPackageDirectoryOpen(false);
-        setPackageName('');
-        setPackageVersion('');
-        setPackageDirectory(null);
-    };
-
-    // Package Info
-    const submitPackageInfo = async () => {
-        // Validate package version consists of only numbers
-        if (!/^(\d+(\.\d+)*)?$/.test(packageVersion)) {
-            alert('Error: Version must contain only numbers.');
-            return;
-        }
-        setPackageDirectory(`/${packageName}/${packageVersion}`);
-        const response = await axios.get(`/package/byName/${packageName}`, {headers});
-        if (response.status === 200) {
-            console.log('Success')
-            return;
-        }else {
-            alert('Error: Package does not exist.');
-        }
-    };
 
     // Package Reset
     const resetPackageRegistry = async () => {
@@ -176,6 +154,15 @@ function App() {
             setSearchResults([]); // Reset search results on error
         }
     };
+
+    const fetchPackages = async () => {
+        try {
+            const response = await axios.post('/packages', [{ Name: packageNameQuery, Version: packageVersionQuery }], { headers });
+            setPackageQueryResults(response.data);
+        } catch (error) {
+            alert('No packages found, failed to fetch packages');
+        }
+    };
     
 
     const handleSearchTypeChange = (e: ChangeEvent<HTMLSelectElement>) => {
@@ -242,6 +229,25 @@ function App() {
         }
         else {
             alert('Please enter either content or url, not both');
+        }
+    };
+    const handleDelete = async () => {
+        try {
+            let response;
+            if (deleteType === 'id') {
+                response = await axios.delete(`/package/${deleteInput}`, { headers });
+            } else if (deleteType === 'name') {
+                response = await axios.delete(`/package/byName/${deleteInput}`, { headers });
+            }
+    
+            if (response.status === 200) {
+                setDeleteMessage('Package deleted successfully');
+            } else {
+                setDeleteMessage('Failed to delete package');
+            }
+        } catch (error) {
+            console.error('Error deleting package:', error);
+            setDeleteMessage('Failed to delete package');
         }
     };
 
@@ -382,47 +388,55 @@ function App() {
                         )}
                     </div>
 
-            <div className="package-directory">
-                <h2>Package Directory</h2>
-                <button type="button" onClick={openPackageDirectory}>
-                    Open Package Directory
-                </button>
+            {/* Package Query Section */}
+            <div className="package-query">
+                <h2>Packages Directory</h2>
+                <input
+                    type="text"
+                    placeholder="Package Name"
+                    value={packageNameQuery}
+                    onChange={(e) => setPackageNameQuery(e.target.value)}
+                />
+                <input
+                    type="text"
+                    placeholder="Package Version (optional)"
+                    value={packageVersionQuery}
+                    onChange={(e) => setPackageVersionQuery(e.target.value)}
+                />
+                <button onClick={fetchPackages}>Fetch Packages</button>
 
-                {isPackageDirectoryOpen && (
-                    <div className="package-info">
-                        <h3>Enter Package Information</h3>
-                        <label htmlFor="packageName">Name:</label>
-                        <input
-                            type="text"
-                            id="packageName"
-                            value={packageName}
-                            onChange={(e) => setPackageName(e.target.value)}
-                        />
-
-                        <label htmlFor="packageVersion">Version:</label>
-                        <input
-                            type="text"
-                            id="packageVersion"
-                            value={packageVersion}
-                            onChange={(e) => setPackageVersion(e.target.value)}
-                        />
-                        <button type="button" onClick={submitPackageInfo}>
-                            Submit
-                        </button>
-                        <button type="button" onClick={closePackageDirectory}>
-                            Cancel
-                        </button>
-
-                        {packageDirectory && (
-                            <div className="directory-view">
-                                <h3>Package Directory View</h3>
-                                <p>Directory: {packageDirectory}</p>
-                            </div>
-                        )}
+                {packageQueryResults.length > 0 && (
+                    <div className="package-query-results">
+                        <h3>Packages Results:</h3>
+                        <ul>
+                            {packageQueryResults.map((pkg, index) => (
+                                <li key={index}>
+                                    Name: {pkg.Name}, Version: {pkg.Version}, ID: {pkg.ID}
+                                </li>
+                            ))}
+                        </ul>
                     </div>
                 )}
             </div>
-
+            
+            {/* Package Deletion Section */}
+            <div className="package-deletion">
+                <h2>Delete Package</h2>
+                <select value={deleteType} onChange={(e) => setDeleteType(e.target.value)}>
+                    <option value="id">By ID</option>
+                    <option value="name">By Name</option>
+                </select>
+                <input
+                    type="text"
+                    placeholder={deleteType === 'id' ? 'Enter Package ID' : 'Enter Package Name'}
+                    value={deleteInput}
+                    onChange={(e) => setDeleteInput(e.target.value)}
+                />
+                <button onClick={handleDelete}>Delete</button>
+                {deleteMessage && <p className="delete-message">{deleteMessage}</p>}
+            </div>
+            
+            {/* Package Reset Section */}
             <div className="package-reset">
                 <h2>Package Reset</h2>
                 <button type="button" onClick={resetPackageRegistry}>

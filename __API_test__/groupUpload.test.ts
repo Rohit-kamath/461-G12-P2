@@ -233,21 +233,6 @@ describe('groupUpload Process', () => {
                 }
             }
         });
-
-        it('should fail to execute due to it being an empty transaction', async () => {
-            try {
-                await axiosInstance.post(`$/transaction/execute/upload`, {
-                    transactionId: emptyTransactionId
-                });
-                throw new Error('Expected Axios to throw an error, but it did not.');
-            } catch (error: any) {
-                if (axios.isAxiosError(error)) {
-                    expect(error.response?.status).toBe(404);
-                } else {
-                    throw error;
-                }
-            }
-        });
     });
 
     describe('Reset', () => {

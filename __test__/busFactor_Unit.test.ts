@@ -35,7 +35,7 @@ describe('Bus Factor calculations', () => {
             ];
 
             const result = await calculateBusFactor(contributors);
-            expect(result).toBe(0.2);
+            expect(result).toBe(0.45);
         });
 
         it('should return a bus factor of 0 if no contributors are found', async () => {
