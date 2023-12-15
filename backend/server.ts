@@ -208,6 +208,12 @@ app.put('/package/:id', async (req, res) => {
 
 app.post('/transaction/initiate', async (req, res) => {
     try {
+        logger.info(`POST /transaction/initiate request headers: ${JSON.stringify(req.headers)}`);
+        const xAuthHeaderValue = req.headers['x-authorization'];
+        if(xAuthHeaderValue !== "0"){
+            logger.info("400 Unauthorized, POST /transaction/initiate");
+            return res.sendStatus(400);
+        }
         logger.info(`POST /transaction/initiate request: ${JSON.stringify(req.body)}`);
         await apiPackage.initiateTransaction(req, res);
     } catch (error) {
@@ -218,6 +224,12 @@ app.post('/transaction/initiate', async (req, res) => {
 
 app.post('/transaction/append/upload', async (req, res) => {
     try {
+        logger.info(`POST /transaction/append/upload request headers: ${JSON.stringify(req.headers)}`);
+        const xAuthHeaderValue = req.headers['x-authorization'];
+        if(xAuthHeaderValue !== "0"){
+            logger.info("400 Unauthorized, POST /transaction/append/upload");
+            return res.sendStatus(400);
+        }
         logger.info(`POST /transaction/append/upload request: ${JSON.stringify(req.body)}`);
         await apiPackage.appendToUploadTransaction(req, res);
     } catch (error) {
@@ -228,6 +240,12 @@ app.post('/transaction/append/upload', async (req, res) => {
 
 app.post('/transaction/execute/upload', async (req, res) => {
     try {
+        logger.info(`POST /transaction/execute/upload request headers: ${JSON.stringify(req.headers)}`);
+        const xAuthHeaderValue = req.headers['x-authorization'];
+        if(xAuthHeaderValue !== "0"){
+            logger.info("400 Unauthorized, POST /transaction/execute/upload");
+            return res.sendStatus(400);
+        }
         logger.info(`POST /transaction/execute/upload request: ${JSON.stringify(req.body)}`);
         await apiPackage.executeUploadTransaction(req, res);
     } catch (error) {
@@ -238,6 +256,12 @@ app.post('/transaction/execute/upload', async (req, res) => {
 
 app.post('/transaction/append/rate', async (req, res) => {
     try {
+        logger.info(`POST /transaction/append/rate request headers: ${JSON.stringify(req.headers)}`);
+        const xAuthHeaderValue = req.headers['x-authorization'];
+        if(xAuthHeaderValue !== "0"){
+            logger.info("400 Unauthorized, POST /transaction/append/rate");
+            return res.sendStatus(400);
+        }
         logger.info(`POST /transaction/append/rate request: ${JSON.stringify(req.body)}`);
         await apiPackage.appendToRateTransaction(req, res);
     } catch (error) {
@@ -248,6 +272,12 @@ app.post('/transaction/append/rate', async (req, res) => {
 
 app.post('/transaction/execute/rate', async (req, res) => {
     try {
+        logger.info(`POST /transaction/execute/rate request headers: ${JSON.stringify(req.headers)}`);
+        const xAuthHeaderValue = req.headers['x-authorization'];
+        if(xAuthHeaderValue !== "0"){ 
+            logger.info("400 Unauthorized, POST /transaction/execute/rate");
+            return res.sendStatus(400);
+        }
         logger.info(`GET /transaction/execute/rate request: ${JSON.stringify(req.body)}`);
         await apiPackage.executeRateTransaction(req, res);
     } catch (error) {
@@ -258,6 +288,12 @@ app.post('/transaction/execute/rate', async (req, res) => {
 
 app.post('/transaction/append/update', async (req, res) => {
     try {
+        logger.info(`POST /transaction/append/update request: ${JSON.stringify(req.headers)}`);
+        const xAuthHeaderValue = req.headers['x-authorization'];
+        if(xAuthHeaderValue !== "0"){ 
+            logger.info("400 Unauthorized, POST /transaction/append/update");
+            return res.sendStatus(400);
+        }
         logger.info(`POST /transaction/append/update request: ${JSON.stringify(req.body)}`);
         await apiPackage.appendToUpdateTransaction(req, res);
     } catch (error) {
@@ -268,6 +304,12 @@ app.post('/transaction/append/update', async (req, res) => {
 
 app.post('/transaction/execute/update', async (req, res) => {
     try {
+        logger.info(`POST /transaction/execute/update request: ${JSON.stringify(req.headers)}`);
+        const xAuthHeaderValue = req.headers['x-authorization'];
+        if(xAuthHeaderValue !== "0"){ 
+            logger.info("400 Unauthorized, POST /transaction/execute/update");
+            return res.sendStatus(400);
+        }
         logger.info(`POST /transaction/execute/update request: ${JSON.stringify(req.body)}`);
         await apiPackage.executeUpdateTransaction(req, res);
         } catch (error) {
@@ -278,6 +320,12 @@ app.post('/transaction/execute/update', async (req, res) => {
 
 app.post('/transaction/append/download', async (req, res) => {
     try {
+        logger.info(`POST /transaction/append/download request: ${JSON.stringify(req.headers)}`);
+        const xAuthHeaderValue = req.headers['x-authorization'];
+        if(xAuthHeaderValue !== "0"){ 
+            logger.info("400 Unauthorized, POST /transaction/append/download");
+            return res.sendStatus(400);
+        }
         logger.info(`POST /transaction/append/download request: ${JSON.stringify(req.body)}`);
         await apiPackage.appendToDownloadTransaction(req, res);
     } catch (error) {
@@ -288,6 +336,12 @@ app.post('/transaction/append/download', async (req, res) => {
 
 app.post('/transaction/execute/download', async (req, res) => {
     try {
+        logger.info(`POST /transaction/execute/download request: ${JSON.stringify(req.headers)}`);
+        const xAuthHeaderValue = req.headers['x-authorization'];
+        if(xAuthHeaderValue !== "0"){ 
+            logger.info("400 Unauthorized, POST /transaction/execute/download");
+            return res.sendStatus(400);
+        }
         logger.info(`POST /transaction/execute/download request: ${JSON.stringify(req.body)}`);
         await apiPackage.executeDownloadTransaction(req, res);
     } catch (error) {

@@ -3,11 +3,12 @@ import * as apiSchema from "../backend/apiSchema";
 import createModuleLogger from '../src/logger';
 const APIURL = 'http://ece461-packageregistry-depenv.eba-bphpcw3d.us-east-2.elasticbeanstalk.com';
 const logger = createModuleLogger('getPackageByName.test.ts');
+const headers = {"x-authorization" : "0"};
 logger.info("Starting tests for getPackageByName.test.ts");
 describe('reset', () => {
     it('should return 200 status code to signifiy successful reset. Used for clean test environment', async () => {
         try {
-            const response = await axios.delete(`${APIURL}/reset`);
+            const response = await axios.delete(`${APIURL}/reset`, {headers});
             expect(response.status).toBe(200);
         } catch (error: any) {
             console.log(error.response.status);
@@ -21,9 +22,9 @@ describe('get /package/byName/{name} endpoint', () => {
     it('POST /package endpoint to put something in registry. should return 200 status code and something for a valid github repo link', async () => {
         try {
             const response= await axios.post(`${APIURL}/package`, {
-                "URL": "https://github.com/feross/safe-buffer"
-            });
-            expect(response.status).toBe(200);
+                "URL": "https://github.com/expressjs/express"
+            }, {headers});
+            expect(response.status).toBe(201);
             const packageResponse : apiSchema.Package = response.data;
             packageName = packageResponse.metadata.Name;
         } catch (error: any) {
@@ -34,8 +35,7 @@ describe('get /package/byName/{name} endpoint', () => {
 
     it('get /package/byName/{name} endpoint (package history). should return 200 status code and something for a valid package name', async () => {
         try {
-            const response = await axios.get(`${APIURL}/package/byName/${packageName}`);
-            //console.log(response.data);
+            const response = await axios.get(`${APIURL}/package/byName/${packageName}`, {headers});
             expect(response.status).toBe(200);
         } catch (error: any) {
             console.log(error.response.status);
@@ -46,7 +46,7 @@ describe('get /package/byName/{name} endpoint', () => {
 
     it('get /package/byName/{name} endpoint (package history). should return 404 status code for an invalid package name', async () => {
         try {
-            await axios.get(`${APIURL}/package/byName/invalidPackageName`);
+            await axios.get(`${APIURL}/package/byName/invalidPackageName`, {headers});
             throw new Error('not returning 404 status code for invalid package name');
         } catch (error: any) {
             if(error.message === 'not returning 404 status code for invalid package name') {
@@ -60,7 +60,7 @@ describe('get /package/byName/{name} endpoint', () => {
 describe('reset', () => { // rerun reset test for clean deployment
     it('should return 200 status code to signifiy successful reset', async () => {
         try {
-            const response = await axios.delete(`${APIURL}/reset`);
+            const response = await axios.delete(`${APIURL}/reset`, {headers});
             expect(response.status).toBe(200);
         } catch (error: any) {
             console.log(error.response.status);
