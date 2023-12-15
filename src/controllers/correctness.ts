@@ -72,7 +72,7 @@ export class Correctness {
     }
 
     private calculateFinalScore(githubScore: number, eslintScore: number): number {
-        return Math.min(1, 0.2 * githubScore + 0.8 * eslintScore);
+        return Math.min(1, 0.3 * githubScore + 0.7 * eslintScore);
     }
 
     private async lintFile(filePath: string): Promise<void> {
