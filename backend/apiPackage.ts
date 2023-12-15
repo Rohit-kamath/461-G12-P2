@@ -1180,21 +1180,21 @@ export async function deletePackageByID(req: Request, res: Response) {
         const packageID = req.params?.id;
 
         if (!packageID) {
-            logger.info(`Error in retrieveAndDeletePackage: Package ID is undefined`);
+            logger.info(`400 Error in deletePackageByID: Package ID is undefined`);
             return res.sendStatus(400);
         }
 
         const packagecount = await prismaCalls.checkPackageExists(undefined, undefined, packageID)
         if (!packagecount) {
-            logger.info(`Error in retrieveAndDeletePackage: Package not found`);
+            logger.info(`404 Error in deletePackageByID: Package not found`);
             return res.sendStatus(404);
         }
 
         await prismaCalls.deletePackage(packageID);
-        logger.info(`Package with ID ${packageID} has been deleted.`);
+        logger.info(`200 Package with ID ${packageID} has been deleted.`);
         return res.sendStatus(200);
     } catch (error) {
-        logger.info(`Error in retrieveAndDeletePackage: ${error}`);
+        logger.info(`500 Error in deletePackageByID: ${error}`);
         return res.sendStatus(500);
     }
 }
