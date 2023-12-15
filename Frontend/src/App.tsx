@@ -22,6 +22,11 @@ function App() {
     const [deleteType, setDeleteType] = useState('id'); // 'id' or 'name'
     const [deleteInput, setDeleteInput] = useState('');
     const [deleteMessage, setDeleteMessage] = useState('');
+    const [updateFields, setUpdateFields] = useState({
+        metadata: { Name: '', Version: '', ID: '' },
+        data: { URL: '' },
+        zipFile: null,
+    });
 
 
 
@@ -29,9 +34,6 @@ function App() {
     const [packageNameQuery, setPackageNameQuery] = useState('');
     const [packageVersionQuery, setPackageVersionQuery] = useState('');
     const [packageQueryResults, setPackageQueryResults] = useState<PackageQueryResult[]>([]);
-
-    // Update Fields
-    const [updateFields, setUpdateFields] = useState<{ content: string | null, url: string | null }>({ content: '', url: '' });
 
     // Package Rating
     const [packageRating, setPackageRating] = useState<number | null>(null);
@@ -50,6 +52,11 @@ function App() {
         setSelectedFile(file);
         setUploadURL('');
     };
+
+    const handleZipFileChange = (e) => {
+        setUpdateFields(prev => ({ ...prev, zipFile: e.target.files[0] }));
+      };
+    
 
     const uploadZipFile = async () => {
         if (selectedFile) {
@@ -231,6 +238,37 @@ function App() {
             alert('Please enter either content or url, not both');
         }
     };
+
+    const handleUpdateSubmit = async () => {
+        if (updateFields.zipFile) {
+        const reader = new FileReader();
+        reader.readAsDataURL(updateFields.zipFile);
+        reader.onloadend = async () => {
+            const base64Content = reader.result.split(',')[1];
+            try {
+            const response = await axios.put(`/package/${updateFields.metadata.ID}`, {
+                metadata: updateFields.metadata,
+                data: { Content: base64Content, URL: updateFields.data.URL },
+            }, { headers });
+    
+            if (response.status === 200) {
+                alert('Package updated successfully');
+            } else {
+                alert('Failed to update package');
+            }
+            } catch (error) {
+            console.error('Error updating package:', error);
+            alert('Failed to update package');
+            }
+        };
+        reader.onerror = () => {
+            alert('Error reading file');
+        };
+        } else {
+        alert('Please select a ZIP file');
+        }
+    };
+
     const handleDelete = async () => {
         try {
             let response;
@@ -298,7 +336,8 @@ function App() {
 
                 <div className="search-packages">
                     <h2>Search Packages</h2>
-                    <select value={searchType} onChange={(e) => setSearchType(e.target.value)}>
+                    <label htmlFor="searchTypeSelect" className="visually-hidden">Select Search Type:</label>
+                    <select id="searchTypeSelect" value={searchType} onChange={(e) => setSearchType(e.target.value)}>
                         <option value="name">By Name</option>
                         <option value="regex">By Regex</option>
                     </select>
@@ -354,12 +393,54 @@ function App() {
                     )}
                 </div>
 
-                {/* Update Section */}
+                {/* Update Package Section */}
                 <div className="update-package">
-                    <h2>Update Package</h2>
-                    <button type="button" onClick={handleUpdateClick} disabled={!selectedPackage}>
-                        Update
-                    </button>
+                <h2>Update Package</h2>
+                <div>
+                    {/* Input for Package Name */}
+                    <input
+                    type="text"
+                    placeholder="Package Name"
+                    value={updateFields.metadata.Name}
+                    onChange={(e) => setUpdateFields(prev => ({ ...prev, metadata: { ...prev.metadata, Name: e.target.value } }))}
+                    />
+
+                    {/* Input for Package Version */}
+                    <input
+                    type="text"
+                    placeholder="Package Version"
+                    value={updateFields.metadata.Version}
+                    onChange={(e) => setUpdateFields(prev => ({ ...prev, metadata: { ...prev.metadata, Version: e.target.value } }))}
+                    />
+
+                    {/* Input for Package ID */}
+                    <input
+                    type="text"
+                    placeholder="Package ID"
+                    value={updateFields.metadata.ID}
+                    onChange={(e) => setUpdateFields(prev => ({ ...prev, metadata: { ...prev.metadata, ID: e.target.value } }))}
+                    />
+
+                    {/* File Input for ZIP File */}
+                    <label htmlFor="zipFileInput" className="visually-hidden">Choose ZIP File:</label>
+                    <input
+                        id="zipFileInput"
+                        type="file"
+                        accept=".zip"
+                        onChange={handleZipFileChange}
+                    />
+
+                    {/* Input for URL */}
+                    <input
+                    type="text"
+                    placeholder="URL"
+                    value={updateFields.data.URL}
+                    onChange={(e) => setUpdateFields(prev => ({ ...prev, data: { ...prev.data, URL: e.target.value } }))}
+                    />
+
+                    {/* Update Submission Button */}
+                    <button type="button" onClick={handleUpdateSubmit}>Update</button>
+                </div>
                 </div>
 
                 {/* Ratings Section */}
@@ -422,7 +503,8 @@ function App() {
             {/* Package Deletion Section */}
             <div className="package-deletion">
                 <h2>Delete Package</h2>
-                <select value={deleteType} onChange={(e) => setDeleteType(e.target.value)}>
+                <label htmlFor="deleteTypeSelect" className="visually-hidden">Select Delete Type:</label>
+                <select id="deleteTypeSelect" value={deleteType} onChange={(e) => setDeleteType(e.target.value)}>
                     <option value="id">By ID</option>
                     <option value="name">By Name</option>
                 </select>
