@@ -3,12 +3,13 @@ import * as apiSchema from "../backend/apiSchema";
 import createModuleLogger from '../src/logger';
 
 const APIURL = 'http://ece461-packageregistry-depenv.eba-bphpcw3d.us-east-2.elasticbeanstalk.com';
+const axiosInstance = axios.create({baseURL: APIURL, headers : {"x-authorization": "0"}});
 const logger = createModuleLogger('postPackages.test.ts');
 logger.info("Starting tests for postPackages.test.ts");
 describe('reset', () => {
     it('should return 200 status code to signifiy successful reset. Used for clean test environment', async () => {
         try {
-            const response = await axios.delete(`${APIURL}/reset`);
+            const response = await axiosInstance.delete(`/reset`);
             expect(response.status).toBe(200);
         } catch (error: any) {
             console.log(error.response.status);
@@ -20,7 +21,7 @@ describe('reset', () => {
 describe('POST /packages endpoint', () => {
     it('POST /packages should return 200 even if no packages are found', async () => {
         try {
-            const response = await axios.post(`${APIURL}/packages`, [{
+            const response = await axiosInstance.post(`/packages`, [{
                 "Version": "1.0.0",
                 "Name": "test"
             }]);
@@ -34,10 +35,10 @@ describe('POST /packages endpoint', () => {
     let packageVersion : string;
     it('POST /package endpoint to put something in registry. should return 200 status code and something for a valid github repo link', async () => {
         try {
-            const response= await axios.post(`${APIURL}/package`, {
-                "URL": "https://github.com/feross/safe-buffer"
+            const response= await axiosInstance.post(`/package`, {
+                "URL": "https://www.npmjs.com/package/express"
             });
-            expect(response.status).toBe(200);
+            expect(response.status).toBe(201);
             const packageResponse : apiSchema.Package = response.data;
             packageName = packageResponse.metadata.Name;
             packageVersion = packageResponse.metadata.Version;
@@ -49,7 +50,7 @@ describe('POST /packages endpoint', () => {
 
     it('POST /packages should return 200 status code and something for a valid package id', async () => {
         try {
-            const response = await axios.post(`${APIURL}/packages`, [{
+            const response = await axiosInstance.post(`/packages`, [{
                 "Version": packageVersion,
                 "Name": packageName
             }]);
@@ -63,7 +64,7 @@ describe('POST /packages endpoint', () => {
 
     it('POST /packages should return 413 status code for a large offset in the query', async () => {
         try {
-            await axios.post(`${APIURL}/packages?offset=100000`, [{
+            await axiosInstance.post(`/packages?offset=100000`, [{
                 "Version": packageVersion,
                 "Name": packageName
             }]);
@@ -75,7 +76,7 @@ describe('POST /packages endpoint', () => {
 
     it('POST /packages should return 200 status code but nothing in data for a valid package id and a small offset in the query', async () => {
         try {
-            const response = await axios.post(`${APIURL}/packages?offset=0`, [{
+            const response = await axiosInstance.post(`/packages?offset=0`, [{
                 "Version": packageVersion,
                 "Name": packageName
             }]);
@@ -90,7 +91,7 @@ describe('POST /packages endpoint', () => {
 
     it('POST /packages should return 200 status code and something for a valid package id/set popularity flag', async () => {
         try {
-            const response = await axios.post(`${APIURL}/packages`, [{
+            const response = await axiosInstance.post(`/packages`, [{
                 "Version": packageVersion,
                 "Name": packageName,
                 "Popularity": true
@@ -107,7 +108,7 @@ describe('POST /packages endpoint', () => {
 describe('reset', () => { // rerun reset test for clean deployment
     it('should return 200 status code to signifiy successful reset', async () => {
         try {
-            const response = await axios.delete(`${APIURL}/reset`);
+            const response = await axiosInstance.delete(`/reset`);
             expect(response.status).toBe(200);
         } catch (error: any) {
             console.log(error.response.status);

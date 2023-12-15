@@ -1,6 +1,6 @@
 import axios from 'axios';
 const APIURL = 'http://ece461-packageregistry-depenv.eba-bphpcw3d.us-east-2.elasticbeanstalk.com';
-
+const axiosInstance = axios.create({baseURL: APIURL, headers : {"x-authorization": "0"}});
 describe('groupRate Process', () => {
 
     let transaction1Id: string;
@@ -12,7 +12,7 @@ describe('groupRate Process', () => {
     describe('reset', () => {
         it('should return 200 status code to signify successful reset. Used for clean test environment', async () => {
             try {
-                const response = await axios.delete(`${APIURL}/reset`);
+                const response = await axiosInstance.delete(`/reset`);
                 expect(response.status).toBe(200);
             } catch (error: any) {
                 console.log(error.response?.status);
@@ -22,24 +22,24 @@ describe('groupRate Process', () => {
     });
 
     describe('uploading packages to later pull ratings', () => {
-        it('should return 200 status code for successful upload', async () => {
+        it('should return 201 status code for successful upload', async () => {
             try {
-                const response = await axios.post(`${APIURL}/package`, {
-                    "URL": "https://github.com/remy/nodemon"
+                const response = await axiosInstance.post(`/package`, {
+                    "URL": "https://www.npmjs.com/package/express"
                 });
-                expect(response.status).toBe(200);
+                expect(response.status).toBe(201);
                 metadataIds.push(response.data.metadata.ID);
             } catch (error: any) {
                 console.log(error.response.status);
                 throw error;
             }
         }, 20000);
-        it('should return 200 status code for successful upload', async () => {
+        it('should return 201 status code for successful upload', async () => {
             try {
-                const response = await axios.post(`${APIURL}/package`, {
-                    "URL": "https://github.com/ladjs/supertest"
+                const response = await axiosInstance.post(`/package`, {
+                    "URL": "https://github.com/inversify/InversifyJS"
                 });
-                expect(response.status).toBe(200);
+                expect(response.status).toBe(201);
                 metadataIds.push(response.data.metadata.ID);
             } catch (error: any) {
                 console.log(error.response.status);
@@ -51,7 +51,7 @@ describe('groupRate Process', () => {
     describe('Initiate Rate Transaction', () => {
         it('should initiate a transaction successfully for RATE type', async () => {
             try {
-                const response = await axios.post(`${APIURL}/transaction/initiate`, {
+                const response = await axiosInstance.post(`/transaction/initiate`, {
                     transactionType: 'RATE'
                 });
                 expect(response.status).toBe(200);
@@ -63,7 +63,7 @@ describe('groupRate Process', () => {
         });
         it('should initiate another transaction successfully for RATE type', async () => {
             try {
-                const response = await axios.post(`${APIURL}/transaction/initiate`, {
+                const response = await axiosInstance.post(`/transaction/initiate`, {
                     transactionType: 'RATE'
                 });
                 expect(response.status).toBe(200);
@@ -75,7 +75,7 @@ describe('groupRate Process', () => {
         });
         it('should initiate another transaction successfully for RATE type, will be keeping it empty by not appending to it', async () => {
             try {
-                const response = await axios.post(`${APIURL}/transaction/initiate`, {
+                const response = await axiosInstance.post(`/transaction/initiate`, {
                     transactionType: 'RATE'
                 });
                 expect(response.status).toBe(200);
@@ -87,7 +87,7 @@ describe('groupRate Process', () => {
         });
         it('should initiate another transaction successfully for UPLOAD type, will be invalid when appending or executing with rate', async () => {
             try {
-                const response = await axios.post(`${APIURL}/transaction/initiate`, {
+                const response = await axiosInstance.post(`/transaction/initiate`, {
                     transactionType: 'UPLOAD'
                 });
                 expect(response.status).toBe(200);
@@ -102,7 +102,7 @@ describe('groupRate Process', () => {
     describe('Append to Rate Transaction', () => {
         it('should append to transaction successfully', async () => {
             try {
-                const response = await axios.post(`${APIURL}/transaction/append/rate`, {
+                const response = await axiosInstance.post(`/transaction/append/rate`, {
                     transactionId: transaction1Id,
                     packageId: metadataIds[0]
                 });
@@ -114,7 +114,7 @@ describe('groupRate Process', () => {
         });
         it('should append to transaction successfully', async () => {
             try {
-                const response = await axios.post(`${APIURL}/transaction/append/rate`, {
+                const response = await axiosInstance.post(`/transaction/append/rate`, {
                     transactionId: transaction1Id,
                     packageId: metadataIds[1]
                 });
@@ -126,7 +126,7 @@ describe('groupRate Process', () => {
         });    
         it('should append to transaction successfully', async () => {
             try {
-                const response = await axios.post(`${APIURL}/transaction/append/rate`, {
+                const response = await axiosInstance.post(`/transaction/append/rate`, {
                     transactionId: transaction2Id,
                     packageId: metadataIds[0]
                 });
@@ -138,7 +138,7 @@ describe('groupRate Process', () => {
         });
         it('should append to transaction successfully, this should later fail in execute', async () => {
             try {
-                const response = await axios.post(`${APIURL}/transaction/append/rate`, {
+                const response = await axiosInstance.post(`/transaction/append/rate`, {
                     transactionId: transaction2Id,
                     packageId: 'invalid package id'
                 });
@@ -150,7 +150,7 @@ describe('groupRate Process', () => {
         });
         it('should fail to append due to invalid transaction ID', async () => {
             try {
-                await axios.post(`${APIURL}/transaction/append/rate`, {
+                await axiosInstance.post(`/transaction/append/rate`, {
                     transactionId: '1234',
                     packageId: metadataIds[0]
                 });
@@ -165,7 +165,7 @@ describe('groupRate Process', () => {
         });
         it('should fail to append due invalid request data', async () => {
             try {
-                await axios.post(`${APIURL}/transaction/append/rate`, {
+                await axiosInstance.post(`/transaction/append/rate`, {
                     transactionId: emptyTransactionId,
                     Invalid: 'invalid'
                 });
@@ -180,7 +180,7 @@ describe('groupRate Process', () => {
         });
         it('should fail to append due to missing package ID', async () => {
             try {
-                await axios.post(`${APIURL}/transaction/append/rate`, {
+                await axiosInstance.post(`/transaction/append/rate`, {
                     transactionId: emptyTransactionId,
                 });
                 throw new Error('Expected Axios to throw an error, but it did not.');
@@ -194,7 +194,7 @@ describe('groupRate Process', () => {
         });
         it('should fail to append due to invalid transaction type', async () => {
             try {
-                await axios.post(`${APIURL}/transaction/append/rate`, {
+                await axiosInstance.post(`/transaction/append/rate`, {
                     transactionId: nonRateTransactionId,
                     packageId: metadataIds[0]
                 });
@@ -212,7 +212,7 @@ describe('groupRate Process', () => {
     describe('Execute Rate Transaction', () => {
         it('should successfully execute the transaction', async () => {
             try {
-                const response = await axios.post(`${APIURL}/transaction/execute/rate`, {
+                const response = await axiosInstance.post(`/transaction/execute/rate`, {
                     transactionId: transaction1Id
                 });
                 expect(response.status).toBe(200);
@@ -223,7 +223,7 @@ describe('groupRate Process', () => {
         });
         it('should fail to execute the transaction due to not being able to find package with certain ID', async () => {
             try {
-                await axios.post(`${APIURL}/transaction/execute/rate`, {
+                await axiosInstance.post(`/transaction/execute/rate`, {
                     transactionId: transaction2Id
                 });
                 throw new Error('Expected Axios to throw an error, but it did not.');
@@ -237,7 +237,7 @@ describe('groupRate Process', () => {
         });
         it('should fail to execute the transaction due to transaction not having any packages (not appended on yet)', async () => {
             try {
-                await axios.post(`${APIURL}/transaction/execute/rate`, {
+                await axiosInstance.post(`/transaction/execute/rate`, {
                     transactionId: emptyTransactionId
                 });
                 throw new Error('Expected Axios to throw an error, but it did not.');
@@ -251,7 +251,7 @@ describe('groupRate Process', () => {
         });
         it('should fail to execute the transaction because it is not in a state to be executed', async () => {
             try {
-                await axios.post(`${APIURL}/transaction/execute/rate`, {
+                await axiosInstance.post(`/transaction/execute/rate`, {
                     transactionId: transaction2Id
                 });
                 throw new Error('Expected Axios to throw an error, but it did not.');
@@ -265,7 +265,7 @@ describe('groupRate Process', () => {
         });
         it('should fail to execute the transaction due to no transaction ID specified in request', async () => {
             try {
-                await axios.post(`${APIURL}/transaction/execute/rate`, {
+                await axiosInstance.post(`/transaction/execute/rate`, {
                 });
                 throw new Error('Expected Axios to throw an error, but it did not.');
             } catch (error: any) {
@@ -278,7 +278,7 @@ describe('groupRate Process', () => {
         });
         it('should fail to execute due to invalid transaction ID', async () => {
             try {
-                await axios.post(`${APIURL}/transaction/execute/rate`, {
+                await axiosInstance.post(`/transaction/execute/rate`, {
                     transactionId: '1234'
                 });
                 throw new Error('Expected Axios to throw an error, but it did not.');
@@ -294,7 +294,7 @@ describe('groupRate Process', () => {
     describe('reset', () => {
         it('should return 200 status code to signify successful reset. Used for clean test environment', async () => {
             try {
-                const response = await axios.delete(`${APIURL}/reset`);
+                const response = await axiosInstance.delete(`/reset`);
                 expect(response.status).toBe(200);
             } catch (error: any) {
                 console.log(error.response?.status);
