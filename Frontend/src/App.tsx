@@ -10,6 +10,7 @@ function App() {
     const [uploadURL, setUploadURL] = useState<string>('');
     const [searchType, setSearchType] = useState('name');
     const [searchInput, setSearchInput] = useState('');
+    const [downloadId, setDownloadId] = useState('');
 
     // Package Directory
     const [isPackageDirectoryOpen, setIsPackageDirectoryOpen] = useState<boolean>(false);
@@ -48,11 +49,7 @@ function App() {
         if (response.status === 200) {
             console.log('Success')
             return;
-        }
-        else if (response.status === 404) {
-            axios.post('/package', { name: packageName, version: packageVersion }, {headers});
-        }
-        else {
+        }else {
             alert('Error: Package does not exist.');
         }
     };
@@ -141,6 +138,7 @@ function App() {
     };
 
     const searchPackages = async () => {
+        console.log("Searching packages")
         try {
             let response;
             if (searchType === 'name') {
@@ -172,9 +170,11 @@ function App() {
     };
 
     const downloadPackage = async () => {
-        if (selectedPackage) {
+        console.log("Download package")
+        if (downloadId) {
             try {
-                const response = await axios.get(`/package/${selectedPackage}`, {headers});
+                console.log("Downloading package")
+                const response = await axios.get(`/package/${downloadId}`, {headers});
                 const base64Content = response.data;
                 // Convert base64 to binary
                 const binaryContent = atob(base64Content);
@@ -188,7 +188,7 @@ function App() {
                 // Create a link element and simulate a click to trigger the download
                 const link = document.createElement('a');
                 link.href = window.URL.createObjectURL(blob);
-                link.download = `${selectedPackage}.zip`; // Set the desired file name
+                link.download = `${downloadId}.zip`; // Set the desired file name
                 link.click();
             } catch (error: any) {
                 console.error(`Error downloading package: ${error.message}`);
@@ -283,7 +283,15 @@ function App() {
                 {/* Download Package Section */}
                 <div className="download-package">
                     <h2>Download Package</h2>
-                    <button type="button" onClick={downloadPackage} disabled={!selectedPackage}>
+                    <label htmlFor="downloadId" className="url-label">Enter Package ID:</label>
+                    <input
+                        id="downloadId"
+                        type="text"
+                        placeholder="Package ID"
+                        value={downloadId}
+                        onChange={(e) => setDownloadId(e.target.value)}
+                    />
+                    <button type="button" onClick={downloadPackage} disabled={!downloadId}>
                         Download
                     </button>
                 </div>
